@@ -6,6 +6,7 @@ import { ProductForm } from "../ProductForm";
 import { saveProduct, adjustStock, uploadImage, deleteProduct } from "../../actions";
 import { MOVEMENT_TH, type Product, type Movement } from "@/lib/stock/types";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
+import { ImageUploader } from "@/components/stock/ImageUploader";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,8 @@ export default async function ProductDetail({ params, searchParams }: { params: 
 
       <div className="grid lg:grid-cols-[240px_1fr] gap-6">
         <div className="space-y-4">
-          <div className="card p-4 text-center">
-            {product.image_url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={product.image_url} alt="" className="w-full aspect-square object-cover rounded-xl" /> : <div className="w-full aspect-square rounded-xl bg-lavender/30 grid place-items-center text-ink-soft text-sm">ยังไม่มีรูป</div>}
-            <form action={uploadImage.bind(null, "products", id)} className="mt-3 space-y-2">
-              <input type="file" name="image" accept="image/*" className="text-xs w-full" required />
-              <button className="btn-outline w-full py-1.5 text-xs">อัปโหลดรูป</button>
-            </form>
+          <div className="card p-4">
+            <ImageUploader action={uploadImage.bind(null, "products", id)} current={product.image_url} />
           </div>
           <div className="card p-4">
             <div className="text-xs text-ink-soft font-semibold">คงเหลือ (ดี)</div>

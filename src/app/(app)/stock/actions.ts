@@ -234,3 +234,29 @@ export async function deleteContact(id: string) {
   if (error) redirect(`/stock/contacts?error=${encodeURIComponent("ลบไม่ได้ — รายชื่อนี้ถูกใช้ในเอกสารแล้ว")}`);
   revalidatePath("/stock/contacts");
 }
+
+export async function createDefect(formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_defect", {
+    p_product_id: nul(formData.get("product_id")),
+    p_qty: Number(formData.get("qty")),
+    p_status: nul(formData.get("status")) ?? "review",
+    p_supplier_id: nul(formData.get("contact_id")),
+    p_note: nul(formData.get("note")),
+    p_from_stock: formData.get("from_stock") !== "no",
+  });
+  if (error) redirect(`/stock/defects?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/stock/defects");
+  revalidatePath("/stock/products");
+  redirect("/stock/defects?saved=1");
+}
+
+export async function deleteDefect(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_defect", { p_defect_id: id });
+  if (error) redirect(`/stock/defects?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/stock/defects");
+  revalidatePath("/stock/products");
+}

@@ -2,16 +2,21 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
-import { updateDefect } from "../actions";
+import { updateDefect, deleteDefect } from "../actions";
+import { DefectForm } from "./DefectForm";
 import { DEFECT_TH, type Defect, type DefectStatus } from "@/lib/stock/types";
 
 export const dynamic = "force-dynamic";
 
 const TABS: [string, string][] = [["open", "ค้างอยู่"], ["review", "รอพิจารณา"], ["return_pending", "รอส่งคืน"], ["closed", "ปิดแล้ว"]];
 
-export default async function DefectsPage({ searchParams }: { searchParams: Promise<{ tab?: string; error?: string }> }) {
-  const { tab = "open", error } = await searchParams;
+export default async function DefectsPage({ searchParams }: { searchParams: Promise<{ tab?: string; error?: string; saved?: string }> }) {
+  const { tab = "open", error, saved } = await searchParams;
   const supabase = await createClient();
+  const [{ data: products }, { data: suppliers }] = await Promise.all([
+    supabase.from("products").select("id, code, name, barcode, stock_qty").eq("is_active", true).order("name"),
+    supabase.from("contacts").select("id, name, code, tax_id").eq("kind", "supplier").eq("is_active", true).order("name"),
+  ]);
   let q = supabase.from("defects").select("*, products(code, name), contacts(name), receipts(receipt_no), app_users!defects_created_by_fkey(display_name)").order("created_at", { ascending: false }).limit(300);
   if (tab === "open") q = q.in("status", ["review", "return_pending"]);
   else if (tab === "closed") q = q.in("status", ["returned", "disposed", "restored"]);
@@ -24,6 +29,8 @@ export default async function DefectsPage({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       <Header title="ของเสีย / ส่งคืน" sub={`${rows.length} รายการ · ${rows.reduce((a, r) => a + r.qty, 0)} ชิ้น`} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
+      {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกของเสียแล้ว</div>}
+      <DefectForm products={products ?? []} suppliers={suppliers ?? []} />
       <div className="flex gap-2 flex-wrap">
         {TABS.map(([k, l]) => <Link key={k} href={`/stock/defects?tab=${k}`} className={tab === k ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>{l}</Link>)}
       </div>
@@ -48,6 +55,7 @@ export default async function DefectsPage({ searchParams }: { searchParams: Prom
                     <button formAction={updateDefect.bind(null, d.id, "returned")} className="btn-primary py-1.5 text-xs">ส่งคืนแล้ว</button>
                     <button formAction={updateDefect.bind(null, d.id, "disposed")} className="btn-danger py-1.5 text-xs">ตัดทิ้ง</button>
                   </div>
+                  <button formAction={deleteDefect.bind(null, d.id)} className="text-xs text-red underline self-end">ลบรายการ (คืนค่าสต็อก)</button>
                 </form>
               )}
             </div>

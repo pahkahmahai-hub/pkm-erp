@@ -25,6 +25,7 @@
 2. รันไฟล์ใน `supabase/migrations/` **ตามลำดับ ทีละไฟล์** (คัดลอกทั้งไฟล์ วาง กด Run):
    - `0001_foundation_hr.sql` — ตารางทั้งหมดของรากฐาน + HR, สิทธิ์ (RLS), ข้อมูลตั้งต้น: 2 ทีม, พนักงาน 6 คน, admin 2 บัญชี, พิกัดโชว์รูม, เวลางาน, โควต้าลา
    - `0002_stock.sql` — โมดูลคลังใหญ่ + สมุดรายชื่อ + ที่เก็บรูป (storage bucket `stock-images`) + สินค้า 189 รายการ / รายชื่อ 452 ราย พร้อมยอดยกมา
+   - `0003_defects_manual.sql` — บันทึก/ลบของเสียย้อนหลัง
 3. **Project Settings → API** จด `Project URL` และ `anon public` key
 
 ### 2) Google Sign-in

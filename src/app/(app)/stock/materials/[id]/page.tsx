@@ -5,6 +5,7 @@ import { fmtDateTime } from "@/lib/format";
 import { saveMaterial, moveMaterial, uploadImage, deleteMaterial } from "../../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { ContactPicker } from "@/components/stock/ContactPicker";
+import { ImageUploader } from "@/components/stock/ImageUploader";
 import { MATERIAL_TH, type Material, type MaterialMovement } from "@/lib/stock/types";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +32,7 @@ export default async function MaterialDetail({ params, searchParams }: { params:
       <div className="grid lg:grid-cols-[280px_1fr] gap-6">
         <div className="space-y-4">
           <div className="card p-4">
-            {mat.image_url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={mat.image_url} alt="" className="w-full aspect-square object-cover rounded-xl" /> : <div className="w-full aspect-square rounded-xl bg-lavender/30 grid place-items-center text-ink-soft text-sm">ยังไม่มีรูป</div>}
-            <form action={uploadImage.bind(null, "materials", id)} className="mt-3 space-y-2">
-              <input type="file" name="image" accept="image/*" className="text-xs w-full" required />
-              <button className="btn-outline w-full py-1.5 text-xs">อัปโหลดรูป</button>
-            </form>
+            <ImageUploader action={uploadImage.bind(null, "materials", id)} current={mat.image_url} />
           </div>
           <div className="card p-4">
             <div className="text-xs text-ink-soft font-semibold">คงเหลือ</div>
