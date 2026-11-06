@@ -52,5 +52,5 @@ export async function reviewLeave(id: string, decision: "approved" | "rejected",
     .update({ status: decision, reviewed_by: s.appUser.id, reviewed_at: new Date().toISOString(), admin_note: (formData.get("admin_note") as string) || null })
     .eq("id", id);
   revalidatePath("/hr/leave");
-  revalidatePath("/");
+  revalidatePath("/hr");
 }

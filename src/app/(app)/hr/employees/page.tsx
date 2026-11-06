@@ -8,7 +8,8 @@ import type { Employee } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
 
@@ -45,6 +46,7 @@ export default async function EmployeesPage() {
         sub={`${employees.filter((e) => e.status !== "resigned").length} คน`}
         action={<Link href="/hr/employees/new" className="btn-primary"><Plus size={16} /> เพิ่มพนักงาน</Link>}
       />
+      {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบพนักงานแล้ว</div>}
       <div className="card overflow-x-auto">
         <table className="tbl min-w-[720px]">
           <thead>

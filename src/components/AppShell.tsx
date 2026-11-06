@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck,
+  LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -13,12 +13,9 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?:
 
 const MODULES: { title: string; items: NavItem[] }[] = [
   {
-    title: "หน้าหลัก",
-    items: [{ href: "/", label: "แดชบอร์ด", icon: LayoutDashboard }],
-  },
-  {
-    title: "HR — บุคคล",
+    title: "HR — งานบุคคล",
     items: [
+      { href: "/hr", label: "แดชบอร์ด HR", icon: LayoutDashboard },
       { href: "/hr/checkin", label: "เช็คอิน / เช็คเอาท์", icon: MapPin },
       { href: "/hr/attendance", label: "บันทึกเวลา", icon: Clock },
       { href: "/hr/leave", label: "ลางาน", icon: CalendarDays },
@@ -39,6 +36,9 @@ export function AppShell({ session, children }: { session: SessionInfo; children
 
   const nav = (
     <nav className="flex flex-col gap-6">
+      <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-lavender hover:bg-white/10 hover:text-white border border-white/15">
+        <LayoutGrid size={18} /> โปรแกรมทั้งหมด
+      </Link>
       {MODULES.map((m) => {
         const items = m.items.filter((i) => !i.admin || session.isAdmin);
         if (!items.length) return null;
@@ -47,7 +47,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <div className="px-3 mb-2 text-[11px] font-semibold tracking-[0.14em] text-lavender uppercase">{m.title}</div>
             <ul className="space-y-0.5">
               {items.map((i) => {
-                const active = i.href === "/" ? pathname === "/" : pathname.startsWith(i.href);
+                const active = i.href === "/hr" ? pathname === "/hr" : pathname.startsWith(i.href);
                 const Icon = i.icon;
                 return (
                   <li key={i.href}>
@@ -98,6 +98,26 @@ export function AppShell({ session, children }: { session: SessionInfo; children
       </form>
     </div>
   );
+
+  const isHome = pathname === "/";
+
+  if (isHome) {
+    return (
+      <div className="min-h-dvh flex flex-col">
+        <div className="pkm-stripe h-1.5" />
+        <header className="flex items-center justify-between px-4 sm:px-8 py-4 bg-white border-b border-line">
+          <BrandLogo className="h-10" />
+          <div className="flex items-center gap-3 text-sm">
+            <span className="hidden sm:inline text-ink-soft">{session.appUser.display_name ?? session.employee?.first_name ?? session.authUser.email}</span>
+            {session.isAdmin && <Link href="/settings" className="btn-ghost py-1.5 px-3"><Settings size={16} /> ตั้งค่า</Link>}
+            <form action="/auth/signout" method="post"><button className="btn-outline py-1.5 px-3"><LogOut size={14} /> ออก</button></form>
+          </div>
+        </header>
+        <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
+        <footer className="px-6 py-4 text-[11px] text-ink-soft">PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful</footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh flex">

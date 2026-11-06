@@ -44,6 +44,6 @@ export const getSession = cache(async (): Promise<SessionInfo> => {
 
 export async function requireAdmin() {
   const s = await getSession();
-  if (!s.isAdmin) redirect("/");
+  if (!s.isAdmin) redirect("/hr");
   return s;
 }

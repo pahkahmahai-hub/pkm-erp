@@ -117,3 +117,14 @@ export async function setLoginActive(employeeId: string, active: boolean) {
   await supabase.from("app_users").update({ is_active: active }).eq("employee_id", employeeId);
   revalidatePath(`/hr/employees/${employeeId}`);
 }
+
+export async function deleteEmployee(id: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  // login account first (FK is set null on delete, but remove it so the email can't sign in)
+  await supabase.from("app_users").delete().eq("employee_id", id);
+  const { error } = await supabase.from("employees").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/hr/employees");
+  redirect("/hr/employees?deleted=1");
+}

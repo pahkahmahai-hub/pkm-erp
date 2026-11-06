@@ -51,5 +51,5 @@ export async function reviewOt(id: string, decision: "approved" | "rejected", fo
     })
     .eq("id", id);
   revalidatePath("/hr/ot");
-  revalidatePath("/");
+  revalidatePath("/hr");
 }

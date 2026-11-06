@@ -5,6 +5,7 @@ import { Header } from "@/components/ui";
 import { EmployeeForm } from "../EmployeeForm";
 import { updateEmployee, ensureLogin, setLoginActive } from "../actions";
 import { fmtDateTime } from "@/lib/format";
+import { DeleteButton } from "./DeleteButton";
 import type { Employee, Team, AppUser } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,9 +39,10 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
 
       <form action={action} className="card p-6 space-y-6">
         <EmployeeForm employee={e} teams={(teams ?? []) as Team[]} isAdmin={session.isAdmin} />
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           <button className="btn-primary">บันทึก</button>
           <a href="/hr/employees" className="btn-ghost">กลับ</a>
+          {session.isAdmin && <span className="ml-auto"><DeleteButton id={id} name={`${e.first_name} ${e.last_name}`} /></span>}
         </div>
       </form>
 
