@@ -14,11 +14,12 @@ export default async function Dashboard() {
   const today = todayBkk();
 
   if (session.isAdmin) {
-    const [{ data: att }, { data: leaves }, { data: ots }, { data: emps }] = await Promise.all([
+    const [{ data: att }, { data: leaves }, { data: ots }, { data: emps }, { count: timeReqCount }] = await Promise.all([
       supabase.from("attendance").select("*, employees(emp_code, first_name, last_name, nickname)").eq("work_date", today).order("check_in_at"),
       supabase.from("leave_requests").select("*, employees(emp_code, first_name, last_name, nickname), leave_types(name_th)").eq("status", "pending").order("created_at"),
       supabase.from("ot_requests").select("*, employees(emp_code, first_name, last_name, nickname)").eq("status", "pending").order("created_at"),
       supabase.from("employees").select("*").neq("status", "resigned").order("emp_code"),
+      supabase.from("attendance_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
     const attendance = (att ?? []) as Attendance[];
     const employees = (emps ?? []) as Employee[];
@@ -36,6 +37,11 @@ export default async function Dashboard() {
           <Stat label="ใบลารออนุมัติ" value={leaves?.length ?? 0} tone="yellow" href="/hr/leave" />
           <Stat label="OT รออนุมัติ" value={ots?.length ?? 0} tone="purple" href="/hr/ot" />
         </div>
+        {(timeReqCount ?? 0) > 0 && (
+          <Link href="/hr/time-requests" className="card p-4 flex items-center justify-between text-sm hover:border-purple">
+            <span>มีคำขอแก้เวลาเข้า-ออกรออนุมัติ <b>{timeReqCount}</b> รายการ</span><span className="text-purple font-semibold">ดู →</span>
+          </Link>
+        )}
 
         {needsReview.length > 0 && (
           <div className="card p-4 flex items-start gap-3 border-yellow/60 bg-yellow/10">

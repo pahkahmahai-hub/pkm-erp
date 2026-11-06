@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
-  Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History,
+  Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -22,6 +22,7 @@ const NAV: Record<string, NavGroup[]> = {
         { href: "/hr", label: "แดชบอร์ด HR", icon: LayoutDashboard },
         { href: "/hr/checkin", label: "เช็คอิน / เช็คเอาท์", icon: MapPin },
         { href: "/hr/attendance", label: "บันทึกเวลา", icon: Clock },
+        { href: "/hr/time-requests", label: "ขอแก้เวลาเข้า-ออก", icon: ClockAlert },
         { href: "/hr/leave", label: "ลางาน", icon: CalendarDays },
         { href: "/hr/ot", label: "ขอ OT", icon: BadgeCheck },
         { href: "/hr/employees", label: "พนักงาน", icon: Users },
