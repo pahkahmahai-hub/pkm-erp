@@ -31,10 +31,12 @@ export default async function ModuleHome() {
                 <div className="font-display font-bold text-lg">{m.name} <span className="text-xs font-semibold tracking-widest text-ink-soft ml-1">{m.nameEn.toUpperCase()}</span></div>
                 <p className="text-sm text-ink-soft mt-1">{m.description}</p>
               </div>
-              {live && <div className="mt-auto flex items-center gap-1 text-sm font-semibold text-purple">เปิดโปรแกรม <ArrowRight size={16} /></div>}
+              {live && <div className="mt-auto flex items-center gap-1 text-sm font-semibold text-purple">{m.external ? "เปิดเว็บ (แท็บใหม่)" : "เปิดโปรแกรม"} <ArrowRight size={16} /></div>}
             </div>
           );
-          return live ? <Link key={m.key} href={m.href}>{inner}</Link> : <div key={m.key}>{inner}</div>;
+          if (!live) return <div key={m.key}>{inner}</div>;
+          if (m.external) return <a key={m.key} href={m.href} target="_blank" rel="noopener">{inner}</a>;
+          return <Link key={m.key} href={m.href}>{inner}</Link>;
         })}
       </div>
 

@@ -5,41 +5,65 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
+  Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean };
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean; external?: boolean };
+type NavGroup = { title: string; items: NavItem[] };
 
-const MODULES: { title: string; items: NavItem[] }[] = [
-  {
-    title: "HR — งานบุคคล",
-    items: [
-      { href: "/hr", label: "แดชบอร์ด HR", icon: LayoutDashboard },
-      { href: "/hr/checkin", label: "เช็คอิน / เช็คเอาท์", icon: MapPin },
-      { href: "/hr/attendance", label: "บันทึกเวลา", icon: Clock },
-      { href: "/hr/leave", label: "ลางาน", icon: CalendarDays },
-      { href: "/hr/ot", label: "ขอ OT", icon: BadgeCheck },
-      { href: "/hr/employees", label: "พนักงาน", icon: Users },
-      { href: "/hr/reports", label: "รายงาน", icon: FileBarChart2, admin: true },
-    ],
-  },
-  {
-    title: "ระบบ",
-    items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }],
-  },
-];
+/** Sidebar per module — keyed by the first URL segment */
+const NAV: Record<string, NavGroup[]> = {
+  hr: [
+    {
+      title: "HR — งานบุคคล",
+      items: [
+        { href: "/hr", label: "แดชบอร์ด HR", icon: LayoutDashboard },
+        { href: "/hr/checkin", label: "เช็คอิน / เช็คเอาท์", icon: MapPin },
+        { href: "/hr/attendance", label: "บันทึกเวลา", icon: Clock },
+        { href: "/hr/leave", label: "ลางาน", icon: CalendarDays },
+        { href: "/hr/ot", label: "ขอ OT", icon: BadgeCheck },
+        { href: "/hr/employees", label: "พนักงาน", icon: Users },
+        { href: "/hr/reports", label: "รายงาน", icon: FileBarChart2, admin: true },
+      ],
+    },
+  ],
+  stock: [
+    {
+      title: "คลังใหญ่",
+      items: [
+        { href: "/stock", label: "แดชบอร์ดคลัง", icon: LayoutDashboard },
+        { href: "/stock/products", label: "สินค้า", icon: Boxes },
+        { href: "/stock/receipts", label: "รับเข้า", icon: PackagePlus },
+        { href: "/stock/issues", label: "ใบเบิก", icon: PackageMinus },
+        { href: "/stock/defects", label: "ของเสีย / ส่งคืน", icon: AlertTriangle },
+        { href: "/stock/materials", label: "ลายผ้า & แพคเกจจิ้ง", icon: Scissors },
+        { href: "/stock/movements", label: "ประวัติเคลื่อนไหว", icon: History },
+        { href: "/stock/contacts", label: "สมุดรายชื่อ", icon: BookUser },
+      ],
+    },
+    {
+      title: "คลังออนไลน์",
+      items: [{ href: "https://pahkahmah-stock.vercel.app/", label: "เปิดเว็บคลังออนไลน์", icon: ExternalLink, external: true }],
+    },
+  ],
+};
+const SYSTEM_NAV: NavGroup = { title: "ระบบ", items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }] };
 
 export function AppShell({ session, children }: { session: SessionInfo; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  const seg = pathname.split("/")[1] ?? "";
+  const groups = [...(NAV[seg] ?? []), SYSTEM_NAV];
 
   const nav = (
     <nav className="flex flex-col gap-6">
       <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-lavender hover:bg-white/10 hover:text-white border border-white/15">
         <LayoutGrid size={18} /> โปรแกรมทั้งหมด
       </Link>
-      {MODULES.map((m) => {
+      {groups.map((m) => {
         const items = m.items.filter((i) => !i.admin || session.isAdmin);
         if (!items.length) return null;
         return (
@@ -47,12 +71,15 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <div className="px-3 mb-2 text-[11px] font-semibold tracking-[0.14em] text-lavender uppercase">{m.title}</div>
             <ul className="space-y-0.5">
               {items.map((i) => {
-                const active = i.href === "/hr" ? pathname === "/hr" : pathname.startsWith(i.href);
+                const isRoot = i.href === `/${seg}`;
+                const active = !i.external && (isRoot ? pathname === i.href : pathname.startsWith(i.href));
                 const Icon = i.icon;
                 return (
                   <li key={i.href}>
                     <Link
                       href={i.href}
+                      target={i.external ? "_blank" : undefined}
+                      rel={i.external ? "noopener" : undefined}
                       onClick={() => setOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                         active ? "bg-white/15 text-white" : "text-lavender hover:bg-white/10 hover:text-white"
