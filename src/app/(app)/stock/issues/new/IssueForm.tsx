@@ -18,6 +18,7 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
   const [pickerKey, setPickerKey] = useState(0);
   const [pdfInfo, setPdfInfo] = useState<{ ok: number; miss: { name: string; qty: number; barcode: string }[]; unmatched: string[]; customerName: string | null } | null>(null);
   const [pending, start] = useTransition();
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const total = items.reduce((a, i) => a + i.qty, 0);
   const over = items.some((i) => i.qty > i.stock_qty);
 
@@ -29,6 +30,8 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
     start(async () => {
       try {
         const res = await parseFlowAccountPdf(fd);
+        if ("error" in res) { setPdfError(res.error); return; }
+        setPdfError(null);
         const next: LineItem[] = [];
         const miss: { name: string; qty: number; barcode: string }[] = [];
         for (const m of res.matched) {
@@ -60,6 +63,7 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
           </label>
           <span className="text-xs text-ink-soft">ระบบจะอ่านเลขที่เอกสาร ลูกค้า และรายการสินค้า แล้วจับคู่ด้วยบาร์โค้ด</span>
         </div>
+        {pdfError && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{pdfError}</div>}
         {pdfInfo && (
           <div className="text-sm space-y-1">
             <div className="flex items-center gap-2 text-green"><CheckCircle2 size={16} /> จับคู่ได้ {pdfInfo.ok} รายการ{pdfInfo.customerName ? ` · ลูกค้าในเอกสาร: ${pdfInfo.customerName}` : ""}</div>

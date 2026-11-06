@@ -120,18 +120,32 @@ export async function createIssue(formData: FormData) {
 }
 
 /** Parse an uploaded FlowAccount PDF and match lines to products by barcode. */
-export async function parseFlowAccountPdf(formData: FormData): Promise<{
+export type PdfResult = {
   doc: ParsedDoc;
   matched: { barcode: string; qty: number; name: string; product: { id: string; code: string; name: string; stock_qty: number } | null }[];
   customer: { id: string; name: string } | null;
-}> {
+};
+export async function parseFlowAccountPdf(formData: FormData): Promise<PdfResult | { error: string }> {
+  try {
+    return await parseFlowAccountPdfInner(formData);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+async function parseFlowAccountPdfInner(formData: FormData): Promise<PdfResult> {
   await getSession();
   const file = formData.get("pdf") as File | null;
   if (!file || file.size === 0) throw new Error("ไม่พบไฟล์");
-  const pdfParse = (await import("pdf-parse")).default;
+  const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
   const buf = Buffer.from(await file.arrayBuffer());
-  const { text } = await pdfParse(buf);
+  let text = "";
+  try {
+    ({ text } = await pdfParse(buf));
+  } catch (e) {
+    throw new Error("อ่านไฟล์ PDF ไม่ได้: " + (e as Error).message);
+  }
   const doc = parseFlowAccountPdfText(text);
+  if (!doc.lines.length && !doc.docNo) throw new Error("ไม่พบรายการสินค้าในไฟล์ — ต้องเป็น PDF ที่ออกจาก FlowAccount (ไม่ใช่ภาพสแกน)");
 
   const supabase = await createClient();
   const barcodes = doc.lines.map((l) => l.barcode).filter(Boolean) as string[];
