@@ -274,3 +274,24 @@ export async function deleteDefect(id: string) {
   revalidatePath("/stock/defects");
   revalidatePath("/stock/products");
 }
+
+/** Any text PDF with 13-digit barcodes (PO / delivery slip from other systems). Quantities are best-guess — user confirms. */
+export async function parseGenericPdf(formData: FormData): Promise<{ docNo: string | null; matched: { barcode: string; qty: number; context: string; product: { id: string; code: string; name: string; stock_qty: number } | null }[] } | { error: string }> {
+  try {
+    await getSession();
+    const file = formData.get("pdf") as File | null;
+    if (!file || file.size === 0) throw new Error("ไม่พบไฟล์");
+    const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
+    let text = "";
+    try { ({ text } = await pdfParse(Buffer.from(await file.arrayBuffer()))); } catch (e) { throw new Error("อ่านไฟล์ PDF ไม่ได้: " + (e as Error).message); }
+    const { parseGenericBarcodes } = await import("@/lib/stock/flowaccount-pdf");
+    const { docNo, lines } = parseGenericBarcodes(text);
+    if (!lines.length) throw new Error("ไม่พบบาร์โค้ด 13 หลักในไฟล์ — ถ้าเป็นภาพสแกนระบบอ่านไม่ได้");
+    const supabase = await createClient();
+    const { data: prods } = await supabase.from("products").select("id, code, name, barcode, stock_qty").in("barcode", lines.map((l) => l.barcode));
+    const by = new Map((prods ?? []).map((p) => [p.barcode as string, p]));
+    return { docNo, matched: lines.map((l) => ({ ...l, product: by.get(l.barcode) ?? null })) };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}

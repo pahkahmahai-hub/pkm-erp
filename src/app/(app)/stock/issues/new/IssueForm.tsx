@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { FileUp, CheckCircle2, AlertCircle } from "lucide-react";
 import { LineItemsEditor, type LineItem } from "@/components/stock/LineItemsEditor";
 import { ContactPicker } from "@/components/stock/ContactPicker";
-import { createIssue, parseFlowAccountPdf } from "../../actions";
+import { createIssue, parseFlowAccountPdf, parseGenericPdf } from "../../actions";
 import type { Product, Contact } from "@/lib/stock/types";
 
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">;
@@ -12,11 +12,11 @@ type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id">;
 
 export function IssueForm({ products, customers }: { products: ProductLite[]; customers: ContactLite[] }) {
   const [items, setItems] = useState<LineItem[]>([]);
-  const [source, setSource] = useState<"manual" | "flowaccount_pdf">("manual");
+  const [source, setSource] = useState<"manual" | "flowaccount_pdf" | "other_pdf">("manual");
   const [docNo, setDocNo] = useState("");
   const [customer, setCustomer] = useState<ContactLite | null>(null);
   const [pickerKey, setPickerKey] = useState(0);
-  const [pdfInfo, setPdfInfo] = useState<{ ok: number; miss: { name: string; qty: number; barcode: string }[]; unmatched: string[]; customerName: string | null } | null>(null);
+  const [pdfInfo, setPdfInfo] = useState<{ ok: number; miss: { name: string; qty: number; barcode: string }[]; unmatched: string[]; customerName: string | null; generic?: boolean } | null>(null);
   const [pending, start] = useTransition();
   const [pdfError, setPdfError] = useState<string | null>(null);
   const total = items.reduce((a, i) => a + i.qty, 0);
@@ -50,6 +50,29 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
     e.target.value = "";
   }
 
+  function onGenericPdf(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const fd = new FormData();
+    fd.set("pdf", f);
+    start(async () => {
+      const res = await parseGenericPdf(fd);
+      if ("error" in res) { setPdfError(res.error); return; }
+      setPdfError(null);
+      const next: LineItem[] = [];
+      const miss: { name: string; qty: number; barcode: string }[] = [];
+      for (const m of res.matched) {
+        if (m.product) next.push({ key: crypto.randomUUID(), product_id: m.product.id, code: m.product.code, name: m.product.name, stock_qty: m.product.stock_qty, qty: m.qty, note: "" });
+        else miss.push({ name: m.context, qty: m.qty, barcode: m.barcode });
+      }
+      setItems(next);
+      setSource("other_pdf");
+      setDocNo(res.docNo ?? "");
+      setPdfInfo({ ok: next.length, miss, unmatched: [], customerName: null, generic: true });
+    });
+    e.target.value = "";
+  }
+
   return (
     <form action={createIssue} className="space-y-6">
       <input type="hidden" name="items" value={JSON.stringify(items.map((i) => ({ product_id: i.product_id, qty: i.qty, note: i.note ?? "" })))} />
@@ -61,12 +84,17 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
             <FileUp size={16} /> {pending ? "กำลังอ่าน PDF…" : "อัปโหลด PDF จาก FlowAccount"}
             <input type="file" accept="application/pdf" onChange={onPdf} className="hidden" disabled={pending} />
           </label>
-          <span className="text-xs text-ink-soft">ระบบจะอ่านเลขที่เอกสาร ลูกค้า และรายการสินค้า แล้วจับคู่ด้วยบาร์โค้ด</span>
+          <label className="btn-outline cursor-pointer">
+            <FileUp size={16} /> {pending ? "กำลังอ่าน PDF…" : "อัปโหลด PDF อื่นที่มีบาร์โค้ด"}
+            <input type="file" accept="application/pdf" onChange={onGenericPdf} className="hidden" disabled={pending} />
+          </label>
         </div>
+        <p className="text-xs text-ink-soft">FlowAccount: อ่านเลขที่เอกสาร ลูกค้า และรายการครบ · PDF อื่น (PO ห้าง, ใบส่งของระบบอื่น): อ่านบาร์โค้ด + จำนวน แล้วให้ตรวจก่อนบันทึก</p>
         {pdfError && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{pdfError}</div>}
         {pdfInfo && (
           <div className="text-sm space-y-1">
             <div className="flex items-center gap-2 text-green"><CheckCircle2 size={16} /> จับคู่ได้ {pdfInfo.ok} รายการ{pdfInfo.customerName ? ` · ลูกค้าในเอกสาร: ${pdfInfo.customerName}` : ""}</div>
+            {pdfInfo.generic && <div className="rounded-xl bg-yellow/15 p-3 text-[#8a6a00]"><b>กรุณาตรวจจำนวนทุกบรรทัดก่อนบันทึก</b> — เอกสารรูปแบบนี้ระบบเดาจำนวนจากตัวเลขในบรรทัดเดียวกับบาร์โค้ด และต้องเลือกลูกค้าเอง</div>}
             {pdfInfo.miss.length > 0 && (
               <div className="rounded-xl bg-yellow/15 p-3">
                 <div className="flex items-center gap-2 text-[#8a6a00] font-semibold"><AlertCircle size={16} /> บาร์โค้ดไม่พบในระบบ {pdfInfo.miss.length} รายการ — เพิ่มด้วยการค้นหาด้านล่าง</div>

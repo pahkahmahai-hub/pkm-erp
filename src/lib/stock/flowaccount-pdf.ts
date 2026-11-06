@@ -105,3 +105,43 @@ export function parseFlowAccountPdfText(rawText: string): ParsedDoc {
 
   return { docNo, docDate, customerName, customerTaxId, lines, unmatched: [...new Set(unmatched)] };
 }
+
+/**
+ * Generic parser for any text PDF that lists 13-digit barcodes (PO, delivery slips from other systems).
+ * Returns each barcode with a best-guess quantity (the first number in the text chunk before the barcode)
+ * — the user confirms/edits quantities in the form.
+ */
+export interface GenericLine { barcode: string; qty: number; context: string }
+export function parseGenericBarcodes(rawText: string): { docNo: string | null; lines: GenericLine[] } {
+  const textNl = clean(rawText);
+  const text = textNl.replace(/\n/g, " ");
+  const docNo = text.match(/\b([A-Z]{1,4}\d{2}-\d{4,6})\b/)?.[1] ?? text.match(/\b(PO\.?\s?\d{6,})\b/i)?.[1] ?? text.match(/\b((?:INV|DN|DO|SO|PO)\d{6,})\b/)?.[1] ?? null;
+
+  const re = /(?<!\d)(\d{13})(?!\d)/g;
+  const lines: GenericLine[] = [];
+  const seen = new Map<string, number>();
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(textNl))) {
+    const barcode = m[1];
+    // only the row the barcode belongs to: the last non-empty line of the chunk (or the one before, when the barcode sits alone on a line)
+    const rawChunk = textNl.slice(last, m.index);
+    last = re.lastIndex;
+    const rows = rawChunk.split("\n").map((r) => r.trim()).filter(Boolean);
+    let chunk = rows[rows.length - 1] ?? "";
+    if (!/\d/.test(chunk) && rows.length > 1) chunk = rows[rows.length - 2] + " " + chunk;
+    // skip tax ids and phone-like numbers: Thai product EANs start with 885
+    if (!barcode.startsWith("885")) continue;
+    // quantity guess: first standalone number (1–4 digits, optionally .00) that is not a percentage or price with cents
+    const nums = [...chunk.matchAll(/(?<![\d.,])(\d{1,4})(?:\.00)?(?![\d%]|\.\d)/g)].map((x) => Number(x[1])).filter((n) => n > 0);
+    const qty = nums[0] ?? 1;
+    const context = chunk.replace(/[\d.,%]+/g, " ").replace(/\s+/g, " ").trim().slice(-60);
+    if (seen.has(barcode)) {
+      lines[seen.get(barcode)!].qty += qty;
+    } else {
+      seen.set(barcode, lines.length);
+      lines.push({ barcode, qty, context });
+    }
+  }
+  return { docNo, lines };
+}
