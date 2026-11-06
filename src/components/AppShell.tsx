@@ -1,0 +1,141 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import {
+  LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck,
+} from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
+import type { SessionInfo } from "@/lib/types";
+
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean };
+
+const MODULES: { title: string; items: NavItem[] }[] = [
+  {
+    title: "หน้าหลัก",
+    items: [{ href: "/", label: "แดชบอร์ด", icon: LayoutDashboard }],
+  },
+  {
+    title: "HR — บุคคล",
+    items: [
+      { href: "/hr/checkin", label: "เช็คอิน / เช็คเอาท์", icon: MapPin },
+      { href: "/hr/attendance", label: "บันทึกเวลา", icon: Clock },
+      { href: "/hr/leave", label: "ลางาน", icon: CalendarDays },
+      { href: "/hr/ot", label: "ขอ OT", icon: BadgeCheck },
+      { href: "/hr/employees", label: "พนักงาน", icon: Users },
+      { href: "/hr/reports", label: "รายงาน", icon: FileBarChart2, admin: true },
+    ],
+  },
+  {
+    title: "ระบบ",
+    items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }],
+  },
+];
+
+export function AppShell({ session, children }: { session: SessionInfo; children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  const nav = (
+    <nav className="flex flex-col gap-6">
+      {MODULES.map((m) => {
+        const items = m.items.filter((i) => !i.admin || session.isAdmin);
+        if (!items.length) return null;
+        return (
+          <div key={m.title}>
+            <div className="px-3 mb-2 text-[11px] font-semibold tracking-[0.14em] text-lavender uppercase">{m.title}</div>
+            <ul className="space-y-0.5">
+              {items.map((i) => {
+                const active = i.href === "/" ? pathname === "/" : pathname.startsWith(i.href);
+                const Icon = i.icon;
+                return (
+                  <li key={i.href}>
+                    <Link
+                      href={i.href}
+                      onClick={() => setOpen(false)}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                        active ? "bg-white/15 text-white" : "text-lavender hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <Icon size={18} />
+                      {i.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  );
+
+  const userBox = (
+    <div className="mt-auto pt-4 border-t border-white/10">
+      <div className="flex items-center gap-3 px-2">
+        {session.authUser.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={session.authUser.avatar} alt="" className="h-9 w-9 rounded-full ring-2 ring-pink/60" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="h-9 w-9 rounded-full bg-pink text-purple font-bold grid place-items-center">
+            {(session.employee?.first_name ?? session.authUser.email)[0]}
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white truncate">
+            {session.employee ? `${session.employee.first_name}${session.employee.nickname ? ` (${session.employee.nickname})` : ""}` : session.appUser.display_name ?? session.authUser.email}
+          </div>
+          <div className="text-[11px] text-lavender truncate">
+            {session.isAdmin ? "ผู้ดูแลระบบ" : session.employee?.emp_code ?? "พนักงาน"}
+          </div>
+        </div>
+      </div>
+      <form action="/auth/signout" method="post" className="mt-3 px-2">
+        <button className="w-full flex items-center gap-2 text-xs text-lavender hover:text-white">
+          <LogOut size={14} /> ออกจากระบบ
+        </button>
+      </form>
+    </div>
+  );
+
+  return (
+    <div className="min-h-dvh flex">
+      {/* sidebar – desktop */}
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-purple text-white p-4">
+        <div className="px-2 py-3 mb-4">
+          <BrandLogo variant="white" className="h-11" />
+        </div>
+        {nav}
+        {userBox}
+      </aside>
+
+      {/* sidebar – mobile drawer */}
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-ink/50" onClick={() => setOpen(false)} />
+          <aside className="absolute left-0 top-0 h-full w-72 bg-purple text-white p-4 flex flex-col">
+            <div className="flex items-center justify-between px-2 py-3 mb-4">
+              <BrandLogo variant="white" className="h-10" />
+              <button onClick={() => setOpen(false)} aria-label="ปิดเมนู"><X size={20} /></button>
+            </div>
+            {nav}
+            {userBox}
+          </aside>
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="pkm-stripe h-1.5" />
+        <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-line">
+          <button onClick={() => setOpen(true)} aria-label="เปิดเมนู" className="text-purple"><Menu size={22} /></button>
+          <BrandLogo />
+        </header>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto">{children}</main>
+        <footer className="px-6 py-4 text-[11px] text-ink-soft">
+          PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful
+        </footer>
+      </div>
+    </div>
+  );
+}
