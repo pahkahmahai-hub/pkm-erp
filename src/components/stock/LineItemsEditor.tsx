@@ -20,12 +20,13 @@ export interface LineItem {
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">;
 
 export function LineItemsEditor({
-  products, items, onChange, mode,
+  products, items, onChange, mode, showCost = false,
 }: {
   products: ProductLite[];
   items: LineItem[];
   onChange: (items: LineItem[]) => void;
   mode: "receive" | "issue";
+  showCost?: boolean;
 }) {
   const [q, setQ] = useState("");
   const results = useMemo(() => {
@@ -88,7 +89,7 @@ export function LineItemsEditor({
                 <th>สินค้า</th>
                 <th className="w-24">จำนวน</th>
                 {mode === "receive" && <th className="w-40">สภาพ</th>}
-                {mode === "receive" && <th className="w-28">ต้นทุน/หน่วย</th>}
+                {mode === "receive" && showCost && <th className="w-28">ต้นทุน/หน่วย</th>}
                 <th>หมายเหตุ</th>
                 <th className="w-10"></th>
               </tr>
@@ -120,7 +121,7 @@ export function LineItemsEditor({
                         )}
                       </td>
                     )}
-                    {mode === "receive" && (
+                    {mode === "receive" && showCost && (
                       <td><input type="number" step="0.01" value={i.unit_cost ?? ""} onChange={(e) => update(i.key, { unit_cost: e.target.value })} className="input" placeholder="—" /></td>
                     )}
                     <td><input value={i.note ?? ""} onChange={(e) => update(i.key, { note: e.target.value })} className="input" /></td>

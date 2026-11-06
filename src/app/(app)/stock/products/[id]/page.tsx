@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
+import { canSeeCost } from "@/lib/access";
 import { Header } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
 import { ProductForm } from "../ProductForm";
@@ -13,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function ProductDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { id } = await params;
   const { saved, error } = await searchParams;
+  const session = await getSession();
   const supabase = await createClient();
   const [{ data: p }, { data: moves }, { data: cats }] = await Promise.all([
     supabase.from("products").select("*").eq("id", id).maybeSingle(),
@@ -51,7 +54,7 @@ export default async function ProductDetail({ params, searchParams }: { params: 
 
         <div className="space-y-6">
           <form action={saveProduct.bind(null, id)} className="card p-6 space-y-6">
-            <ProductForm p={product} depts={depts} subDepts={subs} />
+            <ProductForm p={product} depts={depts} subDepts={subs} showCost={canSeeCost(session)} />
             <div className="flex flex-wrap gap-3 items-center">
               <button className="btn-primary">บันทึก</button>
               <a href="/stock/products" className="btn-ghost">กลับ</a>

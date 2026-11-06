@@ -1,6 +1,6 @@
 import type { Product } from "@/lib/stock/types";
 
-export function ProductForm({ p, depts, subDepts }: { p?: Product | null; depts: string[]; subDepts: string[] }) {
+export function ProductForm({ p, depts, subDepts, showCost = false }: { p?: Product | null; depts: string[]; subDepts: string[]; showCost?: boolean }) {
   return (
     <div className="grid md:grid-cols-3 gap-4">
       <F label="รหัสสินค้า *"><input name="code" defaultValue={p?.code ?? ""} className="input font-mono" required /></F>
@@ -11,7 +11,7 @@ export function ProductForm({ p, depts, subDepts }: { p?: Product | null; depts:
       <F label="หมวดย่อย (Sub Dept)"><input name="sub_dept" list="subdepts" defaultValue={p?.sub_dept ?? ""} className="input" /><datalist id="subdepts">{subDepts.map((d) => <option key={d} value={d} />)}</datalist></F>
       <F label="สต็อกขั้นต่ำ (แจ้งเตือน)"><input name="min_alert" type="number" defaultValue={p?.min_alert ?? 0} className="input" /></F>
       <F label="ราคาขาย"><input name="price" type="number" step="0.01" defaultValue={p?.price ?? 0} className="input" /></F>
-      <F label="ต้นทุน (ถ้ามี)"><input name="cost" type="number" step="0.01" defaultValue={p?.cost ?? ""} className="input" /></F>
+      {showCost && <F label="ต้นทุน (ผู้ดูแลเห็นเท่านั้น)"><input name="cost" type="number" step="0.01" defaultValue={p?.cost ?? ""} className="input" /></F>}
       {!p && <F label="ยอดเริ่มต้น (ชิ้น)"><input name="opening_qty" type="number" defaultValue={0} className="input" /></F>}
       <div className="md:col-span-3"><F label="หมายเหตุ"><input name="notes" defaultValue={p?.notes ?? ""} className="input" /></F></div>
       {p && (

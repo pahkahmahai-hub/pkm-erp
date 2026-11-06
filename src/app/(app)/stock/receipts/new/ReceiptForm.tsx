@@ -6,7 +6,7 @@ import { ContactPicker } from "@/components/stock/ContactPicker";
 import { createReceipt } from "../../actions";
 import type { Product, Contact } from "@/lib/stock/types";
 
-export function ReceiptForm({ products, suppliers }: { products: Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">[]; suppliers: Pick<Contact, "id" | "name" | "code" | "tax_id">[] }) {
+export function ReceiptForm({ products, suppliers, showCost }: { products: Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">[]; suppliers: Pick<Contact, "id" | "name" | "code" | "tax_id">[]; showCost: boolean }) {
   const [items, setItems] = useState<LineItem[]>([]);
   const good = items.filter((i) => i.condition !== "defect").reduce((a, i) => a + i.qty, 0);
   const bad = items.filter((i) => i.condition === "defect").reduce((a, i) => a + i.qty, 0);
@@ -31,7 +31,7 @@ export function ReceiptForm({ products, suppliers }: { products: Pick<Product, "
 
       <div className="card p-6 space-y-4">
         <h2 className="font-display font-bold">รายการสินค้า</h2>
-        <LineItemsEditor products={products} items={items} onChange={setItems} mode="receive" />
+        <LineItemsEditor products={products} items={items} onChange={setItems} mode="receive" showCost={showCost} />
       </div>
 
       <div className="flex flex-wrap items-center gap-4">

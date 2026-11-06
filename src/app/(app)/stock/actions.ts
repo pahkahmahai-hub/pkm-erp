@@ -11,9 +11,9 @@ const num = (v: FormDataEntryValue | null) => { const s = nul(v); return s === n
 
 // ---------------- products ----------------
 export async function saveProduct(id: string | null, formData: FormData) {
-  await getSession();
+  const session = await getSession();
   const supabase = await createClient();
-  const row = {
+  const row: Record<string, unknown> = {
     code: String(formData.get("code")).trim().toUpperCase(),
     barcode: nul(formData.get("barcode")),
     name: String(formData.get("name")).trim(),
@@ -21,11 +21,11 @@ export async function saveProduct(id: string | null, formData: FormData) {
     sub_dept: nul(formData.get("sub_dept")),
     unit: nul(formData.get("unit")) ?? "ชิ้น",
     price: num(formData.get("price")) ?? 0,
-    cost: num(formData.get("cost")),
     min_alert: num(formData.get("min_alert")) ?? 0,
     notes: nul(formData.get("notes")),
     is_active: formData.get("is_active") !== "off",
   };
+  if (session.isAdmin) row.cost = num(formData.get("cost"));
   if (id) {
     const { error } = await supabase.from("products").update(row).eq("id", id);
     if (error) redirect(`/stock/products/${id}?error=${encodeURIComponent(error.message)}`);

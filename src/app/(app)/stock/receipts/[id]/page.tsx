@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
+import { canSeeCost } from "@/lib/access";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { setReceiptPaid } from "../../actions";
@@ -11,6 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function ReceiptDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
   const { id } = await params;
   const { saved } = await searchParams;
+  const session = await getSession();
+  const showCost = canSeeCost(session);
   const supabase = await createClient();
   const [{ data: r }, { data: items }] = await Promise.all([
     supabase.from("receipts").select("*, contacts(name), app_users(display_name)").eq("id", id).maybeSingle(),
@@ -37,7 +41,7 @@ export default async function ReceiptDetail({ params, searchParams }: { params: 
       {rc.note && <div className="card p-4 text-sm"><span className="text-ink-soft">หมายเหตุ:</span> {rc.note}</div>}
       <div className="card overflow-x-auto">
         <table className="tbl">
-          <thead><tr><th>รหัส</th><th>สินค้า</th><th className="text-right">จำนวน</th><th>สภาพ</th><th className="text-right">ต้นทุน/หน่วย</th><th>หมายเหตุ</th></tr></thead>
+          <thead><tr><th>รหัส</th><th>สินค้า</th><th className="text-right">จำนวน</th><th>สภาพ</th>{showCost && <th className="text-right">ต้นทุน/หน่วย</th>}<th>หมายเหตุ</th></tr></thead>
           <tbody>
             {((items ?? []) as ReceiptItem[]).map((i) => (
               <tr key={i.id}>
@@ -45,7 +49,7 @@ export default async function ReceiptDetail({ params, searchParams }: { params: 
                 <td>{i.products?.name}</td>
                 <td className="text-right font-semibold">{i.qty}</td>
                 <td>{i.condition === "good" ? <span className="badge-ok">ดี → เข้าคลัง</span> : <span className="badge-rejected">เสีย · {i.defect_action ? DEFECT_TH[i.defect_action] : ""}</span>}</td>
-                <td className="text-right">{i.unit_cost != null ? Number(i.unit_cost).toLocaleString() : "—"}</td>
+                {showCost && <td className="text-right">{i.unit_cost != null ? Number(i.unit_cost).toLocaleString() : "—"}</td>}
                 <td className="text-xs text-ink-soft">{i.note}</td>
               </tr>
             ))}
