@@ -13,7 +13,7 @@ export default async function NewExpense({ searchParams }: { searchParams: Promi
   const data = await expenseEditorData(supabase);
   return (
     <div className="space-y-6">
-      <Header title="บันทึกบิลค่าใช้จ่าย" sub="ถ่ายรูปบิล → AI อ่านให้ → ตรวจ → ส่งขออนุมัติ" />
+      <Header title="บันทึกบิลค่าใช้จ่าย" sub="แนบรูปบิล → กรอกรายการ → ส่งขออนุมัติ" />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       <form action={createExpense} className="space-y-6">
         <ExpenseForm {...data} aiEnabled={aiEnabled()} />
