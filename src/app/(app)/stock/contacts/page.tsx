@@ -44,13 +44,18 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <div><label className="label">อีเมล</label><input name="email" defaultValue={e?.email ?? ""} className="input" /></div>
         <div><label className="label">โทรสำนักงาน</label><input name="office_phone" defaultValue={e?.office_phone ?? ""} className="input" /></div>
         <div><label className="label">เครดิต (วัน)</label><input name="credit_days" type="number" defaultValue={e?.credit_days ?? 0} className="input" /></div>
+        {k === "customer" && <>
+          <div><label className="label">ส่วนลด / GP ประจำ (%)</label><input name="default_discount_pct" type="number" step="0.01" min={0} max={100} defaultValue={(e as unknown as { default_discount_pct?: number })?.default_discount_pct ?? 0} className="input" placeholder="เช่น 35" /></div>
+          <div><label className="label">ช่องทางประจำ</label><select name="default_channel" defaultValue={(e as unknown as { default_channel?: string })?.default_channel ?? ""} className="input"><option value="">—</option><option value="store">ห้างสรรพสินค้า</option><option value="corporate">Corporate / B2B</option><option value="online">ออนไลน์</option><option value="export">ต่างประเทศ</option><option value="intercompany">ระหว่างบริษัท</option></select></div>
+          <div><label className="label">VAT ประจำ</label><select name="default_vat_mode" defaultValue={(e as unknown as { default_vat_mode?: string })?.default_vat_mode ?? ""} className="input"><option value="">ตามค่าเริ่มต้น</option><option value="inclusive">ราคารวม VAT</option><option value="exclusive">ราคาก่อน VAT</option></select></div>
+        </>}
         <div className="md:col-span-2"><label className="label">หมายเหตุ</label><input name="note" defaultValue={e?.note ?? ""} className="input" /></div>
         <div className="md:col-span-4 flex gap-2"><button className="btn-primary">{e ? "บันทึกการแก้ไข" : "เพิ่ม"}</button>{e && <Link href={`/stock/contacts?kind=${k}`} className="btn-ghost">ยกเลิก</Link>}</div>
       </form>
 
       <div className="card overflow-x-auto">
         <table className="tbl min-w-[760px]">
-          <thead><tr><th>รหัส</th><th>ชื่อ</th><th>เลขภาษี</th><th>ผู้ติดต่อ</th><th>โทร</th><th>เครดิต</th><th></th></tr></thead>
+          <thead><tr><th>รหัส</th><th>ชื่อ</th><th>เลขภาษี</th><th>ผู้ติดต่อ</th><th>โทร</th><th>เครดิต</th>{k === "customer" && <th>GP%</th>}<th></th></tr></thead>
           <tbody>
             {rows.map((c) => (
               <tr key={c.id}>
@@ -60,13 +65,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 <td className="text-xs">{c.contact_name ?? "—"}</td>
                 <td className="text-xs">{c.mobile ?? c.office_phone ?? "—"}</td>
                 <td className="text-xs">{c.credit_days ? `${c.credit_days} วัน` : "—"}</td>
+                {k === "customer" && <td className="text-xs font-semibold">{Number((c as unknown as { default_discount_pct?: number }).default_discount_pct ?? 0) > 0 ? `${(c as unknown as { default_discount_pct?: number }).default_discount_pct}%` : "—"}</td>}
                 <td className="whitespace-nowrap text-xs">
                   <Link href={`/stock/contacts?kind=${k}&edit=${c.id}`} className="text-purple mr-3">แก้ไข</Link>
                   {session.isAdmin && <form action={deleteContact.bind(null, c.id)} className="inline"><button className="text-red">ลบ</button></form>}
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan={7} className="text-center text-ink-soft py-8">ไม่พบรายชื่อ</td></tr>}
+            {!rows.length && <tr><td colSpan={8} className="text-center text-ink-soft py-8">ไม่พบรายชื่อ</td></tr>}
           </tbody>
         </table>
       </div>

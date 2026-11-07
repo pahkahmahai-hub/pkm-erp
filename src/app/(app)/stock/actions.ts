@@ -234,6 +234,9 @@ export async function saveContact(id: string | null, formData: FormData) {
     address: nul(formData.get("address")), postcode: nul(formData.get("postcode")), contact_name: nul(formData.get("contact_name")),
     email: nul(formData.get("email")), mobile: nul(formData.get("mobile")), office_phone: nul(formData.get("office_phone")),
     credit_days: num(formData.get("credit_days")) ?? 0, note: nul(formData.get("note")),
+    default_discount_pct: num(formData.get("default_discount_pct")) ?? 0,
+    default_channel: nul(formData.get("default_channel")),
+    default_vat_mode: nul(formData.get("default_vat_mode")),
   };
   if (id) await supabase.from("contacts").update(row).eq("id", id);
   else await supabase.from("contacts").insert(row);

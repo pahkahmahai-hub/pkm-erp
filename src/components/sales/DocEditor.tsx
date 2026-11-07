@@ -7,7 +7,7 @@ import { DOC_META, VAT_TH, CHANNEL_TH } from "@/lib/sales/types";
 import type { Contact, Product } from "@/lib/stock/types";
 
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "price" | "unit" | "stock_qty">;
-type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "credit_days">;
+type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "credit_days"> & { default_discount_pct?: number | null; default_vat_mode?: VatMode | null; default_channel?: SalesChannel | null };
 interface Line { key: string; product_id: string | null; description: string; barcode: string; qty: number; unit: string; unit_price: number; discount_pct: number; note: string }
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -36,9 +36,16 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
   const custResults = useMemo(() => { const s = cq.trim().toLowerCase(); return s ? customers.filter((c) => c.name.toLowerCase().includes(s) || (c.code ?? "").toLowerCase().includes(s) || (c.tax_id ?? "").includes(s)).slice(0, 8) : []; }, [cq, customers]);
   const prodResults = useMemo(() => { const s = pq.trim().toLowerCase(); return s ? products.filter((p) => p.code.toLowerCase().includes(s) || p.name.toLowerCase().includes(s) || (p.barcode ?? "").includes(s)).slice(0, 8) : []; }, [pq, products]);
 
+  const [channel, setChannel] = useState<SalesChannel>(doc?.channel ?? "corporate");
+  const [custHint, setCustHint] = useState<string | null>(null);
   function pickCustomer(c: ContactLite) {
     setCust({ id: c.id, name: c.name, address: [c.address, c.address2, c.address3, c.postcode].filter(Boolean).join(" "), tax_id: c.tax_id ?? "", branch: c.branch_code ?? "" });
     setCq("");
+    const hints: string[] = [];
+    if (c.default_discount_pct && Number(c.default_discount_pct) > 0) { setDiscPct(Number(c.default_discount_pct)); setDiscAmt(0); hints.push(`ส่วนลด/GP ${c.default_discount_pct}%`); }
+    if (c.default_vat_mode && company?.vat_registered) { setVatMode(c.default_vat_mode); hints.push(VAT_TH[c.default_vat_mode]); }
+    if (c.default_channel) { setChannel(c.default_channel); hints.push(CHANNEL_TH[c.default_channel]); }
+    setCustHint(hints.length ? `เติมให้ตามข้อมูลลูกค้า: ${hints.join(" · ")} (แก้ได้)` : null);
   }
   function addProduct(p: ProductLite) {
     setLines((l) => [...l, { key: crypto.randomUUID(), product_id: p.id, description: `${p.name} ${p.barcode ?? ""}`.trim(), barcode: p.barcode ?? "", qty: 1, unit: p.unit, unit_price: Number(p.price), discount_pct: 0, note: "" }]);
@@ -78,7 +85,7 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
         {docType === "quotation" ? <div><label className="label">ยืนราคาถึง</label><input name="valid_until" type="date" defaultValue={doc?.valid_until ?? ""} className="input" /></div>
           : <div><label className="label">ครบกำหนด</label><input name="due_date" type="date" defaultValue={doc?.due_date ?? ""} className="input" /></div>}
         <div><label className="label">ช่องทาง</label>
-          <select name="channel" defaultValue={doc?.channel ?? "corporate"} className="input">{(Object.keys(CHANNEL_TH) as SalesChannel[]).map((k) => <option key={k} value={k}>{CHANNEL_TH[k]}</option>)}</select></div>
+          <select name="channel" value={channel} onChange={(e) => setChannel(e.target.value as SalesChannel)} className="input">{(Object.keys(CHANNEL_TH) as SalesChannel[]).map((k) => <option key={k} value={k}>{CHANNEL_TH[k]}</option>)}</select></div>
         <div><label className="label">PO ลูกค้า / ห้าง</label><input name="po_no" defaultValue={doc?.po_no ?? ""} className="input" /></div>
         <div><label className="label">เอกสารอ้างอิง</label><input name="ref_doc_no" defaultValue={doc?.ref_doc_no ?? prefill?.ref_doc_no ?? ""} className="input font-mono" placeholder="QT2026110009" /></div>
         <div><label className="label">ผู้ขาย</label><input name="seller_name" defaultValue={doc?.seller_name ?? ""} className="input" /></div>
@@ -100,7 +107,8 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
           <div><label className="label">สาขา</label><input name="customer_branch" value={cust.branch} onChange={(e) => setCust({ ...cust, branch: e.target.value })} className="input" placeholder="สำนักงานใหญ่ / 00002" /></div>
           <div className="md:col-span-4"><label className="label">ที่อยู่</label><input name="customer_address" value={cust.address} onChange={(e) => setCust({ ...cust, address: e.target.value })} className="input" /></div>
         </div>
-        {cust.id && <button type="button" onClick={() => setCust({ id: null, name: "", address: "", tax_id: "", branch: "" })} className="text-xs text-purple">เปลี่ยนลูกค้า</button>}
+        {custHint && <div className="text-xs text-[#8a6a00] bg-yellow/15 rounded-lg px-3 py-1.5">{custHint}</div>}
+        {cust.id && <button type="button" onClick={() => { setCust({ id: null, name: "", address: "", tax_id: "", branch: "" }); setCustHint(null); }} className="text-xs text-purple">เปลี่ยนลูกค้า</button>}
       </div>
 
       <div className="card p-6 space-y-3">
@@ -143,7 +151,7 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
             {company && !company.vat_registered && <input type="hidden" name="vat_mode" value="none" />}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">ส่วนลดท้ายบิล %</label><input name="discount_pct" type="number" step="0.01" value={discPct} onChange={(e) => setDiscPct(Number(e.target.value))} className="input" /></div>
+            <div><label className="label">ส่วนลด / GP ท้ายบิล %</label><input name="discount_pct" type="number" step="0.01" min={0} max={100} value={discPct} onChange={(e) => setDiscPct(Number(e.target.value))} className="input" placeholder="เช่น 30, 35.5" /></div>
             <div><label className="label">หรือ ส่วนลด (บาท)</label><input name="discount_amount" type="number" step="0.01" value={discAmt} onChange={(e) => setDiscAmt(Number(e.target.value))} className="input" disabled={discPct > 0} /></div>
             {(docType === "billing" || docType === "invoice") && <>
               <div><label className="label">หักเงินมัดจำ (บาท)</label><input name="deposit_amount" type="number" step="0.01" value={deposit} onChange={(e) => setDeposit(Number(e.target.value))} className="input" /></div>
