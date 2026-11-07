@@ -2,7 +2,8 @@ import { requireAdmin } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { saveGeneral, saveLeaveTypes, addHoliday, deleteHoliday, addUser, setUserRole, toggleUser } from "./actions";
+import { saveGeneral, saveLeaveTypes, addHoliday, deleteHoliday, addUser, setUserRole, toggleUser, saveNetworks } from "./actions";
+import { clientIp, type AllowedNetwork } from "@/lib/network";
 import type { AppUser, LeaveType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const grace = Number(S.late_grace_minutes ?? 0);
   const workdays = (S.workdays as number[]) ?? [1, 2, 3, 4, 5];
   const company = S.company as { name_th: string };
+  const nets = ((S.allowed_networks as AllowedNetwork[] | undefined) ?? []);
+  const myIp = await clientIp();
 
   return (
     <div className="space-y-8">
@@ -55,6 +58,27 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
         </div>
         <button className="btn-primary">บันทึก</button>
+      </form>
+
+      <form action={saveNetworks} id="network" className="card p-6 space-y-4">
+        <div>
+          <h2 className="font-display font-bold">เครือข่ายที่พนักงานใช้ระบบได้ (Wi-Fi บริษัท)</h2>
+          <p className="text-xs text-ink-soft mt-1">พนักงานเข้าระบบได้เฉพาะเมื่อ Public IP ตรงกับรายการนี้ · ผู้บริหาร (admin) ใช้ได้ทุกเครือข่ายและเน็ตมือถือ · ถ้ารายการว่าง = ไม่จำกัด</p>
+        </div>
+        <div className="rounded-xl bg-cream px-4 py-3 text-sm flex flex-wrap items-center gap-3">
+          <span>IP ของเครื่องคุณตอนนี้: <b className="font-mono">{myIp || "ไม่ทราบ"}</b></span>
+          <span className="text-xs text-ink-soft">— ถ้าตอนนี้ต่อ Wi-Fi บริษัทอยู่ ให้คัดลอกเลขนี้ใส่ช่องด้านล่าง (ทำทีละ Wi-Fi ทั้ง 2 ตัว)</span>
+        </div>
+        <div className="space-y-2">
+          {[...nets, { label: "", ip: "" }, ...(nets.length === 0 ? [{ label: "", ip: "" }] : [])].map((n, i) => (
+            <div key={i} className="grid grid-cols-[1fr_220px] gap-2">
+              <input name="net_label" defaultValue={n.label} className="input" placeholder={i === 0 ? "ชื่อ เช่น Wi-Fi โชว์รูม ชั้น 1" : "ชื่อเครือข่ายใหม่ (เว้นว่างถ้าไม่ใช้)"} />
+              <input name="net_ip" defaultValue={n.ip} className="input font-mono" placeholder={i === 0 && !n.ip ? myIp || "เช่น 171.97.12.34" : "IP หรือ 171.97.12.0/24"} />
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3"><button className="btn-primary">บันทึกเครือข่าย</button><span className="text-xs text-ink-soft">ลบ: ล้างช่อง IP แล้วบันทึก · รองรับ IP เดี่ยว, ขึ้นต้น (171.97.12.) หรือ CIDR (/24)</span></div>
+        <p className="text-[11px] text-ink-soft">หมายเหตุ: ถ้าอินเทอร์เน็ตบริษัทเป็น IP แบบเปลี่ยนได้ (Dynamic) เลขอาจเปลี่ยนเมื่อเราเตอร์รีสตาร์ท — พนักงานจะเห็นหน้า “ใช้ได้เฉพาะ Wi-Fi บริษัท” ให้ผู้บริหารเข้าหน้านี้แล้วอัปเดตเลขใหม่ (หรือขอ Fixed IP จากผู้ให้บริการเน็ต)</p>
       </form>
 
       <div className="grid lg:grid-cols-2 gap-6">

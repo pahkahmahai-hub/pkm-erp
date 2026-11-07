@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
 import type { SalesDoc, SalesDocItem } from "@/lib/sales/types";
 import { DocSheet } from "@/components/sales/DocSheet";
 
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PrintDoc({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await getSession();
   const supabase = await createClient();
   const [{ data: doc }, { data: items }] = await Promise.all([
     supabase.from("sales_docs").select("*, companies(*)").eq("id", id).maybeSingle(),

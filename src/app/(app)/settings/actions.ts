@@ -70,3 +70,15 @@ export async function toggleUser(id: string, active: boolean) {
   await supabase.from("app_users").update({ is_active: active }).eq("id", id);
   revalidatePath("/settings");
 }
+
+// ---------- allowed networks (staff may use the ERP only from these public IPs) ----------
+export async function saveNetworks(formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const labels = formData.getAll("net_label").map(String); const ips = formData.getAll("net_ip").map(String);
+  const list = labels.map((label, i) => ({ label: label.trim(), ip: (ips[i] ?? "").trim() })).filter((n) => n.ip);
+  const { error } = await supabase.from("settings").upsert({ key: "allowed_networks", value: list, description: "เครือข่าย (Public IP) ที่พนักงานใช้ระบบได้ — ว่าง = ไม่จำกัด" });
+  if (error) redirect(`/settings?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/settings");
+  redirect("/settings?saved=1#network");
+}

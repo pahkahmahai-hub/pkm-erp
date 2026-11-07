@@ -2,6 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { AppUser, Employee, SessionInfo } from "@/lib/types";
+import { clientIp, ipAllowed, type AllowedNetwork } from "@/lib/network";
 
 /** Loads the signed-in Google user + the allowlisted app_user row. Redirects if not allowed. */
 export const getSession = cache(async (): Promise<SessionInfo> => {
@@ -18,6 +19,16 @@ export const getSession = cache(async (): Promise<SessionInfo> => {
     .maybeSingle();
 
   if (!appUser) redirect("/auth/denied");
+
+  // Staff may use the system only from the company's networks (admins: anywhere).
+  if (appUser.role !== "admin") {
+    const { data: net } = await supabase.from("settings").select("value").eq("key", "allowed_networks").maybeSingle();
+    const list = (net?.value as AllowedNetwork[] | null) ?? [];
+    if (list.length > 0) {
+      const ip = await clientIp();
+      if (!ipAllowed(ip, list)) redirect(`/auth/network?ip=${encodeURIComponent(ip)}`);
+    }
+  }
 
   let employee: Employee | null = null;
   if (appUser.employee_id) {
