@@ -63,7 +63,7 @@ export async function uploadImage(table: "products" | "materials", id: string, f
   await getSession();
   const file = formData.get("image") as File | null;
   if (!file || file.size === 0) return;
-  if (file.size > 5 * 1024 * 1024) throw new Error("ไฟล์ใหญ่เกิน 5 MB");
+  if (file.size > 8 * 1024 * 1024) throw new Error("ไฟล์ใหญ่เกิน 8 MB");
   const supabase = await createClient();
   const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
   const path = `${table}/${id}-${Date.now()}.${ext}`;

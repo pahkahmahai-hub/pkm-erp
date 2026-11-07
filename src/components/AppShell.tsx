@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
-  Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert,
+  Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -50,6 +50,17 @@ const NAV: Record<string, NavGroup[]> = {
     },
   ],
 };
+NAV.work = [
+  {
+    title: "งาน",
+    items: [
+      { href: "/work", label: "ภาพรวมงาน", icon: ListChecks },
+      { href: "/work/tasks/new", label: "สั่งงาน", icon: Plus },
+      { href: "/work/notifications", label: "แจ้งเตือน", icon: Bell },
+      { href: "/work/routines", label: "งานประจำ", icon: Repeat },
+    ],
+  },
+];
 const SYSTEM_NAV: NavGroup = { title: "ระบบ", items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }] };
 
 export function AppShell({ session, children }: { session: SessionInfo; children: React.ReactNode }) {
@@ -72,7 +83,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <div className="px-3 mb-2 text-[11px] font-semibold tracking-[0.14em] text-lavender uppercase">{m.title}</div>
             <ul className="space-y-0.5">
               {items.map((i) => {
-                const isRoot = i.href === `/${seg}`;
+                const isRoot = i.href === `/${seg}` || i.href === "/work/tasks/new";
                 const active = !i.external && (isRoot ? pathname === i.href : pathname.startsWith(i.href));
                 const Icon = i.icon;
                 return (

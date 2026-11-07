@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Camera, Upload } from "lucide-react";
+import { compressImage } from "@/lib/image";
 
 /** Clear "choose image" button + preview; uploads automatically via the given server action. */
 export function ImageUploader({ action, current }: { action: (fd: FormData) => Promise<void>; current: string | null }) {
@@ -11,15 +12,18 @@ export function ImageUploader({ action, current }: { action: (fd: FormData) => P
   const [err, setErr] = useState<string | null>(null);
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 5 * 1024 * 1024) { setErr("ไฟล์ใหญ่เกิน 5 MB"); return; }
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    if (raw.size > 25 * 1024 * 1024) { setErr("ไฟล์ใหญ่เกิน 25 MB"); return; }
     setErr(null);
-    setPreview(URL.createObjectURL(f));
-    const fd = new FormData();
-    fd.set("image", f);
+    setPreview(URL.createObjectURL(raw));
     start(async () => {
-      try { await action(fd); } catch (e) { setErr((e as Error).message); }
+      try {
+        const f = await compressImage(raw);
+        const fd = new FormData();
+        fd.set("image", f);
+        await action(fd);
+      } catch (e) { setErr((e as Error).message); }
     });
   }
 
@@ -31,7 +35,7 @@ export function ImageUploader({ action, current }: { action: (fd: FormData) => P
       <button type="button" onClick={() => ref.current?.click()} disabled={pending} className="btn-outline w-full">
         <Upload size={16} /> {pending ? "กำลังอัปโหลด…" : src ? "เปลี่ยนรูป" : "เลือกรูปภาพ"}
       </button>
-      <p className="text-[11px] text-ink-soft text-center">jpg / png ไม่เกิน 5 MB — ถ่ายจากมือถือได้</p>
+      <p className="text-[11px] text-ink-soft text-center">ถ่ายจากมือถือได้ — ระบบย่อรูปให้อัตโนมัติ</p>
       {err && <p className="text-xs text-red">{err}</p>}
     </div>
   );
