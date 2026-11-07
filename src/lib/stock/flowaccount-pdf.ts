@@ -22,7 +22,7 @@ export interface ParsedDoc {
 
 const THAI_MARKS = /[ัิ-ฺ็-๎]/g; // combining vowels/tone marks that pdf-parse emits on their own lines
 
-function clean(text: string) {
+export function cleanPdfText(text: string) {
   // pdf-parse puts Thai combining marks on their own line: "ชิ\n้\nน" → glue them back: "ชิ้น"
   const src = text.replace(/\r/g, "").split("\n");
   const out: string[] = [];
@@ -43,7 +43,7 @@ function clean(text: string) {
 }
 
 export function parseFlowAccountPdfText(rawText: string): ParsedDoc {
-  const text = clean(rawText);
+  const text = cleanPdfText(rawText);
   const flat = text.replace(/\n/g, " ").replace(/\s+/g, " ");
 
   const docNo = flat.match(/เลขที่\s*([A-Z]{2,4}\d{6,})/)?.[1] ?? flat.match(/\b((?:INV|DN|BL|RE|QT|IV|DO)\d{6,})\b/)?.[1] ?? null;
@@ -113,7 +113,7 @@ export function parseFlowAccountPdfText(rawText: string): ParsedDoc {
  */
 export interface GenericLine { barcode: string; qty: number; context: string }
 export function parseGenericBarcodes(rawText: string): { docNo: string | null; lines: GenericLine[] } {
-  const textNl = clean(rawText);
+  const textNl = cleanPdfText(rawText);
   const text = textNl.replace(/\n/g, " ");
   const docNo = text.match(/\b([A-Z]{1,4}\d{2}-\d{4,6})\b/)?.[1] ?? text.match(/\b(PO\.?\s?\d{6,})\b/i)?.[1] ?? text.match(/\b((?:INV|DN|DO|SO|PO)\d{6,})\b/)?.[1] ?? null;
 

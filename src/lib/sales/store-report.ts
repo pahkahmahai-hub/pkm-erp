@@ -9,7 +9,7 @@
  */
 import * as XLSX from "xlsx";
 
-export type ReportFormat = "central_vendor" | "verticaltec_product";
+export type ReportFormat = "central_vendor" | "verticaltec_product" | "pdf_generic";
 
 export interface StoreLine {
   barcode: string | null;
@@ -169,4 +169,70 @@ export function parseStoreReport(buf: ArrayBuffer): ParsedReport {
   throw new Error("ยังไม่รู้จักรูปแบบไฟล์นี้ — รองรับ Central SalesByVendor และ VerticalTec Product Report (ส่งตัวอย่างไฟล์ให้เพิ่มได้)");
 }
 
-export const FORMAT_HINT = "รองรับ: Central / สารพัดไทย (SalesByVendor .xlsx) · Hug Craft / ICONCRAFT (VerticalTec Product Report .xlsx)";
+export const FORMAT_HINT = "รองรับ: Central / สารพัดไทย (SalesByVendor .xlsx) · Hug Craft / ICONCRAFT (VerticalTec Product Report .xlsx) · PDF รายงานห้างใดก็ได้ที่มีบาร์โค้ด (เลือกคอลัมน์เอง)";
+
+
+// ---------------------------------------------------------------------
+// PDF reports (any store): every text line that carries a 13-digit barcode becomes a row;
+// the user picks which numeric column is qty and which is the net amount.
+// ---------------------------------------------------------------------
+export interface PdfRow { barcode: string; text: string; numbers: number[]; raw: string }
+export interface PdfParsed { rows: PdfRow[]; dates: string[]; headerLines: string[]; maxNumbers: number }
+
+const UNIT_WORDS = "ชิ้น|แพค|แพ็ค|ผืน|ตัว|ใบ|อัน|ชุด|กล่อง|คู่|เส้น|ห่อ|EA|PCS|PC|SET|PACK";
+/** Split glued columns pdf-parse produces ("8852468228630200ชิ้น98.0019,600.00") into spaced tokens. */
+function unglue(line: string): string {
+  return line
+    .replace(new RegExp(`(\\d)(${UNIT_WORDS})`, "gi"), "$1 $2 ")          // 200ชิ้น98 → 200 ชิ้น 98
+    .replace(/(\.\d{2})(?=\d)/g, "$1 ")                                    // 98.0019,600.00 → 98.00 19,600.00
+    .replace(/(\d{13})(?=\d)/g, "$1 ")                                      // barcode glued to qty
+    .replace(/(\d{13})(?=[A-Za-zก-๙])/g, "$1 ").replace(/([A-Za-zก-๙])(?=\d{13})/g, "$1 ");
+}
+const numRe = /(?<![\d.])-?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?![\d.])|(?<![\d.,])-?\d+(?:\.\d+)?(?![\d.,])/g;
+function numbersOf(text: string): number[] {
+  return [...text.matchAll(numRe)].map((x) => x[0]).filter((t) => t.replace(/[^\d]/g, "").length <= 9).map((t) => Number(t.replace(/,/g, ""))).filter((n) => Number.isFinite(n));
+}
+
+export function extractPdfRows(cleanText: string): PdfParsed {
+  const lines = cleanText.split("\n").map(unglue);
+  const rows: PdfRow[] = [];
+  const dates = new Set<string>();
+  const dateRe = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g;
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    let m: RegExpExecArray | null;
+    while ((m = dateRe.exec(raw))) { let y = Number(m[3]); if (y < 100) y += y > 50 ? 2500 : 2000; if (y > 2400) y -= 543; dates.add(`${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`); }
+    const bc = raw.match(/(?<!\d)(\d{13})(?!\d)/);
+    if (!bc) continue;
+    if (/ผู้เสียภาษี|tax\s*id|เลขประจำตัว/i.test(raw)) continue;       // tax ids are 13 digits too
+    const rest = raw.replace(bc[1], " ");
+    let nums = numbersOf(rest.replace(/^\s*\d{1,3}(?=\s|[A-Za-zก-๙])/, " ")); // drop a leading line number like "1PAHKAHMAH"
+    let used = raw;
+    // numbers may sit on the following line(s): "PAHKAHMAH … 8852468451403" / "100 ชิ้น 189.00 18,900.00"
+    for (let k = 1; k <= 2 && nums.length < 2 && i + k < lines.length; k++) {
+      const nx = lines[i + k];
+      if (/(?<!\d)\d{13}(?!\d)/.test(nx)) break;
+      const letters = nx.replace(new RegExp(UNIT_WORDS, "gi"), "").replace(/[\d\s.,%-]/g, "");
+      if (letters.length > 3) break;
+      nums = [...nums, ...numbersOf(nx)]; used += " " + nx; i += 1;
+    }
+    const text = rest.replace(/^\s*\d{1,3}(?=[A-Za-zก-๙])/, "").replace(/-?\d[\d,]*(?:\.\d+)?/g, " ").replace(new RegExp(`\\b(${UNIT_WORDS})\\b`, "gi"), " ").replace(/\s+/g, " ").trim();
+    rows.push({ barcode: bc[1], text, numbers: nums, raw: used });
+  }
+  // documents printed as ต้นฉบับ + สำเนา repeat the whole item list — keep one copy
+  const half = rows.length / 2;
+  if (rows.length >= 2 && Number.isInteger(half) && rows.slice(0, half).every((r, i) => r.raw === rows[half + i].raw)) rows.splice(half);
+  return { rows, dates: [...dates].sort(), headerLines: lines.slice(0, 8), maxNumbers: rows.reduce((a, r) => Math.max(a, r.numbers.length), 0) };
+}
+
+/** Build a single StoreBlock from PDF rows with the chosen columns (index from the end when negative). */
+export function blockFromPdfRows(p: PdfParsed, qtyCol: number, netCol: number, grossCol: number | null, storeName: string): ParsedReport {
+  const pick = (r: PdfRow, col: number) => (col < 0 ? r.numbers[r.numbers.length + col] : r.numbers[col]) ?? 0;
+  const block: StoreBlock = { key: storeName || "pdf", storeCode: null, storeName: storeName || "รายงานจาก PDF", periodFrom: p.dates[0] ?? "", periodTo: p.dates[p.dates.length - 1] ?? "", gpPct: null, rows: 0, lines: [], gross: 0, net: 0, vendor: null };
+  for (const r of p.rows) {
+    const qty = pick(r, qtyCol); const net = pick(r, netCol); const gross = grossCol == null ? net : pick(r, grossCol);
+    if (!qty) continue;
+    addLine(block, r.barcode, () => ({ barcode: r.barcode, code: null, description: r.text, qty: 0, gross: 0, net: 0, vendor: null }), qty, gross, net);
+  }
+  return { format: "pdf_generic", formatLabel: "PDF รายงานห้าง (จับบาร์โค้ด + เลือกคอลัมน์)", blocks: finish(new Map([[block.key, block]])), warnings: p.rows.length ? [] : ["ไม่พบบรรทัดที่มีบาร์โค้ด 13 หลักใน PDF (อาจเป็นภาพสแกน)"] };
+}

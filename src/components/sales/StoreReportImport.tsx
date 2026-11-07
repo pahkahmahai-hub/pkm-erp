@@ -4,8 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { Upload, Search, CheckCircle2, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import type { Company, VatMode, SalesChannel } from "@/lib/sales/types";
 import type { Contact } from "@/lib/stock/types";
-import { parseStoreReport, FORMAT_HINT, type ParsedReport, type StoreBlock } from "@/lib/sales/store-report";
-import { createStoreReportDocs, type StoreDocInput } from "@/app/(app)/sales/actions";
+import { parseStoreReport, blockFromPdfRows, FORMAT_HINT, type ParsedReport, type StoreBlock, type PdfParsed } from "@/lib/sales/store-report";
+import { createStoreReportDocs, parseStoreReportPdf, type StoreDocInput } from "@/app/(app)/sales/actions";
 
 type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "credit_days"> & { default_discount_pct?: number | null; default_vat_mode?: VatMode | null; default_channel?: SalesChannel | null };
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,21 +23,44 @@ export function StoreReportImport({ companies, customers }: { companies: Company
   const [states, setStates] = useState<Record<string, BlockState>>({});
   const [result, setResult] = useState<{ ok: { key: string; doc_no: string; id: string; grand: number }[]; errors: { key: string; message: string }[] } | null>(null);
   const [pending, start] = useTransition();
+  const [pdf, setPdf] = useState<PdfParsed | null>(null);
+  const [pdfMap, setPdfMap] = useState<{ qty: number; net: number; gross: number | null; store: string }>({ qty: 0, net: -1, gross: null, store: "" });
+  const [parsing, setParsing] = useState(false);
+
+  function applyReport(r: ParsedReport, name: string) {
+    setReport(r); setFileName(name);
+    const st: Record<string, BlockState> = {};
+    for (const b of r.blocks) {
+      const guess = customers.find((c) => b.storeCode && (c.code ?? "").toUpperCase() === b.storeCode.toUpperCase())
+        ?? customers.find((c) => c.name.toLowerCase().includes(b.storeName.toLowerCase().split(" ").filter((w) => w.length > 3)[0] ?? "§§"));
+      st[b.key] = { contact: guess ?? null, gpPct: b.gpPct ?? Number(guess?.default_discount_pct ?? 0), docDate: lastDay(b.periodTo || new Date().toISOString().slice(0, 10)), poNo: "", skip: false, q: "" };
+    }
+    setStates(st);
+  }
+  function applyPdf(p: PdfParsed, map: typeof pdfMap, name: string) {
+    applyReport(blockFromPdfRows(p, map.qty, map.net, map.gross, map.store), name);
+  }
 
   async function onFile(f: File | undefined) {
     if (!f) return;
-    setErr(null); setResult(null);
+    setErr(null); setResult(null); setPdf(null);
+    if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+      setParsing(true);
+      const fd = new FormData(); fd.set("pdf", f);
+      const r = await parseStoreReportPdf(fd);
+      setParsing(false);
+      if (r.error || !r.parsed) { setReport(null); setErr(r.error ?? "อ่านไม่ได้"); return; }
+      // default guess: first integer-looking column = qty, last number = net
+      const first = r.parsed.rows[0];
+      const qtyIdx = Math.max(0, first.numbers.findIndex((n) => Number.isInteger(n) && n > 0 && n < 10000));
+      const guessStore = r.parsed.headerLines.find((l) => /ห้าง|บริษัท|สาขา|store|shop|branch/i.test(l)) ?? "";
+      const map = { qty: qtyIdx, net: -1, gross: null, store: guessStore.slice(0, 80) };
+      setPdf(r.parsed); setPdfMap(map); applyPdf(r.parsed, map, f.name);
+      return;
+    }
     try {
       const r = parseStoreReport(await f.arrayBuffer());
-      setReport(r); setFileName(f.name);
-      const st: Record<string, BlockState> = {};
-      for (const b of r.blocks) {
-        // guess the contact: store code in contact.code, or store name words
-        const guess = customers.find((c) => b.storeCode && (c.code ?? "").toUpperCase() === b.storeCode.toUpperCase())
-          ?? customers.find((c) => c.name.toLowerCase().includes(b.storeName.toLowerCase().split(" ").filter((w) => w.length > 3)[0] ?? "§§"));
-        st[b.key] = { contact: guess ?? null, gpPct: b.gpPct ?? Number(guess?.default_discount_pct ?? 0), docDate: lastDay(b.periodTo), poNo: "", skip: false, q: "" };
-      }
-      setStates(st);
+      applyReport(r, f.name); return;
     } catch (e) { setReport(null); setErr(e instanceof Error ? e.message : String(e)); }
   }
   const upd = (key: string, patch: Partial<BlockState>) => setStates((s) => ({ ...s, [key]: { ...s[key], ...patch } }));
@@ -66,9 +89,9 @@ export function StoreReportImport({ companies, customers }: { companies: Company
             <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="input">{companies.map((c) => <option key={c.id} value={c.id}>{c.name_th}</option>)}</select></div>
           <div><label className="label">ประเภทเอกสาร</label>
             <select value={docType} onChange={(e) => setDocType(e.target.value as "invoice" | "receipt")} className="input"><option value="invoice">ใบส่งของ / ใบกำกับภาษี (วางบิลห้าง)</option><option value="receipt">ใบเสร็จรับเงิน / ใบกำกับภาษี (ห้างโอนแล้ว)</option></select></div>
-          <div><label className="label">ไฟล์รายงานจากห้าง (.xlsx)</label>
-            <label className="input flex items-center gap-2 cursor-pointer"><Upload size={16} className="text-purple" /><span className="truncate text-sm">{fileName || "เลือกไฟล์…"}</span>
-              <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} /></label></div>
+          <div><label className="label">ไฟล์รายงานจากห้าง (.xlsx / .pdf)</label>
+            <label className="input flex items-center gap-2 cursor-pointer"><Upload size={16} className="text-purple" /><span className="truncate text-sm">{parsing ? "กำลังอ่าน PDF…" : fileName || "เลือกไฟล์…"}</span>
+              <input type="file" accept=".xlsx,.xls,.pdf" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} /></label></div>
         </div>
         <p className="text-xs text-ink-soft">{FORMAT_HINT}</p>
         {err && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{err}</div>}
@@ -80,6 +103,20 @@ export function StoreReportImport({ companies, customers }: { companies: Company
             <span className="badge-ok inline-flex items-center gap-1"><FileSpreadsheet size={14} /> {report.formatLabel}</span>
             <span className="text-ink-soft">พบ {report.blocks.length} สาขา · {report.blocks.reduce((a, b) => a + b.rows, 0).toLocaleString()} แถว</span>
           </div>
+          {pdf && (
+            <div className="card p-5 space-y-3">
+              <div className="font-semibold text-sm">PDF: พบ {pdf.rows.length} บรรทัดที่มีบาร์โค้ด · เลือกว่าตัวเลขคอลัมน์ไหนคือ จำนวน และ ยอดสุทธิ</div>
+              <div className="grid sm:grid-cols-4 gap-3">
+                <div><label className="label">ชื่อห้าง / สาขา</label><input value={pdfMap.store} onChange={(e) => { const m = { ...pdfMap, store: e.target.value }; setPdfMap(m); applyPdf(pdf, m, fileName); }} className="input" placeholder="พิมพ์ชื่อห้าง" /></div>
+                <ColSel label="คอลัมน์ จำนวน" value={pdfMap.qty} max={pdf.maxNumbers} onChange={(v) => { const m = { ...pdfMap, qty: v }; setPdfMap(m); applyPdf(pdf, m, fileName); }} />
+                <ColSel label="คอลัมน์ ยอดสุทธิ (หลังส่วนลดหน้าร้าน)" value={pdfMap.net} max={pdf.maxNumbers} onChange={(v) => { const m = { ...pdfMap, net: v }; setPdfMap(m); applyPdf(pdf, m, fileName); }} />
+                <ColSel label="คอลัมน์ ยอดเต็ม (ถ้ามี)" value={pdfMap.gross ?? 99} max={pdf.maxNumbers} allowNone onChange={(v) => { const m = { ...pdfMap, gross: v === 99 ? null : v }; setPdfMap(m); applyPdf(pdf, m, fileName); }} />
+              </div>
+              <div className="overflow-x-auto"><table className="tbl text-xs"><thead><tr><th>บาร์โค้ด</th><th>ข้อความ</th>{Array.from({ length: pdf.maxNumbers }).map((_, i) => <th key={i} className="text-right">เลข {i + 1}{i === pdf.maxNumbers - 1 ? " (สุดท้าย)" : ""}</th>)}</tr></thead>
+                <tbody>{pdf.rows.slice(0, 5).map((r, i) => <tr key={i}><td className="font-mono">{r.barcode}</td><td>{r.text}</td>{Array.from({ length: pdf.maxNumbers }).map((_, j) => <td key={j} className="text-right">{r.numbers[j] ?? ""}</td>)}</tr>)}</tbody></table>
+                <p className="text-[11px] text-ink-soft mt-1">แสดง 5 บรรทัดแรกเพื่อเทียบ — ถ้าคอลัมน์ไม่ตรง เลือกใหม่ด้านบน ตัวเลขด้านล่างจะอัปเดตทันที · ส่งตัวอย่าง PDF ให้ผู้ดูแลเพื่อให้ระบบจับอัตโนมัติในครั้งถัดไป</p></div>
+            </div>
+          )}
           {report.warnings.map((w) => <div key={w} className="rounded-xl bg-yellow/15 text-[#8a6a00] text-sm px-4 py-2 flex gap-2"><AlertTriangle size={16} className="shrink-0 mt-0.5" />{w}</div>)}
 
           {report.blocks.map((b) => <BlockCard key={b.key} b={b} s={states[b.key]} customers={customers} upd={(p) => upd(b.key, p)} done={result?.ok.find((o) => o.key === b.key)} error={result?.errors.find((o) => o.key === b.key)?.message} />)}
@@ -145,5 +182,17 @@ function BlockCard({ b, s, customers, upd, done, error }: { b: StoreBlock; s: Bl
           <tbody>{b.lines.map((l) => <tr key={l.barcode ?? l.code ?? l.description}><td className="font-mono">{l.barcode ?? l.code ?? "—"}</td><td>{l.description}</td><td className="text-right">{l.qty}</td><td className="text-right">{fmt(l.gross / l.qty)}</td><td className="text-right">{l.gross !== l.net ? `−${fmt(l.gross - l.net)}` : "—"}</td><td className="text-right font-semibold">{fmt(l.net)}</td></tr>)}</tbody></table></div>
       )}
     </div>
+  );
+}
+
+function ColSel({ label, value, max, onChange, allowNone }: { label: string; value: number; max: number; onChange: (v: number) => void; allowNone?: boolean }) {
+  return (
+    <div><label className="label">{label}</label>
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} className="input">
+        {allowNone && <option value={99}>— ไม่ใช้ —</option>}
+        <option value={-1}>เลขสุดท้ายของบรรทัด</option>
+        <option value={-2}>เลขรองสุดท้าย</option>
+        {Array.from({ length: max }).map((_, i) => <option key={i} value={i}>เลขที่ {i + 1}</option>)}
+      </select></div>
   );
 }

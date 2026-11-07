@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSession, requireAdmin } from "@/lib/session";
+import { cleanPdfText } from "@/lib/stock/flowaccount-pdf";
+import { extractPdfRows, type PdfParsed } from "@/lib/sales/store-report";
 
 const nul = (v: FormDataEntryValue | null) => { const s = (v ?? "").toString().trim(); return s === "" ? null : s; };
 const num = (v: FormDataEntryValue | null) => { const s = nul(v); return s === null ? 0 : Number(s); };
@@ -266,4 +268,18 @@ export async function deleteOnlineChannelDay(date: string, channel: string, back
   if (error) redirect(`${back}&error=${encodeURIComponent(error.message)}`);
   revalidatePath("/sales/online");
   redirect(`${back}&deleted=${date}`);
+}
+
+// ---------- store report PDF → raw rows (client picks columns) ----------
+export async function parseStoreReportPdf(formData: FormData): Promise<{ parsed?: PdfParsed; error?: string }> {
+  try {
+    await getSession();
+    const file = formData.get("pdf") as File | null;
+    if (!file || file.size === 0) throw new Error("ไม่พบไฟล์");
+    const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
+    const { text } = await pdfParse(Buffer.from(await file.arrayBuffer()));
+    const parsed = extractPdfRows(cleanPdfText(text));
+    if (!parsed.rows.length) throw new Error("ไม่พบบรรทัดที่มีบาร์โค้ด 13 หลักใน PDF — ถ้าเป็นภาพสแกนต้องขอไฟล์ Excel/PDF ตัวจริงจากห้าง");
+    return { parsed };
+  } catch (e) { return { error: (e as Error).message }; }
 }
