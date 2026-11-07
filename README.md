@@ -33,7 +33,18 @@
 | `ANTHROPIC_API_KEY` | คีย์จาก https://console.anthropic.com (ค่าใช้จ่ายประมาณ 0.3–1 บาท/บิล) |
 | `ANTHROPIC_MODEL` | (ไม่บังคับ) ค่าเริ่มต้น `claude-sonnet-5-5` |
 
-ไม่ใส่ก็ใช้งานได้ — ระบบจะให้กรอกบิลเอง
+ไม่ใส่ก็ใช้งานได้ — ระบบจะให้กรอกบิลเอง (ปุ่ม AI จะซ่อน)
+
+## ช่องนำเข้าค่าใช้จ่ายจากภายนอก (Claude อ่านสลิป/บิลจาก Google Drive หรือแชท)
+
+`POST /api/expenses/import` + header `Authorization: Bearer <ERP_IMPORT_TOKEN>` — ตัวแปรใน Vercel:
+
+| ตัวแปร | ค่า |
+|---|---|
+| `ERP_IMPORT_TOKEN` | รหัสลับยาวๆ ตั้งเอง (ใช้ยืนยันว่าเป็น Claude ของเรา) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → service_role (secret) |
+
+สลิปโอน (kind=slip) → บันทึกเป็น "จ่ายแล้ว" ทันที อนุมัติในนาม pahkahmah@gmail.com · บิล (kind=bill) → "รออนุมัติ" · กันซ้ำด้วยเลขอ้างอิงธนาคาร
 
 ## ติดตั้งครั้งแรก (ทำครั้งเดียว ~20 นาที)
 
