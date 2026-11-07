@@ -103,6 +103,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
                   <button className="btn-primary w-full">จ่ายแล้ว {fmt(x.net_pay)} บาท</button>
                 </form>
               )}
+              {!wc && x.status === "paid" && <Link href={`/expenses/wht/new?expense=${id}`} className="btn-outline w-full">ออกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</Link>}
               {wc && <div className="card p-5 text-sm space-y-1"><div className="font-display font-bold">หนังสือรับรองหัก ณ ที่จ่าย</div><div>{wc.cert_no} · {wc.form === "pnd53" ? "ภ.ง.ด.53" : "ภ.ง.ด.3"}</div><div className="text-xs text-ink-soft">{wc.income_type} · ฐาน {fmt(wc.income_amount)} · หัก {fmt(wc.wht_amount)}</div><a href={`/print/wht/${wc.id}`} target="_blank" className="text-purple text-xs underline">พิมพ์</a></div>}
               {x.status !== "cancelled" && (session.isAdmin || x.created_by === session.appUser.id) && x.status !== "paid" && (
                 <ConfirmDelete action={cancelExpense.bind(null, id, new FormData())} label="ยกเลิกรายการ" warning="รายการนี้จะถูกยกเลิก ไม่นับเป็นค่าใช้จ่าย/เจ้าหนี้" />

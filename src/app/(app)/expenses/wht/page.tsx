@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
@@ -9,8 +10,8 @@ import { monthBkk } from "@/lib/today";
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
 
-export default async function WhtList({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  const { month } = await searchParams;
+export default async function WhtList({ searchParams }: { searchParams: Promise<{ month?: string; created?: string; error?: string }> }) {
+  const { month, created, error } = await searchParams;
   const ym = month ?? monthBkk();
   const from = `${ym}-01`; const to = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).toISOString().slice(0, 10);
   const supabase = await createClient();
@@ -22,7 +23,9 @@ export default async function WhtList({ searchParams }: { searchParams: Promise<
   return (
     <div className="space-y-6">
       <Header title="หนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)" sub="สรุปรายเดือนสำหรับยื่น ภ.ง.ด.3 (บุคคล) และ ภ.ง.ด.53 (นิติบุคคล) ภายในวันที่ 7 ของเดือนถัดไป"
-        action={<form><input type="month" name="month" defaultValue={ym} className="input" onChange={undefined} /><button className="btn-ghost ml-2">ดู</button></form>} />
+        action={<div className="flex items-center gap-2"><form><input type="month" name="month" defaultValue={ym} className="input" /><button className="btn-ghost ml-2">ดู</button></form><Link href="/expenses/wht/new" className="btn-primary"><Plus size={16} /> ออกหนังสือรับรอง</Link></div>} />
+      {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
+      {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ออกหนังสือรับรองแล้ว — <a href={`/print/wht/${created}`} target="_blank" className="underline font-semibold">พิมพ์</a></div>}
       <div className="grid sm:grid-cols-2 gap-3">
         <div className="card p-5"><div className="text-xs text-ink-soft font-semibold">ภ.ง.ด.3 — บุคคลธรรมดา</div><div className="font-display text-2xl font-bold">฿{fmt(sum(by("pnd3")))}</div><div className="text-xs text-ink-soft">{by("pnd3").length} ฉบับ</div></div>
         <div className="card p-5"><div className="text-xs text-ink-soft font-semibold">ภ.ง.ด.53 — นิติบุคคล</div><div className="font-display text-2xl font-bold">฿{fmt(sum(by("pnd53")))}</div><div className="text-xs text-ink-soft">{by("pnd53").length} ฉบับ</div></div>

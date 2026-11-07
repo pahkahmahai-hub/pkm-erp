@@ -18,6 +18,7 @@ export interface ExpenseFile { id: string; expense_id: string; path: string; kin
 export interface WhtCertificate {
   id: string; company_id: string; cert_no: string; expense_id: string | null; form: "pnd3" | "pnd53"; payee_name: string; payee_tax_id: string | null; payee_address: string | null;
   pay_date: string; income_type: string | null; income_amount: number; wht_pct: number; wht_amount: number; created_at: string;
+  income_row: number; payer_condition: number; note: string | null; payee_branch: string | null;
 }
 
 /** What the AI returns from a bill image (all fields optional — human verifies). */

@@ -101,3 +101,29 @@ export async function signExpenseFiles(paths: string[]) {
   const { data } = await supabase.storage.from("expense-files").createSignedUrls(paths, 3600);
   return (data ?? []).map((d) => d.signedUrl ?? "");
 }
+
+// ---------- withholding tax certificates (standalone) ----------
+export async function createWhtCert(formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const amount = num(formData.get("income_amount")); const pct = num(formData.get("wht_pct"));
+  const { data, error } = await supabase.rpc("create_wht_cert", {
+    p_company: formData.get("company_id"), p_form: formData.get("form"),
+    p_payee_name: String(formData.get("payee_name") ?? "").trim(), p_payee_tax_id: nul(formData.get("payee_tax_id")), p_payee_address: nul(formData.get("payee_address")), p_payee_branch: nul(formData.get("payee_branch")),
+    p_pay_date: nul(formData.get("pay_date")), p_income_row: Math.round(num(formData.get("income_row"))) || 5, p_income_type: nul(formData.get("income_type")),
+    p_income_amount: amount, p_wht_pct: pct, p_wht_amount: nul(formData.get("wht_amount")) ? num(formData.get("wht_amount")) : null,
+    p_payer_condition: Math.round(num(formData.get("payer_condition"))) || 1, p_note: nul(formData.get("note")), p_expense: nul(formData.get("expense_id")),
+  });
+  if (error) redirect(`/expenses/wht/new?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/expenses/wht");
+  redirect(`/expenses/wht?created=${data.id}`);
+}
+
+export async function deleteWhtCert(id: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_wht_cert", { p_id: id });
+  if (error) redirect(`/expenses/wht?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/expenses/wht");
+  redirect("/expenses/wht");
+}
