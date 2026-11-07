@@ -10,8 +10,8 @@ import type { OnlineChannel, OnlineDaily, OnlineItem } from "@/lib/sales/types";
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
 
-export default async function OnlinePage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string; error?: string }> }) {
-  const { date = todayBkk(), saved, error } = await searchParams;
+export default async function OnlinePage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string; error?: string; open?: string; deleted?: string }> }) {
+  const { date = todayBkk(), saved, error, open, deleted } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
   const ym = date.slice(0, 7);
@@ -22,9 +22,17 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
     supabase.from("online_sales_daily").select("*").gte("sale_date", from).lte("sale_date", to),
     supabase.from("online_sales_items").select("*").eq("sale_date", date).order("created_at"),
     supabase.from("products").select("id, code, name, barcode, price, unit").eq("is_active", true).order("name"),
-    supabase.from("online_sales_items").select("channel, qty").gte("sale_date", from).lte("sale_date", to),
+    supabase.from("online_sales_items").select("channel, sale_date, qty, amount").gte("sale_date", from).lte("sale_date", to),
   ]);
-  const qtyByCh = ((monthItems ?? []) as { channel: string; qty: number }[]).reduce<Record<string, number>>((a, r) => { a[r.channel] = (a[r.channel] ?? 0) + Number(r.qty); return a; }, {});
+  const mi = (monthItems ?? []) as { channel: string; sale_date: string; qty: number; amount: number }[];
+  const qtyByCh = mi.reduce<Record<string, number>>((a, r) => { a[r.channel] = (a[r.channel] ?? 0) + Number(r.qty); return a; }, {});
+  // per channel: list of recorded days this month (for edit / delete)
+  const history: Record<string, { date: string; lines: number; qty: number; gross: number; payout: number; orders: number; fees: number; tks: boolean }[]> = {};
+  for (const d of (month ?? []) as OnlineDaily[]) {
+    const its = mi.filter((x) => x.channel === d.channel && x.sale_date === d.sale_date);
+    (history[d.channel] ??= []).push({ date: d.sale_date, lines: its.length, qty: its.reduce((a, x) => a + Number(x.qty), 0), gross: Number(d.gross_amount), payout: Number(d.payout_amount ?? 0), orders: d.orders_count, fees: Number(d.fees), tks: d.recorded_tks });
+  }
+  for (const k of Object.keys(history)) history[k].sort((a, b) => b.date.localeCompare(a.date));
   const ch = (channels ?? []) as OnlineChannel[];
   const byCh = Object.fromEntries(((day ?? []) as OnlineDaily[]).map((d) => [d.channel, d]));
   const m = (month ?? []) as OnlineDaily[];
@@ -49,7 +57,8 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
       </form>
 
       {saved && saved !== "1" && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึก {ch.find((c) => c.key === saved)?.name ?? saved} แล้ว</div>}
-      <OnlineDayEditor date={date} channels={ch} products={products ?? []} items={(dayItems ?? []) as OnlineItem[]} daily={(day ?? []) as OnlineDaily[]} openKey={saved && saved !== "1" ? saved : undefined} />
+      {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการวันที่ {fmtDate(deleted)} แล้ว</div>}
+      <OnlineDayEditor date={date} channels={ch} products={products ?? []} items={(dayItems ?? []) as OnlineItem[]} daily={(day ?? []) as OnlineDaily[]} openKey={open ?? (saved && saved !== "1" ? saved : undefined)} history={history} />
       <p className="text-xs text-ink-soft">บันทึกเป็นรายการสินค้าต่อแพลตฟอร์มต่อวัน — ระบบรวมยอดให้ และใช้ยอดนี้สร้างใบเบิกซื้อทีฆาซอร์สตอนปิดเดือน (เฉพาะแพลตฟอร์มที่ตั้งว่า “ออกบิลในนาม TKS”)</p>
 
       <section className="card p-5">

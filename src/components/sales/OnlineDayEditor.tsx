@@ -4,13 +4,18 @@ import { useMemo, useState } from "react";
 import { Search, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import type { OnlineChannel, OnlineDaily, OnlineItem } from "@/lib/sales/types";
 import type { Product } from "@/lib/stock/types";
-import { saveOnlineChannelDay } from "@/app/(app)/sales/actions";
+import { saveOnlineChannelDay, deleteOnlineChannelDay } from "@/app/(app)/sales/actions";
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "price" | "unit">;
+export interface DayHistory { date: string; lines: number; qty: number; gross: number; payout: number; orders: number; fees: number; tks: boolean }
 interface Line { key: string; product_id: string | null; description: string; barcode: string; qty: number; unit_price: number; order_ref: string }
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function OnlineDayEditor({ date, channels, products, items, daily, openKey }: { date: string; channels: OnlineChannel[]; products: ProductLite[]; items: OnlineItem[]; daily: OnlineDaily[]; openKey?: string }) {
+const thD = (s: string) => new Date(s + "T00:00:00").toLocaleDateString("th-TH", { weekday: "short", day: "numeric", month: "short" });
+
+export function OnlineDayEditor({ date, channels, products, items, daily, openKey, history = {} }: { date: string; channels: OnlineChannel[]; products: ProductLite[]; items: OnlineItem[]; daily: OnlineDaily[]; openKey?: string; history?: Record<string, DayHistory[]> }) {
   const [open, setOpen] = useState<string | null>(openKey ?? null);
   return (
     <div className="space-y-3">
@@ -29,7 +34,10 @@ export function OnlineDayEditor({ date, channels, products, items, daily, openKe
               {d?.recorded_tks && <span className="badge-off">TKS</span>}
               {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
-            {isOpen && <ChannelForm date={date} channel={c} products={products} items={its} daily={d} />}
+            {isOpen && <>
+              <ChannelForm date={date} channel={c} products={products} items={its} daily={d} />
+              <HistoryList channel={c} date={date} rows={history[c.key] ?? []} />
+            </>}
           </div>
         );
       })}
@@ -83,5 +91,29 @@ function ChannelForm({ date, channel, products, items, daily }: { date: string; 
         <button className="btn-primary ml-auto">บันทึก {channel.name}</button>
       </div>
     </form>
+  );
+}
+
+function HistoryList({ channel, date, rows }: { channel: OnlineChannel; date: string; rows: DayHistory[] }) {
+  if (!rows.length) return null;
+  const back = `/sales/online?date=${date}&open=${channel.key}`;
+  return (
+    <div className="border-t border-line px-5 py-4">
+      <div className="text-xs font-semibold text-ink-soft mb-2">รายการที่บันทึกแล้ว · {channel.name} · เดือนนี้ ({rows.length} วัน)</div>
+      <div className="overflow-x-auto"><table className="tbl text-sm">
+        <thead><tr><th>วันที่</th><th className="text-right">รายการ</th><th className="text-right">ชิ้น</th><th className="text-right">ยอดขาย</th><th className="text-right">ค่าธรรมเนียม</th><th className="text-right">ได้รับจริง</th><th>TKS</th><th className="w-40" /></tr></thead>
+        <tbody>{rows.map((r) => (
+          <tr key={r.date} className={r.date === date ? "bg-lavender/20" : ""}>
+            <td className="font-medium">{thD(r.date)}{r.date === date && <span className="text-[10px] text-purple ml-1">(กำลังแก้)</span>}</td>
+            <td className="text-right">{r.lines}</td><td className="text-right">{r.qty}</td><td className="text-right font-semibold">{fmt(r.gross)}</td>
+            <td className="text-right text-ink-soft">{r.fees ? fmt(r.fees) : "—"}</td><td className="text-right text-green">{r.payout ? fmt(r.payout) : "—"}</td>
+            <td>{r.tks ? <span className="badge-off">TKS</span> : ""}</td>
+            <td><div className="flex gap-1 justify-end">
+              {r.date !== date && <Link href={`/sales/online?date=${r.date}&open=${channel.key}`} className="btn-ghost !py-1 !px-2 text-xs"><Pencil size={12} /> แก้ไข</Link>}
+              <form action={deleteOnlineChannelDay.bind(null, r.date, channel.key, back)}><button className="btn-ghost !py-1 !px-2 text-xs text-red" onClick={(e) => { if (!confirm(`ลบยอด ${channel.name} วันที่ ${thD(r.date)} ทั้งหมด?`)) e.preventDefault(); }}><Trash2 size={12} /> ลบ</button></form>
+            </div></td>
+          </tr>))}</tbody>
+      </table></div>
+    </div>
   );
 }

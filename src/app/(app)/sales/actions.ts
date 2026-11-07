@@ -258,3 +258,12 @@ export async function issueIntercompanyInvoice(id: string, formData: FormData) {
   revalidatePath("/sales");
   redirect(`/sales/docs/${data.id}?created=1`);
 }
+
+export async function deleteOnlineChannelDay(date: string, channel: string, back: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_online_items", { p_date: date, p_channel: channel, p_items: [], p_orders: 0, p_fees: 0, p_note: null, p_recorded_tks: null, p_payout: 0 });
+  if (error) redirect(`${back}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales/online");
+  redirect(`${back}&deleted=${date}`);
+}
