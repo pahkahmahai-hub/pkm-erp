@@ -5,6 +5,7 @@ import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus } from 
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/image";
 import { fmtDateTime } from "@/lib/format";
+import { fetchNewer } from "@/app/(app)/work/actions";
 
 export interface ChatMessage {
   id: string; author_id: string | null; body: string | null; image_url: string | null; file_url: string | null; file_name: string | null;
@@ -15,8 +16,8 @@ export interface ChatMessage {
 export function ChatBox({
   table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px",
 }: {
-  table: string; filterColumn: string; filterValue: string; initial: ChatMessage[]; meId: string;
-  onPost: (fd: FormData) => Promise<{ error?: string }>;
+  table: "work_comments" | "work_room_messages"; filterColumn: "task_id" | "room_id"; filterValue: string; initial: ChatMessage[]; meId: string;
+  onPost: (fd: FormData) => Promise<{ error?: string; row?: Record<string, unknown> }>;
   onDelete: (id: string) => Promise<void>;
   title?: string; placeholder?: string;
   makeTaskHref?: (m: ChatMessage) => string;   // "เปลี่ยนเป็นงาน"
@@ -32,6 +33,32 @@ export function ChatBox({
   const imgRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  function addMessages(rows: ChatMessage[]) {
+    if (!rows.length) return;
+    setMessages((c) => {
+      const ids = new Set(c.map((x) => x.id));
+      const fresh = rows.filter((r) => !ids.has(r.id));
+      return fresh.length ? [...c, ...fresh].sort((a, b) => a.created_at.localeCompare(b.created_at)) : c;
+    });
+  }
+  const lastRef = useRef<string>(initial.length ? initial[initial.length - 1].created_at : new Date(0).toISOString());
+  useEffect(() => { if (messages.length) lastRef.current = messages[messages.length - 1].created_at; }, [messages]);
+
+  // polling fallback (every 4s) — works even when realtime is blocked
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const rows = (await fetchNewer(table, filterColumn, filterValue, lastRef.current)) as unknown as ChatMessage[];
+        if (alive) addMessages(rows);
+      } catch { /* ignore */ }
+    };
+    const t = setInterval(tick, 4000);
+    const onVis = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
+  }, [table, filterColumn, filterValue]);
+
   useEffect(() => {
     const supabase = createClient();
     const ch = supabase
@@ -39,7 +66,7 @@ export function ChatBox({
       .on("postgres_changes", { event: "INSERT", schema: "public", table, filter: `${filterColumn}=eq.${filterValue}` }, async (payload) => {
         const row = payload.new as ChatMessage;
         const { data } = await supabase.from("app_users").select("display_name, email").eq("id", row.author_id ?? "").maybeSingle();
-        setMessages((c) => (c.some((x) => x.id === row.id) ? c : [...c, { ...row, app_users: data ?? null }]));
+        addMessages([{ ...row, app_users: data ?? null }]);
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table, filter: `${filterColumn}=eq.${filterValue}` }, (payload) => {
         const row = payload.new as ChatMessage;
@@ -68,6 +95,7 @@ export function ChatBox({
       if (file) fd.set("file", file.type.startsWith("image/") ? await compressImage(file) : file);
       const res = await onPost(fd);
       if (res.error) { setErr(res.error); return; }
+      if (res.row) addMessages([res.row as unknown as ChatMessage]);
       setBody(""); setFile(null); setPreview(null);
     });
   }

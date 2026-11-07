@@ -87,7 +87,7 @@ export async function deleteChecklistItem(id: string, taskId: string) {
 }
 
 /** Upload (already compressed) image/file and post it as a comment. Returns error string if any. */
-export async function postComment(taskId: string, formData: FormData): Promise<{ error?: string }> {
+export async function postComment(taskId: string, formData: FormData): Promise<{ error?: string; row?: Record<string, unknown> }> {
   await getSession();
   const supabase = await createClient();
   let image_url: string | null = null;
@@ -103,10 +103,10 @@ export async function postComment(taskId: string, formData: FormData): Promise<{
     const url = supabase.storage.from("work-files").getPublicUrl(path).data.publicUrl;
     if (file.type.startsWith("image/")) image_url = url; else { file_url = url; file_name = file.name; }
   }
-  const { error } = await supabase.rpc("add_comment", { p_task: taskId, p_body: nul(formData.get("body")) ?? "", p_image_url: image_url, p_file_url: file_url, p_file_name: file_name });
+  const { data, error } = await supabase.rpc("add_comment", { p_task: taskId, p_body: nul(formData.get("body")) ?? "", p_image_url: image_url, p_file_url: file_url, p_file_name: file_name });
   if (error) return { error: error.message };
-  revalidatePath(`/work/tasks/${taskId}`);
-  return {};
+  const { data: me } = await supabase.from("app_users").select("display_name, email").eq("id", (await getSession()).appUser.id).maybeSingle();
+  return { row: { ...(data as Record<string, unknown>), app_users: me } };
 }
 
 export async function deleteComment(id: string, taskId: string) {
@@ -162,7 +162,7 @@ async function uploadWorkFile(roomId: string, file: File) {
   return supabase.storage.from("work-files").getPublicUrl(path).data.publicUrl;
 }
 
-export async function postRoomMessage(roomId: string, formData: FormData): Promise<{ error?: string }> {
+export async function postRoomMessage(roomId: string, formData: FormData): Promise<{ error?: string; row?: Record<string, unknown> }> {
   const s = await getSession();
   const supabase = await createClient();
   const body = nul(formData.get("body"));
@@ -176,10 +176,10 @@ export async function postRoomMessage(roomId: string, formData: FormData): Promi
     }
   } catch (e) { return { error: (e as Error).message }; }
   if (!body && !image_url && !file_url) return { error: "ข้อความว่าง" };
-  const { error } = await supabase.from("work_room_messages").insert({ room_id: roomId, author_id: s.appUser.id, body, image_url, file_url, file_name });
+  const { data, error } = await supabase.from("work_room_messages").insert({ room_id: roomId, author_id: s.appUser.id, body, image_url, file_url, file_name }).select("*").single();
   if (error) return { error: error.message };
   await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
-  return {};
+  return { row: { ...data, app_users: { display_name: s.appUser.display_name, email: s.appUser.email } } };
 }
 
 export async function deleteRoomMessage(id: string) {
@@ -192,4 +192,13 @@ export async function markRoomRead(roomId: string) {
   const s = await getSession();
   const supabase = await createClient();
   await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
+}
+
+
+/** Polling fallback: messages newer than `after` (ISO) for a thread or room */
+export async function fetchNewer(table: "work_comments" | "work_room_messages", column: "task_id" | "room_id", value: string, after: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select("*, app_users(display_name, email)").eq(column, value).gt("created_at", after).order("created_at").limit(100);
+  return (data ?? []) as Record<string, unknown>[];
 }
