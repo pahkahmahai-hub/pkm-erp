@@ -10,7 +10,7 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
   const en = c.doc_lang === "en";
   const title = en ? meta.en : meta.th;
   const color = meta.color;
-  const copies: string[] = d.doc_type === "quotation" ? [""] : en ? ["Original", "Copy"] : ["ต้นฉบับ", "สำเนา"];
+  const copies: string[] = d.doc_type === "quotation" || d.doc_type === "purchase_req" ? [""] : en ? ["Original", "Copy"] : ["ต้นฉบับ", "สำเนา"];
 
   return (
     <>
@@ -60,7 +60,7 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
             <div className="head">
               <div className="co">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand/logo-horizontal.png" alt="" style={{ height: 44, marginBottom: 6 }} />
+                <img src={c.logo_path ?? "/brand/logo-horizontal.png"} alt="" style={{ height: c.logo_path ? 56 : 44, marginBottom: 6 }} />
                 <div><b>{en ? c.name_en : c.name_th}</b> {!en && c.branch ? `(${c.branch})` : ""}</div>
                 <div>{en ? c.address_en : c.address_th}</div>
                 {c.tax_id && <div>{en ? "Tax ID" : "เลขประจำตัวผู้เสียภาษี"} {c.tax_id}</div>}
@@ -85,7 +85,7 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
             </div>
 
             <div className="cust">
-              <div className="lbl">{en ? "CUSTOMER" : "ลูกค้า"}</div>
+              <div className="lbl">{d.doc_type === "purchase_req" ? "ผู้ขาย · SUPPLIER" : en ? "CUSTOMER" : "ลูกค้า"}</div>
               <div><b>{d.customer_name}</b>{d.customer_branch && ` (${d.customer_branch})`}</div>
               {d.customer_address && <div>{d.customer_address}</div>}
               {d.customer_tax_id && <div>{en ? "Tax ID" : "เลขประจำตัวผู้เสียภาษี"} {d.customer_tax_id}</div>}

@@ -1,4 +1,4 @@
-export type SalesDocType = "quotation" | "temp_delivery" | "invoice" | "billing" | "receipt" | "credit_note" | "debit_note";
+export type SalesDocType = "quotation" | "temp_delivery" | "invoice" | "billing" | "receipt" | "credit_note" | "debit_note" | "purchase_req";
 export type SalesDocStatus = "draft" | "issued" | "accepted" | "partial" | "paid" | "cancelled";
 export type VatMode = "inclusive" | "exclusive" | "none";
 export type SalesChannel = "store" | "corporate" | "online" | "export" | "intercompany" | "other";
@@ -7,6 +7,7 @@ export interface Company {
   id: string; code: string; name_th: string; name_en: string | null; branch: string | null; address_th: string | null; address_en: string | null;
   tax_id: string | null; phone: string | null; mobile: string | null; email: string | null; website: string | null; vat_registered: boolean;
   bank_name: string | null; bank_branch: string | null; bank_account_name: string | null; bank_account_no: string | null; signer_name: string | null; doc_lang: string; is_active: boolean;
+  doc_no_style?: string; intercompany_discount_pct?: number; logo_path?: string | null;
 }
 
 export interface SalesDoc {
@@ -24,6 +25,7 @@ export interface SalesDocItem {
   unit_price: number; discount_pct: number; amount: number; note: string | null;
 }
 export interface OnlineChannel { key: string; name: string; color: string; sort_order: number; is_active: boolean; bills_to_tks: boolean }
+export interface OnlineItem { id: string; sale_date: string; channel: string; product_id: string | null; barcode: string | null; description: string | null; qty: number; unit_price: number; amount: number; order_ref: string | null }
 export interface OnlineDaily { id: string; sale_date: string; channel: string; orders_count: number; gross_amount: number; fees: number; net_amount: number; recorded_tks: boolean; note: string | null }
 
 export const DOC_META: Record<SalesDocType, { prefix: string; th: string; en: string; color: string; sign: [string, string] }> = {
@@ -34,6 +36,7 @@ export const DOC_META: Record<SalesDocType, { prefix: string; th: string; en: st
   receipt:       { prefix: "RE",  th: "ใบเสร็จรับเงิน",                        en: "Receipt",              color: "#e42213", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้รับเงิน"] },
   credit_note:   { prefix: "CN",  th: "ใบลดหนี้/ใบกำกับภาษี",                  en: "Credit Note",          color: "#0363b1", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้อนุมัติ/ผู้รับสินค้าคืน"] },
   debit_note:    { prefix: "DN",  th: "ใบเพิ่มหนี้/ใบกำกับภาษี",                en: "Debit Note",           color: "#5f116e", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้อนุมัติ"] },
+  purchase_req:  { prefix: "PR",  th: "ใบเบิกซื้อสินค้า",                       en: "Purchase Requisition", color: "#1f3a5f", sign: ["ผู้ขอเบิก", "ผู้มีอำนาจลงนาม"] },
 };
 export const STATUS_TH: Record<SalesDocStatus, string> = { draft: "ฉบับร่าง", issued: "ออกแล้ว", accepted: "ลูกค้ายืนยัน", partial: "รับชำระบางส่วน", paid: "รับชำระแล้ว", cancelled: "ยกเลิก" };
 export const STATUS_BADGE: Record<SalesDocStatus, string> = { draft: "badge-off", issued: "badge-pending", accepted: "badge-ok", partial: "badge-pending", paid: "badge-approved", cancelled: "badge-rejected" };
@@ -49,6 +52,7 @@ export const NEXT_DOCS: Record<SalesDocType, SalesDocType[]> = {
   receipt: [],
   credit_note: [],
   debit_note: ["receipt"],
+  purchase_req: [],
 };
 
 export function thaiBaht(n: number): string {

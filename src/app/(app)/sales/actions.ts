@@ -223,3 +223,37 @@ export async function createStoreReportDocs(inputs: StoreDocInput[]) {
   revalidatePath("/sales");
   return { ok, errors };
 }
+
+// ---------- online sales per product ----------
+export async function saveOnlineChannelDay(formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const date = String(formData.get("sale_date")); const channel = String(formData.get("channel"));
+  const { error } = await supabase.rpc("save_online_items", {
+    p_date: date, p_channel: channel, p_items: JSON.parse(String(formData.get("items") ?? "[]")),
+    p_orders: nul(formData.get("orders")) ? Math.round(num(formData.get("orders"))) : null, p_fees: nul(formData.get("fees")) ? num(formData.get("fees")) : null, p_note: nul(formData.get("note")),
+  });
+  if (error) redirect(`/sales/online?date=${date}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales/online");
+  redirect(`/sales/online?date=${date}&saved=${channel}`);
+}
+
+// ---------- month close: TKS purchase requisition → PKM invoice ----------
+export async function createPurchaseRequisition(formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const month = String(formData.get("month")); // yyyy-mm
+  const { data, error } = await supabase.rpc("create_purchase_requisition", { p_month: `${month}-01`, p_doc_date: nul(formData.get("doc_date")), p_lines: null });
+  if (error) redirect(`/sales/month-close?month=${month}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales");
+  redirect(`/sales/docs/${data.id}?created=1`);
+}
+
+export async function issueIntercompanyInvoice(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("issue_intercompany_invoice", { p_pr: id, p_doc_date: nul(formData.get("doc_date")) });
+  if (error) redirect(`/sales/docs/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales");
+  redirect(`/sales/docs/${data.id}?created=1`);
+}
