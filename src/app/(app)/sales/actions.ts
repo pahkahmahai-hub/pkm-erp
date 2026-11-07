@@ -173,3 +173,53 @@ export async function saveCompany(id: string, formData: FormData) {
   revalidatePath("/sales/companies");
   redirect("/sales/companies?saved=1");
 }
+
+// ---------- store sales report → draft documents ----------
+export interface StoreDocInput {
+  key: string; company_id: string; doc_type: "invoice" | "receipt"; contact_id: string | null;
+  customer_name: string; customer_address: string | null; customer_tax_id: string | null; customer_branch: string | null;
+  doc_date: string; po_no: string | null; gp_pct: number; vendor_amount: number | null;
+  period_from: string; period_to: string; store_code: string | null; store_name: string; format: string; file_name: string;
+  lines: { barcode: string | null; code: string | null; description: string; qty: number; net: number; gross: number }[];
+}
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const thMonth = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { month: "long", year: "numeric" });
+
+export async function createStoreReportDocs(inputs: StoreDocInput[]) {
+  const s = await getSession();
+  const supabase = await createClient();
+  const { data: canSell } = await supabase.rpc("can_sell");
+  if (!canSell) return { ok: [], errors: inputs.map((i) => ({ key: i.key, message: "ไม่มีสิทธิ์สร้างเอกสารขาย" })) };
+  const barcodes = [...new Set(inputs.flatMap((i) => i.lines.map((l) => l.barcode)).filter(Boolean))] as string[];
+  const { data: prods } = barcodes.length ? await supabase.from("products").select("id, barcode, unit").in("barcode", barcodes) : { data: [] };
+  const byBarcode = new Map((prods ?? []).map((p) => [p.barcode as string, p]));
+  const ok: { key: string; doc_no: string; id: string; grand: number }[] = [];
+  const errors: { key: string; message: string }[] = [];
+  for (const inp of inputs) {
+    const items = inp.lines.map((l) => {
+      const p = l.barcode ? byBarcode.get(l.barcode) : undefined;
+      const unit_price = l.qty ? r2(l.gross / l.qty) : 0;
+      const discount_pct = l.gross > 0 && l.net < l.gross ? r2((1 - l.net / l.gross) * 100) : 0;
+      return { product_id: p?.id ?? null, description: l.description, barcode: l.barcode, qty: l.qty, unit: p?.unit ?? "ชิ้น", unit_price, discount_pct, note: p ? null : "ไม่พบสินค้าในระบบ (ตามบาร์โค้ดห้าง)" };
+    });
+    // same rounding as recalc_sales_doc
+    const subtotal = items.reduce((a, it) => a + r2(it.qty * it.unit_price * (1 - it.discount_pct / 100)), 0);
+    const exact = inp.vendor_amount != null;                       // Central: lock to the store's own payable figure
+    const discount_amount = exact ? r2(subtotal - (inp.vendor_amount as number)) : 0;
+    const discount_pct = exact ? 0 : inp.gp_pct;
+    const unmatched = items.filter((i) => !i.product_id).length;
+    const notes = `ยอดขาย ${inp.store_name}${inp.store_code ? ` สาขา ${inp.store_code}` : ""} ประจำเดือน ${thMonth(inp.period_to)} (${inp.period_from} – ${inp.period_to}) หัก GP ${inp.gp_pct}%`;
+    const internal = `นำเข้าจากรายงานห้าง ${inp.file_name} (${inp.format}) โดย ${s.employee?.nickname ?? s.authUser.name ?? s.authUser.email}${unmatched ? ` · ${unmatched} รายการไม่พบบาร์โค้ดในระบบ` : ""}`;
+    const { data, error } = await supabase.rpc("create_sales_doc", {
+      p_company: inp.company_id, p_type: inp.doc_type, p_customer: inp.contact_id, p_customer_name: inp.customer_name, p_customer_address: inp.customer_address,
+      p_customer_tax_id: inp.customer_tax_id, p_customer_branch: inp.customer_branch, p_doc_date: inp.doc_date, p_due_date: null, p_valid_until: null,
+      p_channel: "store", p_ref_doc: null, p_ref_doc_no: inp.store_code ? `รายงานห้าง ${inp.store_code}` : null, p_po_no: inp.po_no,
+      p_vat_mode: "inclusive", p_discount_pct: discount_pct, p_discount_amount: discount_amount, p_deposit_amount: 0, p_deposit_ref: null, p_wht_pct: 0,
+      p_notes: notes, p_internal_note: internal, p_seller_name: null, p_deduct_stock: inp.doc_type === "invoice", p_items: items, p_doc_no: null, p_source: "store_report",
+    });
+    if (error) errors.push({ key: inp.key, message: error.message });
+    else ok.push({ key: inp.key, doc_no: data.doc_no, id: data.id, grand: Number(data.grand_total) });
+  }
+  revalidatePath("/sales");
+  return { ok, errors };
+}

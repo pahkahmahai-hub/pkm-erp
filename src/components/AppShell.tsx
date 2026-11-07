@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
-  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -71,9 +71,22 @@ NAV.sales = [
       { href: "/sales/docs?type=invoice", label: "ใบส่งของ/ใบกำกับ", icon: FileText },
       { href: "/sales/docs?type=billing", label: "ใบวางบิล", icon: FileText },
       { href: "/sales/docs?type=receipt", label: "ใบเสร็จรับเงิน", icon: Receipt },
+      { href: "/sales/store-reports", label: "นำเข้ารายงานห้าง", icon: Upload },
       { href: "/sales/receivables", label: "ลูกหนี้ / รอรับชำระ", icon: Wallet },
       { href: "/sales/online", label: "ยอดขายออนไลน์", icon: Globe },
       { href: "/sales/companies", label: "ข้อมูลบริษัท", icon: Building2, admin: true },
+    ],
+  },
+];
+NAV.expenses = [
+  {
+    title: "ค่าใช้จ่าย",
+    items: [
+      { href: "/expenses", label: "รายการบิล", icon: Wallet },
+      { href: "/expenses/new", label: "บันทึกบิลใหม่", icon: Plus },
+      { href: "/expenses/payables", label: "เตรียมจ่าย (รอบ 1 / 15)", icon: Banknote, admin: true },
+      { href: "/expenses/wht", label: "หัก ณ ที่จ่าย 50 ทวิ", icon: FileText },
+      { href: "/expenses/categories", label: "หมวดค่าใช้จ่าย", icon: Settings, admin: true },
     ],
   },
 ];

@@ -21,6 +21,6 @@ export const MODULES: ModuleDef[] = [
   { key: "sales", href: "/sales", name: "ขาย", nameEn: "Sales", description: "ใบเสนอราคา · ใบส่งของ/ใบกำกับ · ใบวางบิล · ใบเสร็จ · ลูกหนี้ · ยอดขายออนไลน์ 7 ช่องทาง", icon: ShoppingCart, color: "bg-green", status: "live" },
   { key: "purchase", href: "/purchase", name: "จัดซื้อ / ใบเบิกซื้อ", nameEn: "Purchasing", description: "ซัพพลายเออร์ · ใบเบิกซื้อระหว่างบริษัท", icon: FileText, color: "bg-blue", status: "soon" },
   { key: "production", href: "/production", name: "ผลิต", nameEn: "Production", description: "สั่งผลิต · วัตถุดิบ · ชุมชนผู้ผลิต", icon: Factory, color: "bg-green", status: "soon" },
-  { key: "finance", href: "/finance", name: "การเงิน", nameEn: "Finance", description: "รอบจ่ายซัพพลายเออร์ · ค่าจ้าง PC", icon: Wallet, color: "bg-yellow", status: "soon" },
+  { key: "expenses", href: "/expenses", name: "ค่าใช้จ่าย / เจ้าหนี้", nameEn: "Expenses", description: "ถ่ายบิล → AI อ่าน · อนุมัติ · รอบจ่าย 1/15 · หัก ณ ที่จ่าย 50 ทวิ · VAT ซื้อ", icon: Wallet, color: "bg-yellow", status: "live" },
   { key: "reports", href: "/reports", name: "แดชบอร์ดเจ้าของ", nameEn: "Insights", description: "ยอดขาย · กำไร · สต็อก · เงินสด", icon: BarChart3, color: "bg-coral", status: "soon" },
 ];
