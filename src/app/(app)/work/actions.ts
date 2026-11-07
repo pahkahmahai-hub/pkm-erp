@@ -22,6 +22,8 @@ export async function createTask(formData: FormData) {
     p_checklist: checklist,
   });
   if (error) redirect(`/work/tasks/new?room=${roomId}&error=${encodeURIComponent(error.message)}`);
+  const fromMessage = nul(formData.get("from_message"));
+  if (fromMessage) await supabase.from("work_room_messages").update({ task_id: data.id }).eq("id", fromMessage);
   revalidatePath("/work");
   redirect(`/work/tasks/${data.id}?created=1`);
 }
@@ -148,4 +150,46 @@ export async function setRoomMember(roomId: string, employeeId: string, add: boo
   if (add) await supabase.from("work_room_members").upsert({ room_id: roomId, employee_id: employeeId, is_lead: isLead });
   else await supabase.from("work_room_members").delete().eq("room_id", roomId).eq("employee_id", employeeId);
   revalidatePath("/work");
+}
+
+// ---------- room chat ----------
+async function uploadWorkFile(roomId: string, file: File) {
+  const supabase = await createClient();
+  const ext = (file.name.split(".").pop() ?? "bin").toLowerCase();
+  const path = `rooms/${roomId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("work-files").upload(path, file, { contentType: file.type });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from("work-files").getPublicUrl(path).data.publicUrl;
+}
+
+export async function postRoomMessage(roomId: string, formData: FormData): Promise<{ error?: string }> {
+  const s = await getSession();
+  const supabase = await createClient();
+  const body = nul(formData.get("body"));
+  const file = formData.get("file") as File | null;
+  let image_url: string | null = null, file_url: string | null = null, file_name: string | null = null;
+  try {
+    if (file && file.size > 0) {
+      if (file.size > 20 * 1024 * 1024) return { error: "ไฟล์ใหญ่เกิน 20 MB" };
+      const url = await uploadWorkFile(roomId, file);
+      if (file.type.startsWith("image/")) image_url = url; else { file_url = url; file_name = file.name; }
+    }
+  } catch (e) { return { error: (e as Error).message }; }
+  if (!body && !image_url && !file_url) return { error: "ข้อความว่าง" };
+  const { error } = await supabase.from("work_room_messages").insert({ room_id: roomId, author_id: s.appUser.id, body, image_url, file_url, file_name });
+  if (error) return { error: error.message };
+  await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
+  return {};
+}
+
+export async function deleteRoomMessage(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  await supabase.from("work_room_messages").delete().eq("id", id);
+}
+
+export async function markRoomRead(roomId: string) {
+  const s = await getSession();
+  const supabase = await createClient();
+  await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
 }

@@ -30,6 +30,7 @@
    - `0003_defects_manual.sql` — บันทึก/ลบของเสียย้อนหลัง
    - `0004_attendance_requests.sql` — คำขอแก้เวลาเข้า-ออก (ลืมเช็คอิน/เช็คเอาท์)
    - `0005_work.sql` — โมดูลงาน: ห้องงาน 7 ห้อง (ตามกลุ่ม LINE) สั่งงาน เช็คลิสต์ คอมเมนต์+รูปแบบสด งานประจำ แจ้งเตือน
+   - `0006_room_chat.sql` — แชทประจำห้อง (realtime) + ตัวนับยังไม่อ่าน + แปลงข้อความเป็นงาน
 3. **Project Settings → API** จด `Project URL` และ `anon public` key
 
 ### 2) Google Sign-in

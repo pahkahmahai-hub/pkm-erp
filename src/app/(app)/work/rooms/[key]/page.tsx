@@ -7,13 +7,17 @@ import { Header } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
 import { TASK_SELECT, ensureRoutines } from "@/lib/work/queries";
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
+import { RoomChat } from "./RoomChat";
+import { markRoomRead } from "../../actions";
+import type { ChatMessage } from "@/components/work/ChatBox";
+import { MessageCircle, ListChecks } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done"];
 
-export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string }> }) {
+export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string; tab?: string }> }) {
   const { key } = await params;
-  const { who = "", history, deleted } = await searchParams;
+  const { who = "", history, deleted, tab = "tasks" } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
   await ensureRoutines(supabase);
@@ -24,6 +28,19 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   const { data: members } = await supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id);
   const mem = (members ?? []) as RoomMember[];
   if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id)) redirect("/work?denied=1");
+
+  if (tab === "chat") {
+    const { data: msgs } = await supabase.from("work_room_messages").select("*, app_users(display_name, email)").eq("room_id", r.id).order("created_at", { ascending: false }).limit(100);
+    await markRoomRead(r.id);
+    return (
+      <div className="space-y-4">
+        <Header title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
+        <RoomTabs roomKey={key} tab={tab} />
+        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} />
+        <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · กด "เป็นงาน" ใต้ข้อความเพื่อแปลงเป็นงานสั่ง</p>
+      </div>
+    );
+  }
 
   let q = supabase.from("work_tasks").select(TASK_SELECT).eq("room_id", r.id);
   q = history ? q.in("status", ["accepted", "cancelled"]).order("reviewed_at", { ascending: false }).limit(200)
@@ -36,6 +53,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     <div className="space-y-6">
       <Header title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงานในห้องนี้</Link>} />
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบงานแล้ว</div>}
+      <RoomTabs roomKey={key} tab={tab} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="flex items-center gap-1 text-ink-soft"><Users size={14} /></span>
         <Link href={`/work/rooms/${key}${history ? "?history=1" : ""}`} className={!who ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>ทุกคน</Link>
@@ -65,6 +83,15 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function RoomTabs({ roomKey, tab }: { roomKey: string; tab: string }) {
+  return (
+    <div className="flex gap-2">
+      <Link href={`/work/rooms/${roomKey}`} className={tab !== "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><ListChecks size={16} /> งาน</Link>
+      <Link href={`/work/rooms/${roomKey}?tab=chat`} className={tab === "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><MessageCircle size={16} /> แชทห้อง</Link>
     </div>
   );
 }

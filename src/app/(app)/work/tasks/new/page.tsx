@@ -8,8 +8,8 @@ import type { RoomMember } from "@/lib/work/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewTask({ searchParams }: { searchParams: Promise<{ room?: string; error?: string }> }) {
-  const { room, error } = await searchParams;
+export default async function NewTask({ searchParams }: { searchParams: Promise<{ room?: string; error?: string; title?: string; from?: string }> }) {
+  const { room, error, title, from } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
   const rooms = await myRooms(supabase, session.employee?.id ?? null, session.isAdmin);
@@ -21,7 +21,7 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
       <Header title="สั่งงาน" />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       <form action={createTask} className="card p-6">
-        <NewTaskForm rooms={rooms} members={(members ?? []) as RoomMember[]} allEmployees={allEmp ?? []} initialRoomKey={room} isAdmin={session.isAdmin} />
+        <NewTaskForm rooms={rooms} members={(members ?? []) as RoomMember[]} allEmployees={allEmp ?? []} initialRoomKey={room} isAdmin={session.isAdmin} initialTitle={title} fromMessage={from} />
       </form>
     </div>
   );

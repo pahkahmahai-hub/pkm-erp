@@ -5,7 +5,7 @@ import type { Room, RoomMember } from "@/lib/work/types";
 
 type Emp = { id: string; first_name: string; nickname: string | null; emp_code: string };
 
-export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAdmin }: { rooms: Room[]; members: RoomMember[]; allEmployees: Emp[]; initialRoomKey?: string; isAdmin: boolean }) {
+export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAdmin, initialTitle, fromMessage }: { rooms: Room[]; members: RoomMember[]; allEmployees: Emp[]; initialRoomKey?: string; isAdmin: boolean; initialTitle?: string; fromMessage?: string }) {
   const [roomId, setRoomId] = useState(rooms.find((r) => r.key === initialRoomKey)?.id ?? rooms[0]?.id ?? "");
   const options = useMemo(() => {
     const inRoom = members.filter((m) => m.room_id === roomId).map((m) => m.employees).filter(Boolean) as Emp[];
@@ -31,7 +31,7 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
           {options.map((e) => <option key={e.id} value={e.id}>{e.nickname ? `${e.nickname} (${e.first_name})` : e.first_name}</option>)}
         </select>
       </div>
-      <div className="md:col-span-2"><label className="label">ชื่องาน *</label><input name="title" className="input" required autoFocus placeholder="เช่น ออกแบบกล่องของขวัญปีใหม่ 2570" /></div>
+      <div className="md:col-span-2"><label className="label">ชื่องาน *</label><input name="title" defaultValue={initialTitle ?? ""} className="input" required autoFocus placeholder="เช่น ออกแบบกล่องของขวัญปีใหม่ 2570" />{fromMessage && <input type="hidden" name="from_message" value={fromMessage} />}</div>
       <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={3} placeholder="อธิบายสิ่งที่ต้องการ ขนาด จำนวน ลิงก์อ้างอิง…" /></div>
       <div><label className="label">กำหนดเสร็จ</label><input name="due_date" type="date" className="input" /></div>
       <div>

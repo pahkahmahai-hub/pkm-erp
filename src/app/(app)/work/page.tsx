@@ -17,10 +17,12 @@ export default async function WorkHome() {
   const rooms = await myRooms(supabase, session.employee?.id ?? null, session.isAdmin);
   const empId = session.employee?.id;
 
-  const [{ data: tasksRaw }, { count: unread }] = await Promise.all([
+  const [{ data: tasksRaw }, { count: unread }, { data: chatUnread }] = await Promise.all([
     supabase.from("work_tasks").select(TASK_SELECT).not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500),
     supabase.from("work_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.appUser.id).is("read_at", null),
+    supabase.rpc("room_unread_counts"),
   ]);
+  const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = (tasksRaw ?? []) as Task[];
   const mine = tasks.filter((t) => t.assignee_id === empId);
   const assignedByMe = tasks.filter((t) => t.created_by === session.appUser.id && t.assignee_id !== empId);
@@ -50,7 +52,8 @@ export default async function WorkHome() {
           {rooms.map((r) => (
             <Link key={r.id} href={`/work/rooms/${r.key}`} className="card p-4 flex items-center gap-3 hover:border-purple transition">
               <div className="h-10 w-10 rounded-xl text-white grid place-items-center font-display font-bold" style={{ background: r.color }}>{r.name[0]}</div>
-              <div className="min-w-0"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
+              <div className="min-w-0 flex-1"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
+              {(unreadByRoom[r.id] ?? 0) > 0 && <Link href={`/work/rooms/${r.key}?tab=chat`} className="bg-red text-white text-[11px] rounded-full px-2 py-0.5 font-semibold">{unreadByRoom[r.id]} แชท</Link>}
             </Link>
           ))}
         </div>
