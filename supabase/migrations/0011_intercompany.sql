@@ -15,6 +15,9 @@ update public.companies set doc_no_style = 'tks', tax_id = coalesce(nullif(tax_i
        website = coalesce(website, 'www.pahkahmahstore.com') where code = 'TKS';
 update public.companies set website = 'www.pahkahmahstore.com' where code = 'PKM' and (website is null or website = 'www.pahkahmahthailand.com');
 
+-- แพลตฟอร์มที่ออกบิลในนามทีฆาซอร์ส (ตอนนี้: NexGen, Thaimart) — สลับทีหลังได้ในหน้า ยอดขายออนไลน์
+update public.online_channels set bills_to_tks = (key in ('nexgen', 'thaimart'));
+
 -- items: who/when + unit price
 alter table public.online_sales_items add column if not exists unit_price numeric(14,2) not null default 0;
 alter table public.online_sales_items add column if not exists created_by uuid references public.app_users(id);
