@@ -283,3 +283,36 @@ export async function parseStoreReportPdf(formData: FormData): Promise<{ parsed?
     return { parsed };
   } catch (e) { return { error: (e as Error).message }; }
 }
+
+// ---------- online channels (platforms) — admins only ----------
+export async function saveChannel(formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const existing = nul(formData.get("key"));
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) redirect("/sales/online?error=" + encodeURIComponent("กรุณาใส่ชื่อแพลตฟอร์ม"));
+  const key = existing ?? (nul(formData.get("new_key")) ?? name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || `ch-${Date.now()}`;
+  const row = { key, name, color: nul(formData.get("color")) ?? "#452a79", bills_to_tks: formData.get("bills_to_tks") === "on", sort_order: Math.round(num(formData.get("sort_order"))) || 100, is_active: formData.get("is_active") !== "off" };
+  const { error } = existing ? await supabase.from("online_channels").update(row).eq("key", existing) : await supabase.from("online_channels").insert(row);
+  if (error) redirect(`/sales/online?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales/online");
+  redirect("/sales/online?saved=1");
+}
+
+export async function deleteChannel(key: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const [{ count: c1 }, { count: c2 }] = await Promise.all([
+    supabase.from("online_sales_daily").select("*", { count: "exact", head: true }).eq("channel", key),
+    supabase.from("online_sales_items").select("*", { count: "exact", head: true }).eq("channel", key),
+  ]);
+  if ((c1 ?? 0) + (c2 ?? 0) > 0) {
+    await supabase.from("online_channels").update({ is_active: false }).eq("key", key);
+    revalidatePath("/sales/online");
+    redirect("/sales/online?saved=1&note=" + encodeURIComponent("แพลตฟอร์มนี้มียอดขายบันทึกอยู่ จึงปิดใช้งานแทนการลบ (ข้อมูลเก่ายังอยู่ครบ)"));
+  }
+  const { error } = await supabase.from("online_channels").delete().eq("key", key);
+  if (error) redirect(`/sales/online?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/sales/online");
+  redirect("/sales/online?saved=1");
+}
