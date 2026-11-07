@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/session";
 import { Header, Stat } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import { STATUS_TH, STATUS_BADGE, type Expense, type ExpenseStatus } from "@/lib/expenses/types";
-import { aiEnabled } from "@/lib/expenses/queries";
 
 import { monthBkk } from "@/lib/today";
 
@@ -30,7 +29,6 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     <div className="space-y-6">
       <Header title="ค่าใช้จ่าย / เจ้าหนี้" sub={session.isAdmin ? "บิลซัพพลายเออร์ทั้งบริษัท · อนุมัติ · รอบจ่าย 1 และ 15" : "บิลที่คุณบันทึก — ผู้บริหารเป็นผู้อนุมัติและจ่าย"}
         action={<Link href="/expenses/new" className="btn-primary"><Plus size={16} /> บันทึกบิลใหม่</Link>} />
-      {!aiEnabled() && session.isAdmin && <div className="rounded-xl bg-yellow/15 text-[#8a6a00] text-sm px-4 py-2 flex gap-2"><Sparkles size={16} className="shrink-0 mt-0.5" />ยังไม่ได้ตั้งค่า <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> ใน Vercel — ตอนนี้ต้องกรอกบิลเอง (ดูวิธีใน README)</div>}
       {sum && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Stat label={`รออนุมัติ ${sum.pending_count} ใบ`} value={`฿${fmt(sum.pending_amount)}`} tone="yellow" href="/expenses?status=pending" />

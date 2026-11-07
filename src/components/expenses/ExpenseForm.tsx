@@ -130,7 +130,7 @@ export function ExpenseForm({ companies, suppliers, categories, expense, items, 
           ))}
           <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(ev) => onFiles(ev.target.files)} />
           {!e && files.length < 4 && <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-outline w-full"><Camera size={16} /> {uploading ? "กำลังอัปโหลด…" : files.length ? "เพิ่มรูป" : "ถ่าย / เลือกรูปบิล"}</button>}
-          {!e && <p className="text-[11px] text-ink-soft text-center">ถ่ายจากมือถือได้ · รองรับ PDF · {aiEnabled ? "AI จะอ่านและกรอกให้ทันที" : "ยังไม่ได้เปิด AI — กรอกเอง"}</p>}
+          {!e && <p className="text-[11px] text-ink-soft text-center">ถ่ายจากมือถือได้ · รองรับ PDF · {aiEnabled ? "AI จะอ่านและกรอกให้ทันที" : "แนบรูปไว้เป็นหลักฐาน แล้วกรอกรายการด้านขวา"}</p>}
         </div>
 
         {(ai.busy || ai.bill || ai.error) && (
