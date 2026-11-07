@@ -9,7 +9,7 @@ import type { SessionInfo } from "@/lib/types";
 export function canAccessModule(session: SessionInfo, moduleKey: string): boolean {
   if (session.isAdmin) return true;
   const team = session.employee?.teams?.abbrev;
-  if (team === "GC") return ["hr", "online-stock"].includes(moduleKey);
+  if (team === "GC") return ["hr", "online-stock", "work"].includes(moduleKey);
   return true;
 }
 

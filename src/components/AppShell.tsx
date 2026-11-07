@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -61,6 +62,21 @@ NAV.work = [
     ],
   },
 ];
+NAV.sales = [
+  {
+    title: "ขาย",
+    items: [
+      { href: "/sales", label: "แดชบอร์ดขาย", icon: ShoppingCart },
+      { href: "/sales/docs?type=quotation", label: "ใบเสนอราคา", icon: FileText },
+      { href: "/sales/docs?type=invoice", label: "ใบส่งของ/ใบกำกับ", icon: FileText },
+      { href: "/sales/docs?type=billing", label: "ใบวางบิล", icon: FileText },
+      { href: "/sales/docs?type=receipt", label: "ใบเสร็จรับเงิน", icon: Receipt },
+      { href: "/sales/receivables", label: "ลูกหนี้ / รอรับชำระ", icon: Wallet },
+      { href: "/sales/online", label: "ยอดขายออนไลน์", icon: Globe },
+      { href: "/sales/companies", label: "ข้อมูลบริษัท", icon: Building2, admin: true },
+    ],
+  },
+];
 const SYSTEM_NAV: NavGroup = { title: "ระบบ", items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }] };
 
 export function AppShell({ session, children }: { session: SessionInfo; children: React.ReactNode }) {
@@ -83,8 +99,9 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <div className="px-3 mb-2 text-[11px] font-semibold tracking-[0.14em] text-lavender uppercase">{m.title}</div>
             <ul className="space-y-0.5">
               {items.map((i) => {
-                const isRoot = i.href === `/${seg}` || i.href === "/work/tasks/new";
-                const active = !i.external && (isRoot ? pathname === i.href : pathname.startsWith(i.href));
+                const hrefPath = i.href.split("?")[0];
+                const isRoot = hrefPath === `/${seg}` || i.href === "/work/tasks/new";
+                const active = !i.external && (i.href.includes("?") ? false : isRoot ? pathname === hrefPath : pathname.startsWith(hrefPath));
                 const Icon = i.icon;
                 return (
                   <li key={i.href}>
