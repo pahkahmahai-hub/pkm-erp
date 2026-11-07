@@ -291,7 +291,8 @@ export async function saveChannel(formData: FormData) {
   const existing = nul(formData.get("key"));
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirect("/sales/online?error=" + encodeURIComponent("กรุณาใส่ชื่อแพลตฟอร์ม"));
-  const key = existing ?? (nul(formData.get("new_key")) ?? name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || `ch-${Date.now()}`;
+  const slug = (nul(formData.get("new_key")) ?? name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+  const key = existing ?? (slug || `ch-${Date.now()}`);
   const row = { key, name, color: nul(formData.get("color")) ?? "#452a79", bills_to_tks: formData.get("bills_to_tks") === "on", sort_order: Math.round(num(formData.get("sort_order"))) || 100, is_active: formData.get("is_active") !== "off" };
   const { error } = existing ? await supabase.from("online_channels").update(row).eq("key", existing) : await supabase.from("online_channels").insert(row);
   if (error) redirect(`/sales/online?error=${encodeURIComponent(error.message)}`);
