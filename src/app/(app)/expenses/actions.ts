@@ -15,7 +15,7 @@ function commonArgs(formData: FormData) {
     p_supplier_tax_id: nul(formData.get("supplier_tax_id")),
     p_supplier_address: nul(formData.get("supplier_address")),
     p_supplier_branch: nul(formData.get("supplier_branch")),
-    p_supplier_is_company: formData.get("supplier_is_company") === "on",
+    p_supplier_is_company: formData.get("supplier_type") === "company",
     p_category: nul(formData.get("category_id")),
     p_bill_no: nul(formData.get("bill_no")),
     p_bill_date: nul(formData.get("bill_date")),

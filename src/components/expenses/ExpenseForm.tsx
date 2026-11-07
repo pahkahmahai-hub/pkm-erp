@@ -7,17 +7,20 @@ import { compressImage } from "@/lib/image";
 import type { Company, VatMode } from "@/lib/sales/types";
 import type { Contact } from "@/lib/stock/types";
 import type { AiBill, Expense, ExpenseCategory, ExpenseItem } from "@/lib/expenses/types";
+import type { Product, Material } from "@/lib/stock/types";
 import { WHT_CHOICES, nextPayRound } from "@/lib/expenses/types";
 
 type SupplierLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "entity_type"> & { default_expense_category?: string | null; default_wht_pct?: number | null; default_vat_mode_purchase?: VatMode | null };
-interface Line { key: string; description: string; qty: number; unit: string; unit_price: number }
+type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit">;
+type MaterialLite = Pick<Material, "id" | "code" | "name" | "unit" | "kind">;
+interface Line { key: string; description: string; qty: number; unit: string; unit_price: number; product_id?: string | null; material_id?: string | null }
 interface Up { path: string; url: string; name: string }
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const today = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 
-export function ExpenseForm({ companies, suppliers, categories, expense, items, existingFiles, aiEnabled }: {
-  companies: Company[]; suppliers: SupplierLite[]; categories: ExpenseCategory[]; expense?: Expense | null; items?: ExpenseItem[]; existingFiles?: Up[]; aiEnabled: boolean;
+export function ExpenseForm({ companies, suppliers, categories, products = [], materials = [], expense, items, existingFiles, aiEnabled }: {
+  companies: Company[]; suppliers: SupplierLite[]; categories: ExpenseCategory[]; products?: ProductLite[]; materials?: MaterialLite[]; expense?: Expense | null; items?: ExpenseItem[]; existingFiles?: Up[]; aiEnabled: boolean;
 }) {
   const e = expense;
   const [companyId, setCompanyId] = useState(e?.company_id ?? companies.find((c) => c.code === "PKM")?.id ?? companies[0]?.id);
@@ -33,7 +36,18 @@ export function ExpenseForm({ companies, suppliers, categories, expense, items, 
   const [wht, setWht] = useState(Number(e?.wht_pct ?? 0));
   const [payRound, setPayRound] = useState(e?.pay_round ?? nextPayRound(today()));
   const [note, setNote] = useState(e?.note ?? "");
-  const [lines, setLines] = useState<Line[]>((items ?? []).map((i) => ({ key: i.id, description: i.description, qty: Number(i.qty), unit: i.unit ?? "", unit_price: Number(i.unit_price) })));
+  const [lines, setLines] = useState<Line[]>((items ?? []).map((i) => ({ key: i.id, description: i.description, qty: Number(i.qty), unit: i.unit ?? "", unit_price: Number(i.unit_price), product_id: i.product_id, material_id: i.material_id })));
+  const [pq, setPq] = useState("");
+  const prodResults = useMemo(() => {
+    const q = pq.trim().toLowerCase(); if (!q) return [] as { kind: "product" | "material"; id: string; label: string; sub: string; unit: string }[];
+    const a = products.filter((p) => p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.barcode ?? "").includes(q)).slice(0, 6).map((p) => ({ kind: "product" as const, id: p.id, label: p.name, sub: `${p.code}${p.barcode ? ` · ${p.barcode}` : ""}`, unit: p.unit }));
+    const b = materials.filter((m) => (m.code ?? "").toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 6).map((m) => ({ kind: "material" as const, id: m.id, label: m.name, sub: `${m.kind === "fabric" ? "ลายผ้า" : "แพคเกจจิ้ง"}${m.code ? ` · ${m.code}` : ""}`, unit: m.unit }));
+    return [...a, ...b];
+  }, [pq, products, materials]);
+  function addCatalog(r: { kind: "product" | "material"; id: string; label: string; unit: string }) {
+    setLines((l) => [...l, { key: crypto.randomUUID(), description: r.label, qty: 1, unit: r.unit, unit_price: 0, product_id: r.kind === "product" ? r.id : null, material_id: r.kind === "material" ? r.id : null }]);
+    setPq("");
+  }
   const [files, setFiles] = useState<Up[]>(existingFiles ?? []);
   const [uploading, setUploading] = useState(false);
   const [ai, setAi] = useState<{ busy: boolean; bill: AiBill | null; error: string | null }>({ busy: false, bill: null, error: null });
@@ -154,7 +168,7 @@ export function ExpenseForm({ companies, suppliers, categories, expense, items, 
       <div className="space-y-5">
         <input type="hidden" name="company_id" value={companyId} />
         <input type="hidden" name="supplier_id" value={sup.id ?? ""} />
-        <input type="hidden" name="items" value={JSON.stringify(lines.filter((l) => l.description.trim()).map(({ description, qty, unit, unit_price }) => ({ description, qty, unit: unit || null, unit_price })))} />
+        <input type="hidden" name="items" value={JSON.stringify(lines.filter((l) => l.description.trim()).map(({ description, qty, unit, unit_price, product_id, material_id }) => ({ description, qty, unit: unit || null, unit_price, product_id: product_id ?? null, material_id: material_id ?? null })))} />
         <input type="hidden" name="files" value={JSON.stringify(files.map((f) => ({ path: f.path, kind: "bill" })))} />
         <input type="hidden" name="ai_json" value={ai.bill ? JSON.stringify(ai.bill) : ""} />
 
@@ -172,10 +186,14 @@ export function ExpenseForm({ companies, suppliers, categories, expense, items, 
             </div>
             {sup.id && <p className="text-[11px] text-green mt-1">✓ ผูกกับสมุดรายชื่อแล้ว</p>}
           </div>
-          <div className="grid sm:grid-cols-[1fr_120px_auto] gap-4">
+          <div className="grid sm:grid-cols-[1fr_110px_1fr] gap-4">
             <div><label className="label">เลขผู้เสียภาษี</label><input name="supplier_tax_id" value={sup.tax_id} onChange={(ev) => setSup({ ...sup, tax_id: ev.target.value })} className="input" /></div>
             <div><label className="label">สาขา</label><input name="supplier_branch" value={sup.branch} onChange={(ev) => setSup({ ...sup, branch: ev.target.value })} className="input" placeholder="00000" /></div>
-            <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" name="supplier_is_company" checked={sup.is_company} onChange={(ev) => setSup({ ...sup, is_company: ev.target.checked })} /> นิติบุคคล (ภ.ง.ด.53)</label>
+            <div><label className="label">ประเภทผู้รับเงิน (แบบหัก ณ ที่จ่าย)</label>
+              <select name="supplier_type" value={sup.is_company ? "company" : "person"} onChange={(ev) => setSup({ ...sup, is_company: ev.target.value === "company" })} className="input">
+                <option value="person">บุคคลธรรมดา — ภ.ง.ด.3</option>
+                <option value="company">นิติบุคคล (บริษัท/หจก.) — ภ.ง.ด.53</option>
+              </select></div>
           </div>
           <div><label className="label">ที่อยู่ผู้รับเงิน</label><input name="supplier_address" value={sup.address} onChange={(ev) => setSup({ ...sup, address: ev.target.value })} className="input" /></div>
           <div className="grid sm:grid-cols-4 gap-4">
@@ -188,12 +206,20 @@ export function ExpenseForm({ companies, suppliers, categories, expense, items, 
         </div>
 
         <div className="card p-5 space-y-3">
-          <div className="flex items-center justify-between"><h2 className="font-display font-bold">รายการ</h2><button type="button" onClick={addLine} className="btn-ghost text-xs"><Plus size={14} /> เพิ่มบรรทัด</button></div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display font-bold">รายการ</h2>
+            <div className="flex items-center gap-2">
+              <div className="relative w-72"><Search size={14} className="absolute left-3 top-3 text-ink-soft" />
+                <input value={pq} onChange={(ev) => setPq(ev.target.value)} className="input pl-8" placeholder="ค้นหาสินค้า / ลายผ้า / แพคเกจจิ้ง…" />
+                {prodResults.length > 0 && <div className="absolute z-10 right-0 mt-1 w-96 card p-1 max-h-64 overflow-auto">{prodResults.map((r) => <button key={r.kind + r.id} type="button" onClick={() => addCatalog(r)} className="block w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-cream">{r.label}<div className="text-[11px] text-ink-soft">{r.sub} · หน่วย {r.unit}</div></button>)}</div>}</div>
+              <button type="button" onClick={addLine} className="btn-ghost text-xs"><Plus size={14} /> บรรทัดว่าง</button>
+            </div>
+          </div>
           <div className="overflow-x-auto"><table className="tbl">
             <thead><tr><th className="w-[45%]">รายละเอียด</th><th className="text-right">จำนวน</th><th>หน่วย</th><th className="text-right">ราคา/หน่วย</th><th className="text-right">จำนวนเงิน</th><th></th></tr></thead>
             <tbody>{lines.map((l) => (
               <tr key={l.key}>
-                <td><input value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} className="input" /></td>
+                <td><input value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} className="input" />{(l.product_id || l.material_id) && <div className="text-[10px] text-green mt-0.5">✓ ผูกกับ{l.product_id ? "สินค้า" : "วัสดุ"}ในคลัง</div>}</td>
                 <td><input type="number" step="0.01" value={l.qty} onChange={(ev) => upd(l.key, { qty: Number(ev.target.value) })} className="input text-right w-24" /></td>
                 <td><input value={l.unit} onChange={(ev) => upd(l.key, { unit: ev.target.value })} className="input w-20" placeholder="ชิ้น" /></td>
                 <td><input type="number" step="0.01" value={l.unit_price} onChange={(ev) => upd(l.key, { unit_price: Number(ev.target.value) })} className="input text-right w-28" /></td>
