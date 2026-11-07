@@ -232,6 +232,7 @@ export async function saveOnlineChannelDay(formData: FormData) {
   const { error } = await supabase.rpc("save_online_items", {
     p_date: date, p_channel: channel, p_items: JSON.parse(String(formData.get("items") ?? "[]")),
     p_orders: nul(formData.get("orders")) ? Math.round(num(formData.get("orders"))) : null, p_fees: nul(formData.get("fees")) ? num(formData.get("fees")) : null, p_note: nul(formData.get("note")),
+    p_recorded_tks: formData.get("recorded_tks") === "on", p_payout: nul(formData.get("payout")) ? num(formData.get("payout")) : null,
   });
   if (error) redirect(`/sales/online?date=${date}&error=${encodeURIComponent(error.message)}`);
   revalidatePath("/sales/online");

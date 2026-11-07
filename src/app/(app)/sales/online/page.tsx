@@ -28,8 +28,8 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
   const ch = (channels ?? []) as OnlineChannel[];
   const byCh = Object.fromEntries(((day ?? []) as OnlineDaily[]).map((d) => [d.channel, d]));
   const m = (month ?? []) as OnlineDaily[];
-  const mByCh = Object.fromEntries(ch.map((c) => [c.key, m.filter((x) => x.channel === c.key).reduce((a, x) => ({ orders: a.orders + x.orders_count, gross: a.gross + Number(x.gross_amount), net: a.net + Number(x.net_amount), tks: a.tks + (x.recorded_tks ? Number(x.net_amount) : 0) }), { orders: 0, gross: 0, net: 0, tks: 0 })]));
-  const mTotal = Object.values(mByCh).reduce((a, x) => ({ orders: a.orders + x.orders, gross: a.gross + x.gross, net: a.net + x.net, tks: a.tks + x.tks }), { orders: 0, gross: 0, net: 0, tks: 0 });
+  const mByCh = Object.fromEntries(ch.map((c) => [c.key, m.filter((x) => x.channel === c.key).reduce((a, x) => ({ orders: a.orders + x.orders_count, gross: a.gross + Number(x.gross_amount), net: a.net + Number(x.net_amount), tks: a.tks + (x.recorded_tks ? Number(x.gross_amount) : 0), payout: a.payout + Number(x.payout_amount ?? 0) }), { orders: 0, gross: 0, net: 0, tks: 0, payout: 0 })]));
+  const mTotal = Object.values(mByCh).reduce((a, x) => ({ orders: a.orders + x.orders, gross: a.gross + x.gross, net: a.net + x.net, tks: a.tks + x.tks, payout: a.payout + x.payout }), { orders: 0, gross: 0, net: 0, tks: 0, payout: 0 });
   const prev = new Date(new Date(date).getTime() - 86400000).toISOString().slice(0, 10);
   const next = new Date(new Date(date).getTime() + 86400000).toISOString().slice(0, 10);
   const dayTotal = Object.values(byCh).reduce((a, d) => a + Number(d.gross_amount), 0);
@@ -55,11 +55,11 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
       <section className="card p-5">
         <h2 className="font-display font-bold mb-3">สรุปเดือน {fmtDate(from, { month: "long", year: "numeric", day: undefined })}</h2>
         <table className="tbl">
-          <thead><tr><th>แพลตฟอร์ม</th><th className="text-right">ออเดอร์</th><th className="text-right">ชิ้น</th><th className="text-right">ยอดขาย</th><th className="text-right">สุทธิ</th><th className="text-right">ส่วนที่เข้า TKS</th>{session.isAdmin && <th>ออกใบเสร็จในนาม</th>}</tr></thead>
+          <thead><tr><th>แพลตฟอร์ม</th><th className="text-right">ออเดอร์</th><th className="text-right">ชิ้น</th><th className="text-right">ยอดขาย</th><th className="text-right">สุทธิหลังค่าธรรมเนียม</th><th className="text-right">เงินที่ได้รับจริง</th><th className="text-right">ส่วนที่เข้า TKS</th>{session.isAdmin && <th>ออกใบเสร็จในนาม</th>}</tr></thead>
           <tbody>
-            {ch.map((c) => <tr key={c.key}><td>{c.name}</td><td className="text-right">{mByCh[c.key].orders}</td><td className="text-right">{qtyByCh[c.key] ?? 0}</td><td className="text-right">{fmt(mByCh[c.key].gross)}</td><td className="text-right font-semibold">{fmt(mByCh[c.key].net)}</td><td className="text-right text-purple">{fmt(mByCh[c.key].tks)}</td>
+            {ch.map((c) => <tr key={c.key}><td>{c.name}</td><td className="text-right">{mByCh[c.key].orders}</td><td className="text-right">{qtyByCh[c.key] ?? 0}</td><td className="text-right">{fmt(mByCh[c.key].gross)}</td><td className="text-right font-semibold">{fmt(mByCh[c.key].net)}</td><td className="text-right text-green">{fmt(mByCh[c.key].payout)}</td><td className="text-right text-purple">{fmt(mByCh[c.key].tks)}</td>
               {session.isAdmin && <td><form action={toggleChannelTks.bind(null, c.key, !c.bills_to_tks)}><button className="text-xs underline text-purple">{c.bills_to_tks ? "ทีฆาซอร์ส → เปลี่ยนเป็นปากาม้า" : "ปากาม้า → เปลี่ยนเป็นทีฆาซอร์ส"}</button></form></td>}</tr>)}
-            <tr className="font-bold"><td>รวม</td><td className="text-right">{mTotal.orders}</td><td className="text-right">{Object.values(qtyByCh).reduce((a, b) => a + b, 0)}</td><td className="text-right">{fmt(mTotal.gross)}</td><td className="text-right">{fmt(mTotal.net)}</td><td className="text-right text-purple">{fmt(mTotal.tks)}</td>{session.isAdmin && <td></td>}</tr>
+            <tr className="font-bold"><td>รวม</td><td className="text-right">{mTotal.orders}</td><td className="text-right">{Object.values(qtyByCh).reduce((a, b) => a + b, 0)}</td><td className="text-right">{fmt(mTotal.gross)}</td><td className="text-right">{fmt(mTotal.net)}</td><td className="text-right text-green">{fmt(mTotal.payout)}</td><td className="text-right text-purple">{fmt(mTotal.tks)}</td>{session.isAdmin && <td></td>}</tr>
           </tbody>
         </table>
         <div className="mt-3"><Link href={`/sales/month-close?month=${ym}`} className="btn-outline">ปิดเดือน → สร้างใบเบิกซื้อทีฆาซอร์ส</Link></div>

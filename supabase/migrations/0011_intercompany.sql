@@ -18,6 +18,9 @@ update public.companies set website = 'www.pahkahmahstore.com' where code = 'PKM
 -- แพลตฟอร์มที่ออกบิลในนามทีฆาซอร์ส (ตอนนี้: NexGen, Thaimart) — สลับทีหลังได้ในหน้า ยอดขายออนไลน์
 update public.online_channels set bills_to_tks = (key in ('nexgen', 'thaimart'));
 
+-- เงินที่ได้รับจริงจากแพลตฟอร์ม (payout) ต่อวันต่อช่องทาง
+alter table public.online_sales_daily add column if not exists payout_amount numeric(14,2) not null default 0;
+
 -- items: who/when + unit price
 alter table public.online_sales_items add column if not exists unit_price numeric(14,2) not null default 0;
 alter table public.online_sales_items add column if not exists created_by uuid references public.app_users(id);
@@ -83,7 +86,7 @@ end $$;
 -- ---------------------------------------------------------------------
 -- Online sales per product: replace a day/channel's lines and refresh the daily header
 -- ---------------------------------------------------------------------
-create or replace function public.save_online_items(p_date date, p_channel text, p_items jsonb, p_orders int default null, p_fees numeric default null, p_note text default null)
+create or replace function public.save_online_items(p_date date, p_channel text, p_items jsonb, p_orders int default null, p_fees numeric default null, p_note text default null, p_recorded_tks boolean default null, p_payout numeric default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare it jsonb; v_gross numeric := 0; v_qty numeric := 0;
 begin
@@ -95,11 +98,12 @@ begin
             coalesce((it->>'unit_price')::numeric, 0), round(coalesce((it->>'qty')::numeric, 1) * coalesce((it->>'unit_price')::numeric, 0), 2), nullif(it->>'order_ref', ''), public.current_app_user_id());
   end loop;
   select coalesce(sum(amount), 0), coalesce(sum(qty), 0) into v_gross, v_qty from public.online_sales_items where sale_date = p_date and channel = p_channel;
-  insert into public.online_sales_daily (sale_date, channel, orders_count, gross_amount, fees, note, created_by)
-  values (p_date, p_channel, coalesce(p_orders, 0), v_gross, coalesce(p_fees, 0), p_note, public.current_app_user_id())
+  insert into public.online_sales_daily (sale_date, channel, orders_count, gross_amount, fees, note, recorded_tks, payout_amount, created_by)
+  values (p_date, p_channel, coalesce(p_orders, 0), v_gross, coalesce(p_fees, 0), p_note, coalesce(p_recorded_tks, (select bills_to_tks from public.online_channels where key = p_channel), false), coalesce(p_payout, 0), public.current_app_user_id())
   on conflict (sale_date, channel) do update set gross_amount = v_gross, orders_count = coalesce(p_orders, public.online_sales_daily.orders_count),
-      fees = coalesce(p_fees, public.online_sales_daily.fees), note = coalesce(p_note, public.online_sales_daily.note);
-  if v_gross = 0 and coalesce(p_orders, 0) = 0 and coalesce(p_fees, 0) = 0 then
+      fees = coalesce(p_fees, public.online_sales_daily.fees), note = coalesce(p_note, public.online_sales_daily.note),
+      recorded_tks = coalesce(p_recorded_tks, public.online_sales_daily.recorded_tks), payout_amount = coalesce(p_payout, public.online_sales_daily.payout_amount);
+  if v_gross = 0 and coalesce(p_orders, 0) = 0 and coalesce(p_fees, 0) = 0 and coalesce(p_payout, 0) = 0 then
     delete from public.online_sales_daily where sale_date = p_date and channel = p_channel;
   end if;
   return jsonb_build_object('gross', v_gross, 'qty', v_qty);

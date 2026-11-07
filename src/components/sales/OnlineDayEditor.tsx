@@ -25,7 +25,8 @@ export function OnlineDayEditor({ date, channels, products, items, daily, openKe
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
               <b className="w-44">{c.name}</b>
               {c.bills_to_tks && <span className="badge-ok">ออกบิลในนาม TKS</span>}
-              <span className="text-sm text-ink-soft ml-auto">{its.length ? `${its.length} รายการ · ${qty} ชิ้น · ฿${fmt(gross)}` : "ยังไม่บันทึก"}{d && Number(d.fees) ? ` · ค่าธรรมเนียม ${fmt(Number(d.fees))}` : ""}</span>
+              <span className="text-sm text-ink-soft ml-auto">{its.length ? `${its.length} รายการ · ${qty} ชิ้น · ฿${fmt(gross)}` : "ยังไม่บันทึก"}{d && Number(d.fees) ? ` · ค่าธรรมเนียม ${fmt(Number(d.fees))}` : ""}{d && Number(d.payout_amount) ? ` · ได้รับ ${fmt(Number(d.payout_amount))}` : ""}</span>
+              {d?.recorded_tks && <span className="badge-off">TKS</span>}
               {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             {isOpen && <ChannelForm date={date} channel={c} products={products} items={its} daily={d} />}
@@ -71,11 +72,15 @@ function ChannelForm({ date, channel, products, items, daily }: { date: string; 
         </tbody>
         {lines.length > 0 && <tfoot><tr className="font-bold"><td>รวม {lines.reduce((a, l) => a + l.qty, 0)} ชิ้น</td><td /><td /><td className="text-right">{fmt(gross)}</td><td colSpan={2} /></tr></tfoot>}
       </table></div>
-      <div className="grid sm:grid-cols-[120px_160px_1fr_auto] gap-3 items-end">
+      <div className="grid sm:grid-cols-[110px_150px_170px_1fr] gap-3 items-end">
         <div><label className="label">จำนวนออเดอร์</label><input name="orders" type="number" min={0} defaultValue={daily?.orders_count ?? ""} className="input" /></div>
         <div><label className="label">ค่าธรรมเนียมแพลตฟอร์ม</label><input name="fees" type="number" step="0.01" min={0} defaultValue={daily?.fees ?? ""} className="input text-right" /></div>
+        <div><label className="label">เงินที่ได้รับจากแพลตฟอร์ม</label><input name="payout" type="number" step="0.01" min={0} defaultValue={daily?.payout_amount ?? ""} className="input text-right" placeholder="ยอดโอนเข้าบัญชีจริง" /></div>
         <div><label className="label">หมายเหตุ</label><input name="note" defaultValue={daily?.note ?? ""} className="input" /></div>
-        <button className="btn-primary">บันทึก {channel.name}</button>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="recorded_tks" defaultChecked={daily?.recorded_tks ?? channel.bills_to_tks} className="accent-purple" /> บันทึกเข้า TKS (ออกบิลในนามทีฆาซอร์ส)</label>
+        <button className="btn-primary ml-auto">บันทึก {channel.name}</button>
       </div>
     </form>
   );

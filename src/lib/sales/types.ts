@@ -26,7 +26,7 @@ export interface SalesDocItem {
 }
 export interface OnlineChannel { key: string; name: string; color: string; sort_order: number; is_active: boolean; bills_to_tks: boolean }
 export interface OnlineItem { id: string; sale_date: string; channel: string; product_id: string | null; barcode: string | null; description: string | null; qty: number; unit_price: number; amount: number; order_ref: string | null }
-export interface OnlineDaily { id: string; sale_date: string; channel: string; orders_count: number; gross_amount: number; fees: number; net_amount: number; recorded_tks: boolean; note: string | null }
+export interface OnlineDaily { id: string; sale_date: string; channel: string; orders_count: number; gross_amount: number; fees: number; net_amount: number; recorded_tks: boolean; payout_amount?: number; note: string | null }
 
 export const DOC_META: Record<SalesDocType, { prefix: string; th: string; en: string; color: string; sign: [string, string] }> = {
   quotation:     { prefix: "QT",  th: "ใบเสนอราคา",                          en: "Quotation",            color: "#452a79", sign: ["ผู้สั่งซื้อสินค้า", "ผู้อนุมัติ"] },
