@@ -226,7 +226,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
                 <td className="text-right font-semibold whitespace-nowrap">{fmt(r2(l.qty * l.unit_price))}</td>
                 <td><button type="button" onClick={() => setLines((x) => x.filter((y) => y.key !== l.key))} className="text-ink-soft hover:text-red"><Trash2 size={14} /></button></td>
               </tr>))}
-              {!lines.length && <tr><td colSpan={6} className="text-center text-ink-soft py-6">ยังไม่มีรายการ — อัปโหลดรูปบิลให้ AI อ่าน หรือกด “เพิ่มบรรทัด”</td></tr>}
+              {!lines.length && <tr><td colSpan={6} className="text-center text-ink-soft py-6">ยังไม่มีรายการ — ค้นหาสินค้าด้านบน หรือกด “บรรทัดว่าง”</td></tr>}
             </tbody></table></div>
         </div>
 
