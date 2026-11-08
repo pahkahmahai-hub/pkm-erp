@@ -92,6 +92,18 @@ NAV.expenses = [
     ],
   },
 ];
+NAV.purchase = [
+  {
+    title: "จัดซื้อ",
+    items: [
+      { href: "/purchase", label: "ภาพรวม", icon: LayoutGrid },
+      { href: "/purchase/requests", label: "ใบขอซื้อภายใน (PR)", icon: FileText },
+      { href: "/purchase/requests/new", label: "เปิดใบขอซื้อ", icon: Plus },
+      { href: "/purchase/orders", label: "ใบสั่งซื้อ (PO)", icon: ShoppingCart },
+      { href: "/purchase/orders/new", label: "เปิด PO ตรง", icon: Plus, admin: true },
+    ],
+  },
+];
 const SYSTEM_NAV: NavGroup = { title: "ระบบ", items: [{ href: "/settings", label: "ตั้งค่า", icon: Settings, admin: true }] };
 
 export function AppShell({ session, children }: { session: SessionInfo; children: React.ReactNode }) {

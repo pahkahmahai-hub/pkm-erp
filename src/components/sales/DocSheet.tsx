@@ -10,7 +10,7 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
   const en = c.doc_lang === "en";
   const title = en ? meta.en : meta.th;
   const color = meta.color;
-  const copies: string[] = d.doc_type === "quotation" || d.doc_type === "purchase_req" ? [""] : en ? ["Original", "Copy"] : ["ต้นฉบับ", "สำเนา"];
+  const copies: string[] = ["quotation", "purchase_req", "purchase_order", "purchase_request"].includes(d.doc_type) ? [""] : en ? ["Original", "Copy"] : ["ต้นฉบับ", "สำเนา"];
 
   return (
     <>
@@ -78,14 +78,14 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
                     {d.valid_until && <tr><td>{en ? "Valid until" : "ยืนราคาถึง"}</td><td>{dmy(d.valid_until)}</td></tr>}
                     {d.ref_doc_no && <tr><td>{en ? "Ref." : "อ้างอิง"}</td><td>{d.ref_doc_no}</td></tr>}
                     {d.po_no && <tr><td>PO</td><td>{d.po_no}</td></tr>}
-                    {d.seller_name && <tr><td>{en ? "Sales" : "ผู้ขาย"}</td><td>{d.seller_name}</td></tr>}
+                    {d.seller_name && <tr><td>{d.doc_type === "purchase_order" || d.doc_type === "purchase_request" ? "ผู้สั่งซื้อ" : en ? "Sales" : "ผู้ขาย"}</td><td>{d.seller_name}</td></tr>}
                   </tbody>
                 </table>
               </div>
             </div>
 
             <div className="cust">
-              <div className="lbl">{d.doc_type === "purchase_req" ? "ผู้ขาย · SUPPLIER" : en ? "CUSTOMER" : "ลูกค้า"}</div>
+              <div className="lbl">{d.doc_type === "purchase_req" || d.doc_type === "purchase_order" || d.doc_type === "purchase_request" ? "ผู้จำหน่าย · SUPPLIER" : en ? "CUSTOMER" : "ลูกค้า"}</div>
               <div><b>{d.customer_name}</b>{d.customer_branch && ` (${d.customer_branch})`}</div>
               {d.customer_address && <div>{d.customer_address}</div>}
               {d.customer_tax_id && <div>{en ? "Tax ID" : "เลขประจำตัวผู้เสียภาษี"} {d.customer_tax_id}</div>}

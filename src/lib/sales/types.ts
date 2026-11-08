@@ -1,4 +1,4 @@
-export type SalesDocType = "quotation" | "temp_delivery" | "invoice" | "billing" | "receipt" | "credit_note" | "debit_note" | "purchase_req";
+export type SalesDocType = "quotation" | "temp_delivery" | "invoice" | "billing" | "receipt" | "credit_note" | "debit_note" | "purchase_req" | "purchase_order" | "purchase_request";
 export type SalesDocStatus = "draft" | "issued" | "accepted" | "partial" | "paid" | "cancelled";
 export type VatMode = "inclusive" | "exclusive" | "none";
 export type SalesChannel = "store" | "corporate" | "online" | "export" | "intercompany" | "other";
@@ -37,6 +37,8 @@ export const DOC_META: Record<SalesDocType, { prefix: string; th: string; en: st
   credit_note:   { prefix: "CN",  th: "ใบลดหนี้/ใบกำกับภาษี",                  en: "Credit Note",          color: "#0363b1", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้อนุมัติ/ผู้รับสินค้าคืน"] },
   debit_note:    { prefix: "DN",  th: "ใบเพิ่มหนี้/ใบกำกับภาษี",                en: "Debit Note",           color: "#5f116e", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้อนุมัติ"] },
   purchase_req:  { prefix: "PR",  th: "ใบเบิกซื้อสินค้า",                       en: "Purchase Requisition", color: "#1f3a5f", sign: ["ผู้ขอเบิก", "ผู้มีอำนาจลงนาม"] },
+  purchase_order:   { prefix: "PO", th: "ใบสั่งซื้อ",                          en: "Purchase Order",        color: "#8a5a00", sign: ["ผู้ขาย", "ผู้อนุมัติ"] },
+  purchase_request: { prefix: "PR", th: "ใบขอซื้อ (ภายใน)",                     en: "Purchase Request",      color: "#5b6b2f", sign: ["ผู้ขอซื้อ", "ผู้อนุมัติ"] },
 };
 export const STATUS_TH: Record<SalesDocStatus, string> = { draft: "ฉบับร่าง", issued: "ออกแล้ว", accepted: "ลูกค้ายืนยัน", partial: "รับชำระบางส่วน", paid: "รับชำระแล้ว", cancelled: "ยกเลิก" };
 export const STATUS_BADGE: Record<SalesDocStatus, string> = { draft: "badge-off", issued: "badge-pending", accepted: "badge-ok", partial: "badge-pending", paid: "badge-approved", cancelled: "badge-rejected" };
@@ -53,6 +55,8 @@ export const NEXT_DOCS: Record<SalesDocType, SalesDocType[]> = {
   credit_note: [],
   debit_note: ["receipt"],
   purchase_req: [],
+  purchase_order: [],
+  purchase_request: [],
 };
 
 export function thaiBaht(n: number): string {
