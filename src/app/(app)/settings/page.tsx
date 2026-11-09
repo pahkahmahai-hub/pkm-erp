@@ -28,6 +28,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const workdays = (S.workdays as number[]) ?? [1, 2, 3, 4, 5];
   const company = S.company as { name_th: string };
   const nets = ((S.allowed_networks as AllowedNetwork[] | undefined) ?? []);
+  const netOn = S.network_restriction === true;
   const myIp = await clientIp();
 
   return (
@@ -63,8 +64,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <form action={saveNetworks} id="network" className="card p-6 space-y-4">
         <div>
           <h2 className="font-display font-bold">เครือข่ายที่พนักงานใช้ระบบได้ (Wi-Fi บริษัท)</h2>
-          <p className="text-xs text-ink-soft mt-1">พนักงานเข้าระบบได้เฉพาะเมื่อ Public IP ตรงกับรายการนี้ · ผู้บริหาร (admin) ใช้ได้ทุกเครือข่ายและเน็ตมือถือ · ถ้ารายการว่าง = ไม่จำกัด</p>
+          <p className="text-xs text-ink-soft mt-1">พนักงานเข้าระบบได้เฉพาะเมื่อ Public IP ตรงกับรายการนี้ · ผู้บริหาร (admin) ใช้ได้ทุกเครือข่ายและเน็ตมือถือ</p>
         </div>
+        <label className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm border ${netOn ? "bg-green/10 border-green/30" : "bg-cream border-line"}`}>
+          <input type="checkbox" name="network_restriction" defaultChecked={netOn} className="h-4 w-4 accent-purple" />
+          <span><b>{netOn ? "เปิดใช้อยู่" : "ปิดอยู่"}</b> — เปิดใช้ข้อจำกัดเครือข่ายสำหรับพนักงาน <span className="text-xs text-ink-soft">(ปิด = ทุกคนใช้ได้ทุกที่ · เปิดได้เมื่อตั้ง Wi-Fi ครบแล้ว ต้องมี IP อย่างน้อย 1 รายการ)</span></span>
+        </label>
         <div className="rounded-xl bg-cream px-4 py-3 text-sm flex flex-wrap items-center gap-3">
           <span>IP ของเครื่องคุณตอนนี้: <b className="font-mono">{myIp || "ไม่ทราบ"}</b></span>
           <span className="text-xs text-ink-soft">— ถ้าตอนนี้ต่อ Wi-Fi บริษัทอยู่ ให้คัดลอกเลขนี้ใส่ช่องด้านล่าง (ทำทีละ Wi-Fi ทั้ง 2 ตัว)</span>

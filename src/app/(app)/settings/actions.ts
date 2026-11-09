@@ -77,7 +77,11 @@ export async function saveNetworks(formData: FormData) {
   const supabase = await createClient();
   const labels = formData.getAll("net_label").map(String); const ips = formData.getAll("net_ip").map(String);
   const list = labels.map((label, i) => ({ label: label.trim(), ip: (ips[i] ?? "").trim() })).filter((n) => n.ip);
-  const { error } = await supabase.from("settings").upsert({ key: "allowed_networks", value: list, description: "เครือข่าย (Public IP) ที่พนักงานใช้ระบบได้ — ว่าง = ไม่จำกัด" });
+  const enabled = formData.get("network_restriction") === "on";
+  const { error } = await supabase.from("settings").upsert([
+    { key: "allowed_networks", value: list, description: "เครือข่าย (Public IP) ที่พนักงานใช้ระบบได้" },
+    { key: "network_restriction", value: enabled && list.length > 0, description: "เปิดใช้ข้อจำกัดเครือข่ายสำหรับพนักงาน (true/false)" },
+  ]);
   if (error) redirect(`/settings?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/settings");
   redirect("/settings?saved=1#network");

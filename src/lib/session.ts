@@ -22,8 +22,9 @@ export const getSession = cache(async (): Promise<SessionInfo> => {
 
   // Staff may use the system only from the company's networks (admins: anywhere).
   if (appUser.role !== "admin") {
-    const { data: net } = await supabase.from("settings").select("value").eq("key", "allowed_networks").maybeSingle();
-    const list = (net?.value as AllowedNetwork[] | null) ?? [];
+    const { data: rows } = await supabase.from("settings").select("key, value").in("key", ["allowed_networks", "network_restriction"]);
+    const enabled = rows?.find((r) => r.key === "network_restriction")?.value === true;   // off unless an admin switches it on
+    const list = enabled ? ((rows?.find((r) => r.key === "allowed_networks")?.value as AllowedNetwork[] | null) ?? []) : [];
     if (list.length > 0) {
       const ip = await clientIp();
       if (!ipAllowed(ip, list)) redirect(`/auth/network?ip=${encodeURIComponent(ip)}`);
