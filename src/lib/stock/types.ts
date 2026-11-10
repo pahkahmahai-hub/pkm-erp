@@ -48,9 +48,9 @@ export interface Defect {
   receipts?: Pick<Receipt, "receipt_no"> | null; app_users?: { display_name: string | null } | null;
 }
 
-export type MaterialKind = "fabric" | "packaging";
+export type MaterialKind = "fabric" | "packaging" | "accessory";
 export interface Material {
-  id: string; kind: MaterialKind; code: string | null; name: string; unit: string; qty: number; min_alert: number;
+  id: string; kind: MaterialKind; code: string | null; name: string; unit: string; qty: number; min_alert: number; unit_cost?: number;
   image_url: string | null; note: string | null; is_active: boolean; updated_at: string;
 }
 export interface MaterialMovement {
@@ -68,4 +68,5 @@ export const DEFECT_TH: Record<DefectStatus, string> = {
 export const MATERIAL_TH: Record<MaterialKind, { name: string; unit: string }> = {
   fabric: { name: "ลายผ้า", unit: "ผืน" },
   packaging: { name: "แพคเกจจิ้ง", unit: "ชิ้น" },
+  accessory: { name: "อุปกรณ์", unit: "ชิ้น" },
 };

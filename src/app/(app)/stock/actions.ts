@@ -187,6 +187,7 @@ export async function saveMaterial(id: string | null, formData: FormData) {
     unit: nul(formData.get("unit")) ?? (kind === "fabric" ? "ผืน" : "ชิ้น"),
     min_alert: num(formData.get("min_alert")) ?? 0,
     note: nul(formData.get("note")),
+    ...(formData.has("unit_cost") ? { unit_cost: num(formData.get("unit_cost")) ?? 0 } : {}),
   };
   if (id) {
     await supabase.from("materials").update(row).eq("id", id);

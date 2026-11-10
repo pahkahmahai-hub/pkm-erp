@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
 import { saveMaterial, moveMaterial, uploadImage, deleteMaterial } from "../../actions";
@@ -14,6 +15,7 @@ const TYPE_TH: Record<string, string> = { opening: "ยอดเริ่มต�
 export default async function MaterialDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { id } = await params;
   const { saved, error } = await searchParams;
+  const session = await getSession();
   const supabase = await createClient();
   const [{ data: m }, { data: moves }, { data: suppliers }] = await Promise.all([
     supabase.from("materials").select("*").eq("id", id).maybeSingle(),
@@ -61,6 +63,7 @@ export default async function MaterialDetail({ params, searchParams }: { params:
               <div className="md:col-span-2"><label className="label">ชื่อ</label><input name="name" defaultValue={mat.name} className="input" required /></div>
               <div><label className="label">หน่วย</label><input name="unit" defaultValue={mat.unit} className="input" /></div>
               <div><label className="label">ขั้นต่ำ</label><input name="min_alert" type="number" step="0.01" defaultValue={mat.min_alert} className="input" /></div>
+              {session.isAdmin && <div><label className="label">ต้นทุน/หน่วย (บาท)</label><input name="unit_cost" type="number" step="0.01" defaultValue={mat.unit_cost ?? 0} className="input" /></div>}
               <div className="md:col-span-3"><label className="label">หมายเหตุ</label><input name="note" defaultValue={mat.note ?? ""} className="input" /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3">

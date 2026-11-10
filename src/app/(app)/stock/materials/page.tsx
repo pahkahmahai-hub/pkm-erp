@@ -8,27 +8,29 @@ export const dynamic = "force-dynamic";
 
 export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ kind?: string; error?: string; deleted?: string }> }) {
   const { kind = "fabric", error, deleted } = await searchParams;
-  const k = (kind === "packaging" ? "packaging" : "fabric") as MaterialKind;
+  const k = (kind === "packaging" ? "packaging" : kind === "accessory" ? "accessory" : "fabric") as MaterialKind;
   const supabase = await createClient();
   const { data } = await supabase.from("materials").select("*").eq("kind", k).eq("is_active", true).order("name");
   const rows = (data ?? []) as Material[];
 
   return (
     <div className="space-y-6">
-      <Header title="ลายผ้า & แพคเกจจิ้ง" sub={`${MATERIAL_TH[k].name} ${rows.length} รายการ · รวม ${rows.reduce((a, r) => a + Number(r.qty), 0).toLocaleString()} ${MATERIAL_TH[k].unit}`} />
+      <Header title="ลายผ้า · แพคเกจจิ้ง · อุปกรณ์" sub={`${MATERIAL_TH[k].name} ${rows.length} รายการ · รวม ${rows.reduce((a, r) => a + Number(r.qty), 0).toLocaleString()} ${MATERIAL_TH[k].unit}`} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการแล้ว</div>}
       <div className="flex gap-2">
         <Link href="/stock/materials?kind=fabric" className={k === "fabric" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>ลายผ้า (ผืน)</Link>
         <Link href="/stock/materials?kind=packaging" className={k === "packaging" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>แพคเกจจิ้ง (ชิ้น)</Link>
+        <Link href="/stock/materials?kind=accessory" className={k === "accessory" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>อุปกรณ์ (ซิป กระดุม ป้าย ด้าย)</Link>
       </div>
 
-      <form action={saveMaterial.bind(null, null)} className="card p-4 grid sm:grid-cols-[1fr_2fr_1fr_1fr_auto] gap-2 items-end">
+      <form action={saveMaterial.bind(null, null)} className="card p-4 grid sm:grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-2 items-end">
         <input type="hidden" name="kind" value={k} />
-        <div><label className="label">รหัส</label><input name="code" className="input" placeholder={k === "fabric" ? "F-001" : "PK-001"} /></div>
-        <div><label className="label">ชื่อ{k === "fabric" ? "ลาย" : "แพคเกจ"} *</label><input name="name" className="input" required /></div>
+        <div><label className="label">รหัส</label><input name="code" className="input" placeholder={k === "fabric" ? "F-001" : k === "packaging" ? "PK-001" : "AC-001"} /></div>
+        <div><label className="label">ชื่อ{k === "fabric" ? "ลาย" : k === "packaging" ? "แพคเกจ" : "อุปกรณ์"} *</label><input name="name" className="input" required /></div>
         <div><label className="label">ยอดเริ่มต้น ({MATERIAL_TH[k].unit})</label><input name="opening_qty" type="number" step="0.01" defaultValue={0} className="input" /></div>
         <div><label className="label">ขั้นต่ำ</label><input name="min_alert" type="number" step="0.01" defaultValue={0} className="input" /></div>
+        <div><label className="label">ต้นทุน/หน่วย</label><input name="unit_cost" type="number" step="0.01" defaultValue={0} className="input" placeholder="บาท" /></div>
         <button className="btn-primary">+ เพิ่ม</button>
       </form>
 

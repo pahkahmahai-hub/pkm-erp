@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
-  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -101,6 +101,17 @@ NAV.purchase = [
       { href: "/purchase/requests/new", label: "เปิดใบขอซื้อ", icon: Plus },
       { href: "/purchase/orders", label: "ใบสั่งซื้อ (PO)", icon: ShoppingCart },
       { href: "/purchase/orders/new", label: "เปิด PO ตรง", icon: Plus, admin: true },
+    ],
+  },
+];
+NAV.production = [
+  {
+    title: "การผลิต",
+    items: [
+      { href: "/production", label: "ใบสั่งผลิต", icon: Factory },
+      { href: "/production/orders/new", label: "เปิดใบสั่งผลิต", icon: Plus },
+      { href: "/production/bom", label: "สูตรการผลิต (BOM)", icon: Layers },
+      { href: "/stock/materials?kind=fabric", label: "คลังผ้า / แพคเกจจิ้ง / อุปกรณ์", icon: Boxes },
     ],
   },
 ];
