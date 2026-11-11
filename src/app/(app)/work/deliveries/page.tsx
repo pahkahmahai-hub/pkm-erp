@@ -2,13 +2,14 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Store } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/ui";
+import { Header, type Crumb } from "@/components/ui";
 import { DeliveryBoard, type EmpLite, type SalesDocLite } from "@/components/work/DeliveryBoard";
 import { addDays, addMonths, weekColumns, monthOf, type DeliveryStore, type StoreDelivery } from "@/lib/work/deliveries";
 import { todayBkk } from "@/lib/today";
 import { loadDirectory, fillEmployees } from "@/lib/work/queries";
 
 export const dynamic = "force-dynamic";
+const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 
 export default async function DeliveriesPage({ searchParams }: { searchParams: Promise<{ from?: string; months?: string }> }) {
   const sp = await searchParams;
@@ -36,7 +37,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-4">
-      <Header title="ตารางส่งสินค้าห้าง" sub="ทีม SW — แถวละห้าง · ช่องละสัปดาห์ · สีตามขั้นตอน 1 สั่งจัด → 7 สินค้าถึงแล้ว" action={<span className="flex gap-2"><Link href="/work/rooms/sw-room" className="btn-outline">SW ROOM</Link>{canEdit && <Link href="/work/deliveries/stores" className="btn-outline"><Store size={16} /> จัดการห้าง</Link>}</span>} />
+      <Header crumbs={[...WORK, { href: "/work/rooms/sw-room", label: "SW ROOM" }]} title="ตารางส่งสินค้าห้าง" sub="ทีม SW — แถวละห้าง · ช่องละสัปดาห์ · สีตามขั้นตอน 1 สั่งจัด → 7 สินค้าถึงแล้ว" action={<span className="flex gap-2"><Link href="/work/rooms/sw-room" className="btn-outline">SW ROOM</Link>{canEdit && <Link href="/work/deliveries/stores" className="btn-outline"><Store size={16} /> จัดการห้าง</Link>}</span>} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={href(addMonths(from, -1))} className="btn-outline py-1 px-2"><ChevronLeft size={16} /></Link>
         <Link href={href(addMonths(monthOf(today), -1))} className="btn-outline py-1 px-3 text-xs">เดือนนี้</Link>

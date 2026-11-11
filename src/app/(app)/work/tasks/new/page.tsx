@@ -1,12 +1,13 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/ui";
+import { Header, type Crumb } from "@/components/ui";
 import { myRooms, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import { createTask } from "../../actions";
 import { NewTaskForm } from "./NewTaskForm";
 import type { RoomMember } from "@/lib/work/types";
 
 export const dynamic = "force-dynamic";
+const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 
 export default async function NewTask({ searchParams }: { searchParams: Promise<{ room?: string; error?: string; title?: string; from?: string; assignee?: string }> }) {
   const { room, error, title, from, assignee } = await searchParams;
@@ -22,7 +23,7 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
 
   return (
     <div className="space-y-6">
-      <Header title="สั่งงาน" />
+      <Header crumbs={WORK} title="สั่งงาน" />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       <form action={createTask} className="card p-6">
         <NewTaskForm rooms={rooms} members={members} allEmployees={allEmp ?? []} initialRoomKey={room} isAdmin={session.isAdmin} initialTitle={title} fromMessage={from} initialAssignee={assignee} />

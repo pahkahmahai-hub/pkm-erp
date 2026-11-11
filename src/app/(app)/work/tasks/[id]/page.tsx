@@ -40,8 +40,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
 
   return (
     <div className="space-y-6">
-      <div className="text-xs text-ink-soft"><Link href="/work" className="hover:underline">งาน</Link> › <Link href={`/work/rooms/${task.work_rooms?.key}`} className="hover:underline">{task.work_rooms?.name}</Link> › #{task.task_no}</div>
-      <Header title={task.title} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{STATUS_TH[task.status]}</span>} />
+      <Header crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${task.work_rooms?.key}`, label: task.work_rooms?.name ?? "ห้อง" }]} title={`#${task.task_no} ${task.title}`} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{STATUS_TH[task.status]}</span>} />
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สั่งงานแล้ว ผู้รับจะเห็นในหน้างานของตัวเอง</div>}
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}

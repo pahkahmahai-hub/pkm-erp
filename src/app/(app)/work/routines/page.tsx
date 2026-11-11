@@ -1,11 +1,12 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/ui";
+import { Header, type Crumb } from "@/components/ui";
 import { myRooms, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import { saveRoutine, deleteRoutine } from "../actions";
 import { DOW_TH, type Routine, type RoomMember } from "@/lib/work/types";
 
 export const dynamic = "force-dynamic";
+const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 
 export default async function RoutinesPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; edit?: string }> }) {
   const { saved, error, edit } = await searchParams;
@@ -25,7 +26,7 @@ export default async function RoutinesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <Header title="งานประจำ" sub="ระบบสร้างงานให้อัตโนมัติตามวันในสัปดาห์ (เช่น Routine content จ–ศ)" />
+      <Header crumbs={WORK} title="งานประจำ" sub="ระบบสร้างงานให้อัตโนมัติตามวันในสัปดาห์ (เช่น Routine content จ–ศ)" />
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
 

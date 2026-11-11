@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Plus, Users } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/ui";
+import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
 import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp } from "@/lib/work/queries";
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
@@ -13,6 +13,7 @@ import type { ChatMessage } from "@/components/work/ChatBox";
 import { MessageCircle, ListChecks, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 const COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done"];
 
 export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string; tab?: string }> }) {
@@ -44,7 +45,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     await markRoomRead(r.id);
     return (
       <div className="space-y-4">
-        <Header title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
+        <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
         <RoomTabs roomKey={key} tab={tab} />
         <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} />
         <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · พิมพ์ @ชื่อ เพื่อเอ่ยถึง แล้วกด “สั่งงานให้…” ใต้ข้อความเพื่อมอบหมายเป็นงานสั่ง</p>
@@ -61,7 +62,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
 
   return (
     <div className="space-y-6">
-      <Header title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงานในห้องนี้</Link>} />
+      <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงานในห้องนี้</Link>} />
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบงานแล้ว</div>}
       <RoomTabs roomKey={key} tab={tab} />
       <div className="flex flex-wrap items-center gap-2 text-sm">

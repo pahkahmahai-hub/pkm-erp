@@ -34,7 +34,7 @@ export default async function WorkHome() {
 
   return (
     <div className="space-y-6">
-      <Header title="งาน" sub={fmtDate(todayBkk(), { weekday: "long" })} action={
+      <Header crumbs={[]} title="งาน" sub={fmtDate(todayBkk(), { weekday: "long" })} action={
         <div className="flex gap-2">
           <Link href="/work/notifications" className="btn-outline relative"><Bell size={16} /> แจ้งเตือน{(unread ?? 0) > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red text-white text-[10px] rounded-full h-5 min-w-5 px-1 grid place-items-center">{unread}</span>}</Link>
           <Link href="/work/tasks/new" className="btn-primary"><Plus size={16} /> สั่งงาน</Link>

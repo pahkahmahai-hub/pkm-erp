@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/ui";
+import { Header, type Crumb } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
 import { markAllRead } from "../actions";
 import type { Notification } from "@/lib/work/types";
 
 export const dynamic = "force-dynamic";
+const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 
 export default async function NotificationsPage() {
   const session = await getSession();
@@ -15,7 +16,7 @@ export default async function NotificationsPage() {
   const rows = (data ?? []) as (Notification & { work_rooms?: { key: string } | null })[];
   return (
     <div className="space-y-6">
-      <Header title="แจ้งเตือน" action={<form action={markAllRead}><button className="btn-outline">อ่านทั้งหมดแล้ว</button></form>} />
+      <Header crumbs={WORK} title="แจ้งเตือน" action={<form action={markAllRead}><button className="btn-outline">อ่านทั้งหมดแล้ว</button></form>} />
       <ul className="card divide-y divide-line">
         {rows.map((n) => (
           <li key={n.id} className={`px-4 py-3 text-sm flex justify-between gap-3 ${n.read_at ? "text-ink-soft" : "font-semibold"}`}>
