@@ -249,3 +249,12 @@ export async function deleteDeliveryStore(id: string) {
   revalidatePath("/work/deliveries");
   redirect("/work/deliveries/stores?deleted=1");
 }
+
+export async function createDeliveryTask(id: string, title: string, description: string | null, checklist: string[]): Promise<{ error?: string; taskId?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_delivery_task", { p_id: id, p_title: title, p_description: description, p_checklist: checklist });
+  if (error) return { error: error.message };
+  revalidatePath("/work");
+  return { taskId: (data as { id: string }).id };
+}

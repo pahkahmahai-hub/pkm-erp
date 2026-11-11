@@ -2,15 +2,15 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, X, Trash2, Search, ExternalLink, Check } from "lucide-react";
+import { Plus, X, Trash2, Search, ExternalLink, Check, ClipboardList } from "lucide-react";
 import { STEPS, stepMeta, fmtDM, addDays, mondayOf, TH_MONTHS, type DeliveryStore, type StoreDelivery, type WeekCol } from "@/lib/work/deliveries";
-import { saveStoreDelivery, deleteStoreDelivery, type DeliveryPayload } from "@/app/(app)/work/actions";
+import { saveStoreDelivery, deleteStoreDelivery, createDeliveryTask, type DeliveryPayload } from "@/app/(app)/work/actions";
 
 export interface EmpLite { id: string; first_name: string; nickname: string | null }
 export interface SalesDocLite { id: string; doc_no: string; doc_type: string; customer_name: string; doc_date: string; status: string }
 interface Props { stores: DeliveryStore[]; deliveries: StoreDelivery[]; weeks: WeekCol[]; employees: EmpLite[]; salesDocs: SalesDocLite[]; canEdit: boolean; today: string; userNames: Record<string, string> }
 
-type Draft = { id: string | null; store: DeliveryStore; week: string; target_date: string; step: number; doc_no: string; sales_doc_id: string | null; po_no: string; assignee_id: string; note: string; log: StoreDelivery["step_log"] };
+type Draft = { id: string | null; store: DeliveryStore; week: string; target_date: string; step: number; doc_no: string; sales_doc_id: string | null; po_no: string; assignee_id: string; note: string; task_id: string | null; log: StoreDelivery["step_log"] };
 
 export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs, canEdit, today, userNames }: Props) {
   const [rows, setRows] = useState<StoreDelivery[]>(deliveries);
@@ -23,21 +23,35 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
   const months = useMemo(() => { const out: { ym: string; label: string; count: number }[] = []; for (const w of weeks) { const last = out[out.length - 1]; if (last && last.ym === w.month) last.count++; else { const [y, mo] = w.month.split("-").map(Number); out.push({ ym: w.month, label: `${TH_MONTHS[mo - 1]} ${y + 543}`, count: 1 }); } } return out; }, [weeks]);
   const groups = useMemo(() => { const out: { name: string; list: DeliveryStore[] }[] = []; for (const s of stores) { const g = s.group_name ?? "อื่น ๆ"; const last = out[out.length - 1]; if (last && last.name === g) last.list.push(s); else out.push({ name: g, list: [s] }); } return out; }, [stores]);
 
-  const openNew = (store: DeliveryStore, week: string) => { if (!canEdit) return; setErr(null); setDraft({ id: null, store, week, target_date: "", step: 1, doc_no: "", sales_doc_id: null, po_no: "", assignee_id: "", note: "", log: [] }); };
-  const openEdit = (d: StoreDelivery) => { const store = stores.find((s) => s.id === d.store_id); if (!store) return; setErr(null); setDraft({ id: d.id, store, week: d.week_start, target_date: d.target_date ?? "", step: d.step, doc_no: d.doc_no ?? "", sales_doc_id: d.sales_doc_id, po_no: d.po_no ?? "", assignee_id: d.assignee_id ?? "", note: d.note ?? "", log: d.step_log ?? [] }); };
+  const openNew = (store: DeliveryStore, week: string) => { if (!canEdit) return; setErr(null); setDraft({ id: null, store, week, target_date: "", step: 1, doc_no: "", sales_doc_id: null, po_no: "", assignee_id: "", note: "", task_id: null, log: [] }); };
+  const openEdit = (d: StoreDelivery) => { const store = stores.find((s) => s.id === d.store_id); if (!store) return; setErr(null); setDraft({ id: d.id, store, week: d.week_start, target_date: d.target_date ?? "", step: d.step, doc_no: d.doc_no ?? "", sales_doc_id: d.sales_doc_id, po_no: d.po_no ?? "", assignee_id: d.assignee_id ?? "", note: d.note ?? "", task_id: d.task_id ?? null, log: d.step_log ?? [] }); };
 
-  const save = (patch?: Partial<Draft>) => {
-    if (!draft) return;
-    const d = { ...draft, ...patch };
+  const persist = async (d: Draft): Promise<StoreDelivery | null> => {
     const p: DeliveryPayload = { id: d.id, store_id: d.store.id, week: d.week, target_date: d.target_date || null, step: d.step, doc_no: d.doc_no || null, sales_doc_id: d.sales_doc_id, po_no: d.po_no || null, assignee_id: d.assignee_id || null, note: d.note || null };
+    const r = await saveStoreDelivery(p);
+    if (r.error || !r.row) { setErr(r.error ?? "บันทึกไม่สำเร็จ"); return null; }
+    const row = r.row as unknown as StoreDelivery;
+    const full = { ...row, employees: employees.find((e) => e.id === row.assignee_id) ?? null };
+    setRows((x) => (x.some((y) => y.id === full.id) ? x.map((y) => (y.id === full.id ? full : y)) : [...x, full]));
+    return full;
+  };
+  const save = () => { if (!draft) return; const d = draft; start(async () => { if (await persist(d)) setDraft(null); }); };
+  // save first (so the job links back), then create a work task in SW ROOM for the assignee
+  const makeJob = () => {
+    if (!draft) return;
+    if (!draft.assignee_id) { setErr("เลือกผู้รับผิดชอบก่อนสร้าง job"); return; }
+    const d = draft;
     start(async () => {
-      const r = await saveStoreDelivery(p);
-      if (r.error || !r.row) { setErr(r.error ?? "บันทึกไม่สำเร็จ"); return; }
-      const row = r.row as unknown as StoreDelivery;
-      const emp = employees.find((e) => e.id === row.assignee_id) ?? null;
-      const full = { ...row, employees: emp };
-      setRows((x) => (x.some((y) => y.id === full.id) ? x.map((y) => (y.id === full.id ? full : y)) : [...x, full]));
-      setDraft(null);
+      const saved = await persist(d);
+      if (!saved) return;
+      const title = `ส่งสินค้า ${d.store.name} — สัปดาห์ ${fmtDM(d.week)}–${fmtDM(addDays(d.week, 6))}`;
+      const desc = [d.doc_no && `ใบส่งของ: ${d.doc_no}`, d.po_no && `PO ห้าง: ${d.po_no}`, d.target_date && `ตั้งใจส่ง: ${fmtDM(d.target_date)}`, d.note].filter(Boolean).join("\n") || null;
+      const checklist = STEPS.filter((s) => s.n > d.step).map((s) => `${s.n}. ${s.label}`);
+      const r = await createDeliveryTask(saved.id, title, desc, checklist);
+      if (r.error || !r.taskId) { setErr(r.error ?? "สร้าง job ไม่สำเร็จ"); return; }
+      const taskId = r.taskId;
+      setRows((x) => x.map((y) => (y.id === saved.id ? { ...y, task_id: taskId } : y)));
+      setDraft({ ...d, id: saved.id, task_id: taskId, log: saved.step_log });
     });
   };
   const remove = () => {
@@ -108,8 +122,11 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
                   {[...draft.log].reverse().map((l, i) => <div key={i}><span className="inline-block rounded px-1.5 mr-1" style={{ background: stepMeta(l.step).bg, color: stepMeta(l.step).fg }}>{l.step}. {stepMeta(l.step).short}</span>{new Date(l.at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })} · {l.auto ? "อัตโนมัติ (ออกเอกสารขาย)" : (l.by && userNames[l.by]) || "—"}</div>)}
                 </div>
               )}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 {draft.id && <button type="button" onClick={remove} disabled={pending} className="btn-outline !border-red !text-red"><Trash2 size={14} /> ลบ</button>}
+                {draft.task_id
+                  ? <Link href={`/work/tasks/${draft.task_id}`} className="btn-outline"><ClipboardList size={14} /> เปิด job</Link>
+                  : <button type="button" onClick={makeJob} disabled={pending} className="btn-outline" title="บันทึกแล้วสร้างงานสั่งใน SW ROOM ให้ผู้รับผิดชอบ พร้อมเช็คลิสต์ขั้นตอนที่เหลือ"><ClipboardList size={14} /> สร้าง job ให้{draft.assignee_id ? " " + (employees.find((e) => e.id === draft.assignee_id)?.nickname ?? employees.find((e) => e.id === draft.assignee_id)?.first_name ?? "") : "ผู้รับผิดชอบ"}</button>}
                 <span className="ml-auto flex gap-2">
                   <button type="button" onClick={() => setDraft(null)} className="btn-outline">ยกเลิก</button>
                   <button type="button" onClick={() => save()} disabled={pending} className="btn-primary"><Check size={16} /> {pending ? "กำลังบันทึก…" : "บันทึก"}</button>
@@ -138,7 +155,7 @@ function GroupRows({ g, weeks, byCell, canEdit, thisWeek, openNew, openEdit }: {
                   {list.map((d) => { const m = stepMeta(d.step); return (
                     <button key={d.id} type="button" onClick={() => openEdit(d)} title={`${m.n}. ${m.label}${d.employees ? " · " + (d.employees.nickname ?? d.employees.first_name) : ""}${d.note ? "\n" + d.note : ""}`}
                       className="rounded-md px-1.5 py-1 text-[11px] font-semibold text-left leading-tight hover:ring-2 ring-ink/30" style={{ background: m.bg, color: m.fg }}>
-                      {d.doc_no ?? <span className="font-normal italic">ยังไม่มีเลขใบ</span>}<span className="block text-[9px] font-normal opacity-80">{m.n}. {m.short}{d.target_date ? " · " + fmtDM(d.target_date) : ""}</span>
+                      {d.doc_no ?? <span className="font-normal italic">ยังไม่มีเลขใบ</span>}{d.task_id && <ClipboardList size={10} className="inline ml-1 opacity-70" />}<span className="block text-[9px] font-normal opacity-80">{m.n}. {m.short}{d.target_date ? " · " + fmtDM(d.target_date) : ""}</span>
                     </button>); })}
                   {canEdit && <button type="button" onClick={() => openNew(s, w.start)} className={`rounded-md text-ink-soft/0 hover:text-ink-soft hover:bg-cream grid place-items-center ${list.length ? "h-4" : "flex-1 min-h-[28px]"}`} aria-label="เพิ่ม"><Plus size={12} /></button>}
                 </div>
