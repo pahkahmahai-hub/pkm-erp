@@ -9,6 +9,7 @@ import type { Task } from "@/lib/work/types";
 import { fmtDate, todayBkk } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+const MAIN_ROOMS = ["teamwork", "gc-room", "sw-room"];
 
 export default async function WorkHome() {
   const session = await getSession();
@@ -46,17 +47,21 @@ export default async function WorkHome() {
         <Stat label="ที่ฉันสั่ง (ค้าง)" value={assignedByMe.length} tone="yellow" />
       </div>
 
-      <section>
-        <h2 className="font-display font-bold mb-3">ห้องงาน</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {rooms.map((r) => (
-            <Link key={r.id} href={`/work/rooms/${r.key}`} className="card p-4 flex items-center gap-3 hover:border-purple transition">
-              <div className="h-10 w-10 rounded-xl text-white grid place-items-center font-display font-bold" style={{ background: r.color }}>{r.name[0]}</div>
-              <div className="min-w-0 flex-1"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
-              {(unreadByRoom[r.id] ?? 0) > 0 && <Link href={`/work/rooms/${r.key}?tab=chat`} className="bg-red text-white text-[11px] rounded-full px-2 py-0.5 font-semibold">{unreadByRoom[r.id]} แชท</Link>}
-            </Link>
-          ))}
-        </div>
+      <section className="space-y-4">
+        {[{ title: "ห้องหลัก", list: rooms.filter((r) => MAIN_ROOMS.includes(r.key)), cols: "sm:grid-cols-3" }, { title: "ห้องย่อย", list: rooms.filter((r) => !MAIN_ROOMS.includes(r.key)), cols: "sm:grid-cols-2 lg:grid-cols-4" }].filter((g) => g.list.length).map((g) => (
+          <div key={g.title}>
+            <h2 className="font-display font-bold mb-3">{g.title} <span className="text-xs font-normal text-ink-soft">{g.title === "ห้องหลัก" ? "ทั้งบริษัท · ทีม GC · ทีม SW" : "ตามหน้าที่งาน"}</span></h2>
+            <div className={`grid ${g.cols} gap-3`}>
+              {g.list.map((r) => (
+                <Link key={r.id} href={`/work/rooms/${r.key}`} className={`card flex items-center gap-3 hover:border-purple transition ${g.title === "ห้องหลัก" ? "p-5" : "p-4"}`}>
+                  <div className={`${g.title === "ห้องหลัก" ? "h-12 w-12 text-lg" : "h-10 w-10"} rounded-xl text-white grid place-items-center font-display font-bold`} style={{ background: r.color }}>{r.name[0]}</div>
+                  <div className="min-w-0 flex-1"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
+                  {(unreadByRoom[r.id] ?? 0) > 0 && <Link href={`/work/rooms/${r.key}?tab=chat`} className="bg-red text-white text-[11px] rounded-full px-2 py-0.5 font-semibold">{unreadByRoom[r.id]} แชท</Link>}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       <div className="grid lg:grid-cols-2 gap-6">
