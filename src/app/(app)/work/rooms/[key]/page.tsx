@@ -8,7 +8,7 @@ import { TaskCard } from "@/components/work/TaskCard";
 import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp } from "@/lib/work/queries";
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
-import { markRoomRead } from "../../actions";
+import { markRoomRead, setRoomMember } from "../../actions";
 import type { ChatMessage } from "@/components/work/ChatBox";
 import { MessageCircle, ListChecks, Truck } from "lucide-react";
 
@@ -69,9 +69,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
         <span className="flex items-center gap-1 text-ink-soft"><Users size={14} /></span>
         <Link href={`/work/rooms/${key}${history ? "?history=1" : ""}`} className={!who ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>ทุกคน</Link>
         {mem.map((m) => (
-          <Link key={m.employee_id} href={`/work/rooms/${key}?who=${m.employee_id}${history ? "&history=1" : ""}`} className={who === m.employee_id ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>
-            {m.employees?.nickname ?? m.employees?.first_name}{m.is_lead && " ★"}
-          </Link>
+          <span key={m.employee_id} className="inline-flex items-center">
+            <Link href={`/work/rooms/${key}?who=${m.employee_id}${history ? "&history=1" : ""}`} className={who === m.employee_id ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>
+              {m.employees?.nickname ?? m.employees?.first_name}{m.is_lead && " ★"}
+            </Link>
+            {session.isAdmin && <form action={setRoomMember.bind(null, r.id, m.employee_id, true, !m.is_lead)}><button className={`ml-0.5 h-6 w-6 rounded-full text-xs grid place-items-center ${m.is_lead ? "text-yellow bg-yellow/20" : "text-ink-soft/40 hover:text-yellow"}`} title={m.is_lead ? "ถอดจากหัวหน้าห้อง" : "ตั้งเป็นหัวหน้าห้อง (โอน/แก้งานของทุกคนในห้องได้)"}>★</button></form>}
+          </span>
         ))}
         <span className="ml-auto flex gap-2">
           <Link href={`/work/rooms/${key}${who ? `?who=${who}` : ""}`} className={!history ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>ค้างอยู่</Link>

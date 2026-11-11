@@ -32,7 +32,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
 
   const me = session.appUser.id;
   const myEmp = session.employee?.id;
-  const isOwner = session.isAdmin || task.created_by === me;
+  // ผู้บริหาร / ผู้สั่งงาน / หัวหน้าห้อง (★) แก้ไข โอนงาน ตรวจรับ และลบได้
+  const isLead = !!session.employee && members.some((m) => m.employee_id === session.employee!.id && m.is_lead);
+  const isOwner = session.isAdmin || task.created_by === me || isLead;
   const isAssignee = task.assignee_id === myEmp;
   const overdue = !!task.due_date && task.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status);
   const items = (checklist ?? []) as Checklist[];
