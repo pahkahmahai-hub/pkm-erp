@@ -6,6 +6,7 @@ import { Header } from "@/components/ui";
 import { DeliveryBoard, type EmpLite, type SalesDocLite } from "@/components/work/DeliveryBoard";
 import { addDays, addMonths, weekColumns, monthOf, type DeliveryStore, type StoreDelivery } from "@/lib/work/deliveries";
 import { todayBkk } from "@/lib/today";
+import { loadDirectory, fillEmployees } from "@/lib/work/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,10 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
   const team = session.employee?.teams?.abbrev;
   const canEdit = session.isAdmin || team === "SW";
 
-  const [{ data: stores }, { data: rows }, { data: emps }, { data: docs }, { data: users }] = await Promise.all([
+  const [{ data: stores }, { data: rows }, emps, { data: docs }, { data: users }] = await Promise.all([
     supabase.from("delivery_stores").select("*").eq("is_active", true).order("sort_order").order("name"),
     supabase.from("store_deliveries").select("*, employees(id, first_name, nickname)").gte("week_start", rangeStart).lte("week_start", rangeEnd),
-    supabase.from("employees").select("id, first_name, nickname").neq("status", "resigned").order("emp_code"),
+    loadDirectory(supabase),
     supabase.from("sales_docs").select("id, doc_no, doc_type, customer_name, doc_date, status").in("doc_type", ["temp_delivery", "invoice", "billing"]).neq("status", "cancelled").gte("doc_date", addDays(today, -90)).order("doc_date", { ascending: false }).limit(400),
     supabase.from("app_users").select("id, display_name, email"),
   ]);
@@ -44,7 +45,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
         {[2, 3, 4, 6].map((n) => <Link key={n} href={`/work/deliveries?from=${from}&months=${n}`} className={n === span ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>{n} เดือน</Link>)}
         {!canEdit && <span className="ml-auto text-xs text-ink-soft">ดูได้อย่างเดียว (แก้ไขโดยทีม SW และผู้บริหาร)</span>}
       </div>
-      <DeliveryBoard stores={(stores ?? []) as DeliveryStore[]} deliveries={(rows ?? []) as StoreDelivery[]} weeks={weeks} employees={(emps ?? []) as EmpLite[]} salesDocs={(docs ?? []) as SalesDocLite[]} canEdit={canEdit} today={today} userNames={userNames} />
+      <DeliveryBoard stores={(stores ?? []) as DeliveryStore[]} deliveries={fillEmployees(rows as StoreDelivery[], emps, "assignee_id")} weeks={weeks} employees={emps as EmpLite[]} salesDocs={(docs ?? []) as SalesDocLite[]} canEdit={canEdit} today={today} userNames={userNames} />
     </div>
   );
 }

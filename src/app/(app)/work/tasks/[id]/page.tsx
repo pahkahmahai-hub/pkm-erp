@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
-import { TASK_SELECT } from "@/lib/work/queries";
+import { TASK_SELECT, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, type Task, type Checklist, type Comment, type RoomMember } from "@/lib/work/types";
 import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem } from "../../actions";
 import { Thread } from "./Thread";
@@ -25,7 +25,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   ]);
   if (!t) notFound();
   const task = t as Task;
-  const { data: members } = await supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id);
+  const [{ data: membersRaw }, dir] = await Promise.all([supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id), loadDirectory(supabase)]);
+  const members = fillEmployees(membersRaw as RoomMember[], dir, "employee_id");
+  if (!task.employees && task.assignee_id) task.employees = dir.find((e) => e.id === task.assignee_id) ?? null;
   const mem = (members ?? []) as RoomMember[];
 
   const me = session.appUser.id;

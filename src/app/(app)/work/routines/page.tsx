@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
-import { myRooms } from "@/lib/work/queries";
+import { myRooms, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import { saveRoutine, deleteRoutine } from "../actions";
 import { DOW_TH, type Routine, type RoomMember } from "@/lib/work/types";
 
@@ -12,13 +12,14 @@ export default async function RoutinesPage({ searchParams }: { searchParams: Pro
   const session = await getSession();
   const supabase = await createClient();
   const rooms = await myRooms(supabase, session.employee?.id ?? null, session.isAdmin);
-  const [{ data: routines }, { data: members }, { data: editing }] = await Promise.all([
+  const [{ data: routines }, { data: members }, { data: editing }, dir] = await Promise.all([
     supabase.from("work_routines").select("*, work_rooms(key, name, color), employees(first_name, nickname)").order("created_at"),
     supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").in("room_id", rooms.map((r) => r.id)),
     edit ? supabase.from("work_routines").select("*").eq("id", edit).maybeSingle() : Promise.resolve({ data: null }),
+    loadDirectory(supabase),
   ]);
-  const list = (routines ?? []) as Routine[];
-  const mem = (members ?? []) as RoomMember[];
+  const list = fillEmployees(routines as Routine[], dir, "assignee_id");
+  const mem = fillEmployees(members as RoomMember[], dir, "employee_id");
   const e = editing as Routine | null;
   const emps = [...new Map(mem.map((m) => [m.employee_id, m.employees!])).values()];
 

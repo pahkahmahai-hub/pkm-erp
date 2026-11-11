@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { TASK_SELECT, ensureRoutines } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp } from "@/lib/work/queries";
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead } from "../../actions";
@@ -25,12 +25,16 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   const { data: room } = await supabase.from("work_rooms").select("*").eq("key", key).maybeSingle();
   if (!room) notFound();
   const r = room as Room;
-  const { data: members } = await supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id);
-  const mem = (members ?? []) as RoomMember[];
+  const [{ data: members }, dir, { data: adminUsers }] = await Promise.all([
+    supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id),
+    loadDirectory(supabase),
+    supabase.from("app_users").select("employee_id").eq("role", "admin").not("employee_id", "is", null),
+  ]);
+  const mem = fillEmployees(members as RoomMember[], dir, "employee_id");
   // @mention targets: room members + admins (owners), label = nickname or first name
-  const { data: adminEmps } = await supabase.from("app_users").select("employees(id, first_name, nickname)").eq("role", "admin").not("employee_id", "is", null);
-  const chatMembers = [...mem.map((m) => m.employees), ...((adminEmps ?? []) as unknown as { employees: { id: string; first_name: string; nickname: string | null } | null }[]).map((a) => a.employees)]
-    .filter((e): e is { id: string; first_name: string; nickname: string | null } => !!e)
+  const adminEmps = ((adminUsers ?? []) as { employee_id: string }[]).map((a) => dir.find((e) => e.id === a.employee_id) ?? null);
+  const chatMembers = [...mem.map((m) => m.employees), ...adminEmps]
+    .filter((e): e is DirEmp => !!e)
     .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
     .map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name }));
   if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id)) redirect("/work?denied=1");
@@ -53,7 +57,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
               : q.not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500);
   if (who) q = q.eq("assignee_id", who);
   const { data } = await q;
-  const tasks = (data ?? []) as Task[];
+  const tasks = fillEmployees(data as Task[], dir, "assignee_id");
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, Stat } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { myRooms, ensureRoutines, TASK_SELECT, isOverdue } from "@/lib/work/queries";
+import { myRooms, ensureRoutines, TASK_SELECT, isOverdue, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import type { Task } from "@/lib/work/types";
 import { fmtDate, todayBkk } from "@/lib/format";
 
@@ -18,13 +18,14 @@ export default async function WorkHome() {
   const rooms = await myRooms(supabase, session.employee?.id ?? null, session.isAdmin);
   const empId = session.employee?.id;
 
-  const [{ data: tasksRaw }, { count: unread }, { data: chatUnread }] = await Promise.all([
+  const [{ data: tasksRaw }, { count: unread }, { data: chatUnread }, dir] = await Promise.all([
     supabase.from("work_tasks").select(TASK_SELECT).not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500),
     supabase.from("work_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.appUser.id).is("read_at", null),
     supabase.rpc("room_unread_counts"),
+    loadDirectory(supabase),
   ]);
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
-  const tasks = (tasksRaw ?? []) as Task[];
+  const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
   const mine = tasks.filter((t) => t.assignee_id === empId);
   const assignedByMe = tasks.filter((t) => t.created_by === session.appUser.id && t.assignee_id !== empId);
   const review = tasks.filter((t) => t.status === "done" && (session.isAdmin || t.created_by === session.appUser.id));

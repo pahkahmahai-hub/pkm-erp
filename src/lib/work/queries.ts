@@ -20,3 +20,18 @@ export function isOverdue(t: Task) {
 export async function ensureRoutines(supabase: SupabaseClient) {
   await supabase.rpc("generate_routine_tasks");
 }
+
+// ---------------------------------------------------------------------
+// Staff can only read their own row in `employees` (HR privacy), so nested
+// employees(...) joins come back null for everyone else. Use the public
+// `employee_directory` view (safe columns, visible to all) to fill names.
+export interface DirEmp { id: string; first_name: string; nickname: string | null; emp_code: string }
+export async function loadDirectory(supabase: SupabaseClient): Promise<DirEmp[]> {
+  const { data } = await supabase.from("employee_directory").select("id, first_name, nickname, emp_code").order("emp_code");
+  return (data ?? []) as DirEmp[];
+}
+/** fill row.employees from the directory when the join returned null */
+export function fillEmployees<T extends { employees?: unknown }>(rows: T[] | null | undefined, dir: DirEmp[], idKey: keyof T): T[] {
+  const map = new Map(dir.map((e) => [e.id, e]));
+  return (rows ?? []).map((r) => (r.employees ? r : { ...r, employees: map.get(r[idKey] as unknown as string) ?? null }));
+}
