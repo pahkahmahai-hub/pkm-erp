@@ -46,6 +46,12 @@ export function NavFeedback() {
         // defer so the button's name/value still reach the server action
         setTimeout(() => { btn.disabled = true; btn.classList.add("opacity-60", "cursor-wait"); btn.innerHTML = `<span class="inline-flex items-center gap-2"><span class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"></span>กำลังทำงาน…</span>`; }, 0);
         restore.current = () => { btn.disabled = false; btn.classList.remove("opacity-60", "cursor-wait"); btn.innerHTML = html; };
+        // in-place server actions (tick a checklist, post a comment) don't change the URL:
+        // watch for React re-rendering the form's area and restore the button then
+        const area = form.parentElement ?? document.body;
+        const mo = new MutationObserver(() => { mo.disconnect(); setTimeout(() => { setBusy(false); restore.current?.(); restore.current = null; if (timer.current) clearTimeout(timer.current); }, 150); });
+        setTimeout(() => mo.observe(area, { childList: true, subtree: true, characterData: true, attributes: true }), 50);
+        setTimeout(() => mo.disconnect(), 20000);
       }
     };
     document.addEventListener("click", onClick, true);
