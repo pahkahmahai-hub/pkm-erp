@@ -12,5 +12,5 @@ select r.id, e.id, false
   from public.employees e
   join public.teams t on t.id = e.team_id
   join public.work_rooms r on r.key = case t.abbrev when 'GC' then 'gc-room' when 'SW' then 'sw-room' end
- where e.status = 'active'
+ where e.status <> 'resigned'
 on conflict do nothing;
