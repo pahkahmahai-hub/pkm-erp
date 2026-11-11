@@ -7,22 +7,20 @@ import { clientIp, ipAllowed, type AllowedNetwork } from "@/lib/network";
 /** Loads the signed-in Google user + the allowlisted app_user row. Redirects if not allowed. */
 export const getSession = cache(async (): Promise<SessionInfo> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // The proxy already validated/refreshed the session with getUser(); here a local JWT check is enough (no auth round-trip).
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims ? { id: claims.claims.sub as string, email: claims.claims.email as string | undefined, user_metadata: (claims.claims.user_metadata ?? {}) as Record<string, unknown> } : null;
   if (!user) redirect("/login");
 
-  const { data: appUser } = await supabase
-    .from("app_users")
-    .select("*")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const [{ data: appUser }, { data: rows }] = await Promise.all([
+    supabase.from("app_users").select("*").eq("auth_user_id", user.id).maybeSingle(),
+    supabase.from("settings").select("key, value").in("key", ["allowed_networks", "network_restriction"]),
+  ]);
 
   if (!appUser) redirect("/auth/denied");
 
   // Staff may use the system only from the company's networks (admins: anywhere).
   if (appUser.role !== "admin") {
-    const { data: rows } = await supabase.from("settings").select("key, value").in("key", ["allowed_networks", "network_restriction"]);
     const enabled = rows?.find((r) => r.key === "network_restriction")?.value === true;   // off unless an admin switches it on
     const list = enabled ? ((rows?.find((r) => r.key === "allowed_networks")?.value as AllowedNetwork[] | null) ?? []) : [];
     if (list.length > 0) {

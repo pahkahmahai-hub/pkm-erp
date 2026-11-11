@@ -103,3 +103,7 @@ h1, h2, h3, .font-display {
   & td { @apply px-3 py-2.5 border-b border-line/70 align-top; }
   & tr:last-child td { @apply border-b-0; }
 }
+
+/* NavFeedback top bar */
+@keyframes nav-progress { 0% { transform: translateX(-100%); } 60% { transform: translateX(-20%); } 100% { transform: translateX(0); } }
+.nav-progress { animation: nav-progress 4s cubic-bezier(.2,.8,.2,1) forwards; }
