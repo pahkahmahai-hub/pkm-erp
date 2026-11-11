@@ -59,6 +59,16 @@ export async function adjustStock(id: string, formData: FormData) {
   redirect(`/stock/products/${id}?saved=1`);
 }
 
+/** Inline adjust from the product list — returns {error} instead of redirecting. */
+export async function quickAdjustStock(id: string, newQty: number, reason: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("adjust_stock", { p_product_id: id, p_new_qty: Math.max(0, Math.round(newQty)), p_reason: reason });
+  if (error) return { error: error.message };
+  revalidatePath("/stock/products"); revalidatePath("/stock");
+  return { ok: true };
+}
+
 export async function uploadImage(table: "products" | "materials", id: string, formData: FormData) {
   await getSession();
   const file = formData.get("image") as File | null;

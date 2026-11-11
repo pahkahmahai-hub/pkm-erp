@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { QuickAdjust } from "@/components/stock/QuickAdjust";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
@@ -60,7 +61,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                   <td className="font-mono text-xs text-ink-soft">{p.barcode ?? "—"}</td>
                   <td className="text-xs">{p.dept}{p.sub_dept ? ` / ${p.sub_dept}` : ""}</td>
                   <td className="text-right">{Number(p.price).toLocaleString()}</td>
-                  <td className={`text-right font-semibold ${p.stock_qty === 0 ? "text-red" : low ? "text-[#8a6a00]" : ""}`}>{p.stock_qty}{low && <span className="badge-late ml-1">ต่ำ</span>}</td>
+                  <td className="text-right"><QuickAdjust productId={p.id} qty={p.stock_qty} low={low} /></td>
                   <td className="text-right text-ink-soft">{p.defect_qty || "—"}</td>
                   <td className="text-right text-ink-soft">{p.min_alert || "—"}</td>
                 </tr>
