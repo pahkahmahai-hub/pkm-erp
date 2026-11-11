@@ -205,3 +205,47 @@ export async function fetchNewer(table: "work_comments" | "work_room_messages", 
   const { data } = await supabase.from(table).select("*, app_users(display_name, email)").eq(column, value).gt("created_at", after).order("created_at").limit(100);
   return (data ?? []) as Record<string, unknown>[];
 }
+
+// ---------- ตารางส่งสินค้าห้าง ----------
+export interface DeliveryPayload { id?: string | null; store_id: string; week: string; target_date?: string | null; step?: number | null; doc_no?: string | null; sales_doc_id?: string | null; po_no?: string | null; assignee_id?: string | null; note?: string | null }
+export async function saveStoreDelivery(p: DeliveryPayload): Promise<{ error?: string; row?: Record<string, unknown> }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("upsert_store_delivery", {
+    p_id: p.id ?? null, p_store: p.store_id, p_week: p.week, p_target: p.target_date || null, p_step: p.step ?? null, p_doc_no: p.doc_no?.trim() || null,
+    p_sales_doc: p.sales_doc_id || null, p_po: p.po_no?.trim() || null, p_assignee: p.assignee_id || null, p_note: p.note?.trim() || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/work/deliveries");
+  return { row: data as Record<string, unknown> };
+}
+
+export async function deleteStoreDelivery(id: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_store_delivery", { p_id: id });
+  if (error) return { error: error.message };
+  revalidatePath("/work/deliveries");
+  return {};
+}
+
+export async function saveDeliveryStore(id: string | null, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_delivery_store", {
+    p_id: id, p_name: String(formData.get("name")).trim(), p_short: nul(formData.get("short_name")), p_group: nul(formData.get("group_name")), p_contact: nul(formData.get("contact_id")),
+    p_color: nul(formData.get("color")), p_sort: formData.get("sort_order") ? Number(formData.get("sort_order")) : null, p_active: formData.get("is_active") === "on",
+  });
+  if (error) redirect(`/work/deliveries/stores?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/work/deliveries");
+  redirect("/work/deliveries/stores?saved=1");
+}
+
+export async function deleteDeliveryStore(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_delivery_store", { p_id: id });
+  if (error) redirect(`/work/deliveries/stores?error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/work/deliveries");
+  redirect("/work/deliveries/stores?deleted=1");
+}

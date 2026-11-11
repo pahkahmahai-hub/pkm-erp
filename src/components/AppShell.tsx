@@ -7,7 +7,7 @@ import { NavFeedback } from "@/components/NavFeedback";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
-  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -60,6 +60,7 @@ NAV.work = [
       { href: "/work/tasks/new", label: "สั่งงาน", icon: Plus },
       { href: "/work/notifications", label: "แจ้งเตือน", icon: Bell },
       { href: "/work/routines", label: "งานประจำ", icon: Repeat },
+      { href: "/work/deliveries", label: "ตารางส่งห้าง", icon: Truck },
     ],
   },
 ];
