@@ -7,22 +7,49 @@ import { compressImage } from "@/lib/image";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 
+export interface ChatMember { employee_id: string; label: string; first_name: string }
 export interface ChatMessage {
   id: string; author_id: string | null; body: string | null; image_url: string | null; file_url: string | null; file_name: string | null;
-  kind?: string; task_id?: string | null; created_at: string;
+  kind?: string; task_id?: string | null; mentions?: string[] | null; created_at: string;
   app_users?: { display_name: string | null; email: string } | null;
 }
 
 export function ChatBox({
-  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px",
+  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px", members = [],
 }: {
   table: "work_comments" | "work_room_messages"; filterColumn: "task_id" | "room_id"; filterValue: string; initial: ChatMessage[]; meId: string;
   onPost: (fd: FormData) => Promise<{ error?: string; row?: Record<string, unknown> }>;
   onDelete: (id: string) => Promise<void>;
   title?: string; placeholder?: string;
-  makeTaskHref?: (m: ChatMessage) => string;   // "เปลี่ยนเป็นงาน"
+  makeTaskHref?: (m: ChatMessage, assignee?: string) => string;   // "เปลี่ยนเป็นงาน" (assignee = employee id ที่ถูก @)
   maxHeight?: string;
+  members?: ChatMember[];                          // สำหรับ @mention
 }) {
+  const [mentionQ, setMentionQ] = useState<string | null>(null);   // text after the "@" being typed
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const mentionResults = mentionQ === null ? [] : members.filter((m) => m.label.toLowerCase().includes(mentionQ.toLowerCase()) || m.first_name.toLowerCase().includes(mentionQ.toLowerCase())).slice(0, 6);
+  function onBodyChange(v: string) {
+    setBody(v);
+    const el = taRef.current; const pos = el ? el.selectionStart : v.length;
+    const before = v.slice(0, pos); const at = before.lastIndexOf("@");
+    if (at >= 0 && (at === 0 || /\s/.test(before[at - 1])) && !/\s/.test(before.slice(at + 1))) { setMentionQ(before.slice(at + 1)); setMentionIdx(0); } else setMentionQ(null);
+  }
+  function insertMention(m: ChatMember) {
+    const el = taRef.current; const pos = el ? el.selectionStart : body.length;
+    const before = body.slice(0, pos); const at = before.lastIndexOf("@");
+    const next = `${body.slice(0, at)}@${m.label} ${body.slice(pos)}`;
+    setBody(next); setMentionQ(null);
+    requestAnimationFrame(() => { if (el) { el.focus(); const p = at + m.label.length + 2; el.setSelectionRange(p, p); } });
+  }
+  const mentionedIds = (text: string) => members.filter((m) => text.includes(`@${m.label}`)).map((m) => m.employee_id);
+  const labelOf = (empId: string) => members.find((m) => m.employee_id === empId)?.label ?? "";
+  const renderBody = (text: string) => {
+    const labels = members.map((m) => m.label).filter(Boolean).sort((a, b) => b.length - a.length);
+    if (!labels.length) return text;
+    const re = new RegExp(`(@(?:${labels.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}))`, "g");
+    return text.split(re).map((part, i) => (part.startsWith("@") && labels.includes(part.slice(1)) ? <mark key={i} className="bg-yellow/40 text-inherit rounded px-0.5 font-semibold">{part}</mark> : part));
+  };
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -92,6 +119,7 @@ export function ChatBox({
     start(async () => {
       const fd = new FormData();
       fd.set("body", body);
+      fd.set("mentions", JSON.stringify(mentionedIds(body)));
       if (file) fd.set("file", file.type.startsWith("image/") ? await compressImage(file) : file);
       const res = await onPost(fd);
       if (res.error) { setErr(res.error); return; }
@@ -111,12 +139,16 @@ export function ChatBox({
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${mine ? "bg-purple text-white rounded-br-sm" : "bg-cream rounded-bl-sm"}`}>
                 {!mine && <div className="text-[11px] font-semibold opacity-70 mb-0.5">{m.app_users?.display_name ?? m.app_users?.email}</div>}
-                {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                {m.body && <div className="whitespace-pre-wrap break-words">{renderBody(m.body)}</div>}
                 {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
                 {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" download className={`mt-1 flex items-center gap-2 underline ${mine ? "text-white" : "text-purple"}`}><Download size={14} /> {m.file_name ?? "ไฟล์แนบ"}</a>}
                 <div className={`text-[10px] mt-1 flex items-center gap-3 ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <span>{fmtDateTime(m.created_at)}</span>
-                  {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>}
+                  {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
+                    (m.mentions?.length ? m.mentions : []).length > 0
+                      ? m.mentions!.map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
+                      : <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>
+                  )}
                   {mine && <button onClick={() => start(() => onDelete(m.id))} className="hover:text-red" title="ลบ"><Trash2 size={11} /></button>}
                 </div>
               </div>
@@ -136,7 +168,22 @@ export function ChatBox({
           <input ref={fileRef} type="file" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป"><ImageIcon size={18} /></button>
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์"><Paperclip size={18} /></button>
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} className="input resize-none" rows={1} placeholder={placeholder ?? "พิมพ์ข้อความ… (Enter ส่ง, Shift+Enter ขึ้นบรรทัด)"} />
+          <div className="relative flex-1">
+            {mentionQ !== null && mentionResults.length > 0 && (
+              <div className="absolute bottom-full mb-1 left-0 w-64 card p-1 z-20">
+                {mentionResults.map((m, i) => <button key={m.employee_id} type="button" onMouseDown={(e) => { e.preventDefault(); insertMention(m); }} className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${i === mentionIdx ? "bg-lavender/40" : "hover:bg-cream"}`}>@{m.label} <span className="text-[11px] text-ink-soft">{m.first_name}</span></button>)}
+              </div>
+            )}
+            <textarea ref={taRef} value={body} onChange={(e) => onBodyChange(e.target.value)} onKeyDown={(e) => {
+              if (mentionQ !== null && mentionResults.length) {
+                if (e.key === "ArrowDown") { e.preventDefault(); setMentionIdx((i) => (i + 1) % mentionResults.length); return; }
+                if (e.key === "ArrowUp") { e.preventDefault(); setMentionIdx((i) => (i - 1 + mentionResults.length) % mentionResults.length); return; }
+                if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertMention(mentionResults[mentionIdx]); return; }
+                if (e.key === "Escape") { setMentionQ(null); return; }
+              }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+            }} className="input resize-none w-full" rows={1} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… พิมพ์ @ เพื่อเอ่ยถึงคน (Enter ส่ง)" : "พิมพ์ข้อความ… (Enter ส่ง, Shift+Enter ขึ้นบรรทัด)")} />
+          </div>
           <button type="button" onClick={send} disabled={pending || (!body.trim() && !file)} className="btn-primary px-3.5"><Send size={16} /></button>
         </div>
       </div>

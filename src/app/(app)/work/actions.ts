@@ -176,8 +176,11 @@ export async function postRoomMessage(roomId: string, formData: FormData): Promi
     }
   } catch (e) { return { error: (e as Error).message }; }
   if (!body && !image_url && !file_url) return { error: "ข้อความว่าง" };
-  const { data, error } = await supabase.from("work_room_messages").insert({ room_id: roomId, author_id: s.appUser.id, body, image_url, file_url, file_name }).select("*").single();
+  let mentions: string[] = [];
+  try { mentions = JSON.parse(String(formData.get("mentions") ?? "[]")); } catch { mentions = []; }
+  const { data, error } = await supabase.from("work_room_messages").insert({ room_id: roomId, author_id: s.appUser.id, body, image_url, file_url, file_name, mentions }).select("*").single();
   if (error) return { error: error.message };
+  if (mentions.length) await supabase.rpc("notify_mentions", { p_message: data.id });
   await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
   return { row: { ...data, app_users: { display_name: s.appUser.display_name, email: s.appUser.email } } };
 }

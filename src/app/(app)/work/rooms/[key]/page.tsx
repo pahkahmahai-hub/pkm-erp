@@ -27,6 +27,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   const r = room as Room;
   const { data: members } = await supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id);
   const mem = (members ?? []) as RoomMember[];
+  // @mention targets: room members + admins (owners), label = nickname or first name
+  const { data: adminEmps } = await supabase.from("app_users").select("employees(id, first_name, nickname)").eq("role", "admin").not("employee_id", "is", null);
+  const chatMembers = [...mem.map((m) => m.employees), ...((adminEmps ?? []) as unknown as { employees: { id: string; first_name: string; nickname: string | null } | null }[]).map((a) => a.employees)]
+    .filter((e): e is { id: string; first_name: string; nickname: string | null } => !!e)
+    .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
+    .map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name }));
   if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id)) redirect("/work?denied=1");
 
   if (tab === "chat") {
@@ -36,8 +42,8 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       <div className="space-y-4">
         <Header title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
         <RoomTabs roomKey={key} tab={tab} />
-        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} />
-        <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · กด "เป็นงาน" ใต้ข้อความเพื่อแปลงเป็นงานสั่ง</p>
+        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} />
+        <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · พิมพ์ @ชื่อ เพื่อเอ่ยถึง แล้วกด “สั่งงานให้…” ใต้ข้อความเพื่อมอบหมายเป็นงานสั่ง</p>
       </div>
     );
   }

@@ -5,7 +5,7 @@ import type { Room, RoomMember } from "@/lib/work/types";
 
 type Emp = { id: string; first_name: string; nickname: string | null; emp_code: string };
 
-export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAdmin, initialTitle, fromMessage }: { rooms: Room[]; members: RoomMember[]; allEmployees: Emp[]; initialRoomKey?: string; isAdmin: boolean; initialTitle?: string; fromMessage?: string }) {
+export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAdmin, initialTitle, fromMessage, initialAssignee }: { rooms: Room[]; members: RoomMember[]; allEmployees: Emp[]; initialRoomKey?: string; isAdmin: boolean; initialTitle?: string; fromMessage?: string; initialAssignee?: string }) {
   const [roomId, setRoomId] = useState(rooms.find((r) => r.key === initialRoomKey)?.id ?? rooms[0]?.id ?? "");
   const options = useMemo(() => {
     const inRoom = members.filter((m) => m.room_id === roomId).map((m) => m.employees).filter(Boolean) as Emp[];
@@ -26,7 +26,7 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
       </div>
       <div>
         <label className="label">มอบหมายให้</label>
-        <select name="assignee_id" className="input" defaultValue="">
+        <select name="assignee_id" className="input" defaultValue={initialAssignee ?? ""}>
           <option value="">— ยังไม่ระบุ —</option>
           {options.map((e) => <option key={e.id} value={e.id}>{e.nickname ? `${e.nickname} (${e.first_name})` : e.first_name}</option>)}
         </select>
