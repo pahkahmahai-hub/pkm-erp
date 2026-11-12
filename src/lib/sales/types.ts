@@ -32,7 +32,7 @@ export interface OnlineDaily { id: string; sale_date: string; channel: string; o
 export const DOC_META: Record<SalesDocType, { prefix: string; th: string; en: string; color: string; sign: [string, string] }> = {
   quotation:     { prefix: "QT",  th: "ใบเสนอราคา",                          en: "Quotation",            color: "#452a79", sign: ["ผู้สั่งซื้อสินค้า", "ผู้อนุมัติ"] },
   temp_delivery: { prefix: "TD",  th: "ใบส่งของชั่วคราว",                      en: "Delivery Note",        color: "#06acb4", sign: ["ผู้รับสินค้า", "ผู้ส่งสินค้า"] },
-  invoice:       { prefix: "INV", th: "ใบส่งสินค้า/ใบแจ้งหนี้/ใบกำกับภาษี",     en: "Invoice / Tax Invoice", color: "#00856b", sign: ["ผู้รับสินค้า / บริการ", "ผู้อนุมัติ"] },
+  invoice:       { prefix: "INV", th: "ใบส่งสินค้า/ใบกำกับภาษี",                en: "Invoice / Tax Invoice", color: "#00856b", sign: ["ผู้รับสินค้า / บริการ", "ผู้อนุมัติ"] },
   billing:       { prefix: "BL",  th: "ใบวางบิล/ใบแจ้งหนี้",                   en: "Billing Note",         color: "#e74f99", sign: ["ผู้รับวางบิล", "ผู้วางบิล"] },
   receipt:       { prefix: "RE",  th: "ใบเสร็จรับเงิน",                        en: "Receipt",              color: "#e42213", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้รับเงิน"] },
   credit_note:   { prefix: "CN",  th: "ใบลดหนี้/ใบกำกับภาษี",                  en: "Credit Note",          color: "#0363b1", sign: ["ผู้รับสินค้า/ผู้รับบริการ", "ผู้อนุมัติ/ผู้รับสินค้าคืน"] },
