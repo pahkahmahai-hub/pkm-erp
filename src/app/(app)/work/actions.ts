@@ -359,3 +359,27 @@ export async function deleteCompanyEvent(id: string): Promise<{ error?: string }
   revalidatePath("/work/company-calendar");
   return {};
 }
+
+// ---------- วันหยุดประจำปี (0021) — ผู้บริหาร ----------
+export async function saveHoliday(formData: FormData) {
+  const s = await requireAdmin();
+  const supabase = await createClient();
+  const { data: cat } = await supabase.from("event_categories").select("id").eq("key", "holiday").single();
+  const id = nul(formData.get("id"));
+  const start = String(formData.get("start_date"));
+  const row = { title: String(formData.get("title")).trim(), category_id: cat?.id ?? null, start_date: start, end_date: nul(formData.get("end_date")) ?? start, note: nul(formData.get("note")) };
+  if (row.end_date < row.start_date) row.end_date = row.start_date;
+  const { error } = id ? await supabase.from("company_events").update(row).eq("id", id) : await supabase.from("company_events").insert({ ...row, created_by: s.appUser.id });
+  const year = start.slice(0, 4);
+  if (error) redirect(`/work/holidays?year=${year}&error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/work/company-calendar");
+  redirect(`/work/holidays?year=${year}&saved=1`);
+}
+
+export async function deleteHoliday(id: string, year: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  await supabase.from("company_events").delete().eq("id", id);
+  revalidatePath("/work/company-calendar");
+  redirect(`/work/holidays?year=${year}&deleted=1`);
+}

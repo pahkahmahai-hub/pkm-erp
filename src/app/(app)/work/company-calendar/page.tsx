@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Sun } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
@@ -29,7 +29,7 @@ export default async function CompanyCalendarPage({ searchParams }: { searchPara
   const href = (ym: string) => `/work/company-calendar?month=${ym}`;
   return (
     <div className="space-y-4">
-      <Header crumbs={WORK} title="ปฏิทินบริษัท" sub="ออกบูธห้าง · นัดหมายสำคัญ · ลูกค้าเข้า showroom · ประชุมประจำสัปดาห์/เดือน · กิจกรรม 5ส — ทุกคนเห็นพร้อมกัน" action={<Link href="/work/rooms/teamwork" className="btn-outline"><Users size={16} /> TEAMWORK</Link>} />
+      <Header crumbs={WORK} title="ปฏิทินบริษัท" sub="ออกบูธห้าง · นัดหมายสำคัญ · ลูกค้าเข้า showroom · ประชุมประจำสัปดาห์/เดือน · กิจกรรม 5ส — ทุกคนเห็นพร้อมกัน" action={<span className="flex gap-2">{session.isAdmin && <Link href="/work/holidays" className="btn-outline"><Sun size={16} /> วันหยุดประจำปี</Link>}<Link href="/work/rooms/teamwork" className="btn-outline"><Users size={16} /> TEAMWORK</Link></span>} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={href(addMonths(month, -1))} className="btn-outline py-1 px-2"><ChevronLeft size={16} /></Link>
         <Link href={href(today.slice(0, 7))} className="btn-outline py-1 px-3 text-xs">เดือนนี้</Link>

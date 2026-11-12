@@ -37,9 +37,12 @@ export function MonthCalendar({ month, today, events, categories, meId, isAdmin 
         lanesEnd[lane] = endCol;
         segs.push({ occ: o, col, span: endCol - col + 1, lane, isStart: o.start >= wk, isEnd: o.end <= wkEnd });
       }
-      return { wk, days: Array.from({ length: 7 }, (_, i) => addDays(wk, i)), segs, lanes: lanesEnd.length };
+      const holidays = new Set<string>();
+      for (const o of inWeek) if (catOf(o.ev)?.key === "holiday") for (let d = o.start; d <= o.end; d = addDays(d, 1)) holidays.add(d);
+      return { wk, days: Array.from({ length: 7 }, (_, i) => addDays(wk, i)), segs, lanes: lanesEnd.length, holidays };
     });
-  }, [list, month]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, month, categories]);
 
   const openNew = (date: string) => { setErr(null); setDraft({ start_date: date, end_date: date, category_id: categories[0]?.id ?? null, recur: null }); };
   const openEdit = (ev: CompanyEvent) => { setErr(null); setDraft({ ...ev }); };
@@ -65,11 +68,11 @@ export function MonthCalendar({ month, today, events, categories, meId, isAdmin 
         {weeks.map((w) => (
           <div key={w.wk} className="grid grid-cols-7 border-b border-line last:border-b-0 relative min-h-[120px]" style={{ gridTemplateRows: `30px repeat(${w.lanes}, 28px) minmax(12px, 1fr)` }}>
             {w.days.map((d, i) => {
-              const inMonth = d.slice(0, 7) === month; const isToday = d === today;
+              const inMonth = d.slice(0, 7) === month; const isToday = d === today; const hol = w.holidays.has(d);
               return (
-                <div key={d} className={`row-span-full border-l first:border-l-0 border-line ${!inMonth ? "bg-cream/40" : i >= 5 ? "bg-cream/20" : ""}`} style={{ gridColumn: i + 1, gridRow: "1 / -1" }}>
+                <div key={d} className={`row-span-full border-l first:border-l-0 border-line ${hol ? "bg-red/[0.06]" : !inMonth ? "bg-cream/40" : i >= 5 ? "bg-cream/20" : ""}`} style={{ gridColumn: i + 1, gridRow: "1 / -1" }}>
                   <button type="button" onClick={() => openNew(d)} className="w-full h-full text-left group flex items-start" aria-label="เพิ่มกิจกรรม">
-                    <span className={`inline-grid place-items-center h-7 min-w-7 px-1 m-1 rounded-full text-sm ${isToday ? "bg-red text-white font-bold" : inMonth ? "text-ink" : "text-ink-soft/60"}`}>{Number(d.slice(8))}</span>
+                    <span className={`inline-grid place-items-center h-7 min-w-7 px-1 m-1 rounded-full text-sm ${isToday ? "bg-red text-white font-bold" : hol ? "text-red font-semibold" : inMonth ? "text-ink" : "text-ink-soft/60"}`}>{Number(d.slice(8))}</span>
                     <Plus size={12} className="inline text-ink-soft/0 group-hover:text-ink-soft" />
                   </button>
                 </div>);
