@@ -37,6 +37,17 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
           <div><label className="label">ชื่อบัญชี</label><input name="bank_account_name" defaultValue={c.bank_account_name ?? ""} className="input" /></div>
           <div><label className="label">เลขที่บัญชี</label><input name="bank_account_no" defaultValue={c.bank_account_no ?? ""} className="input font-mono" /></div>
           <div className="md:col-span-2"><label className="label">ชื่อผู้มีอำนาจลงนาม (พิมพ์ใต้ลายเซ็น)</label><input name="signer_name" defaultValue={c.signer_name ?? ""} className="input" /></div>
+          <div className="md:col-span-2 card !shadow-none border border-line p-3 space-y-2">
+            <label className="label">ลายเซ็นผู้มีอำนาจ (PNG พื้นใส)</label>
+            {c.signature_path ? <div className="flex items-center gap-3"><img src={c.signature_path} alt="" className="h-14 object-contain bg-white border border-line rounded" /><label className="text-xs flex items-center gap-1 text-red"><input type="checkbox" name="signature_remove" /> ลบ</label></div> : <p className="text-xs text-ink-soft">ยังไม่มี</p>}
+            <input type="file" name="signature_file" accept="image/png,image/jpeg,image/webp" className="input text-xs" />
+          </div>
+          <div className="md:col-span-2 card !shadow-none border border-line p-3 space-y-2">
+            <label className="label">ตราประทับบริษัท (PNG พื้นใส)</label>
+            {c.stamp_path ? <div className="flex items-center gap-3"><img src={c.stamp_path} alt="" className="h-14 object-contain bg-white border border-line rounded" /><label className="text-xs flex items-center gap-1 text-red"><input type="checkbox" name="stamp_remove" /> ลบ</label></div> : <p className="text-xs text-ink-soft">ยังไม่มี</p>}
+            <input type="file" name="stamp_file" accept="image/png,image/jpeg,image/webp" className="input text-xs" />
+          </div>
+          <div className="md:col-span-4 text-xs text-ink-soft">ตอนพิมพ์เอกสารแต่ละใบจะมีช่องติ๊ก "ลายเซ็น" และ "ตราประทับ" ให้เลือกแสดงหรือไม่แสดง (ค่าเริ่มต้น = แสดงเมื่อมีรูป)</div>
           <div className="md:col-span-4"><button className="btn-primary">บันทึก {c.code}</button></div>
         </form>
       ))}

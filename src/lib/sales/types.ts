@@ -4,6 +4,7 @@ export type VatMode = "inclusive" | "exclusive" | "none";
 export type SalesChannel = "store" | "corporate" | "online" | "export" | "intercompany" | "other";
 
 export interface Company {
+  signature_path?: string | null; stamp_path?: string | null;
   id: string; code: string; name_th: string; name_en: string | null; branch: string | null; address_th: string | null; address_en: string | null;
   tax_id: string | null; phone: string | null; mobile: string | null; email: string | null; website: string | null; vat_registered: boolean;
   bank_name: string | null; bank_branch: string | null; bank_account_name: string | null; bank_account_no: string | null; signer_name: string | null; doc_lang: string; is_active: boolean;

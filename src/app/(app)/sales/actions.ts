@@ -170,7 +170,20 @@ export async function saveCompany(id: string, formData: FormData) {
   const row: Record<string, unknown> = Object.fromEntries(fields.map((f) => [f, nul(formData.get(f))]));
   row.vat_registered = formData.get("vat_registered") === "on";
   row.doc_lang = nul(formData.get("doc_lang")) ?? "th";
-  const { error } = await supabase.from("companies").update(row).eq("id", id);
+  // ลายเซ็น / ตราประทับ (0022) — PNG พื้นใส; ติ๊ก "ลบ" เพื่อเอาออก
+  for (const key of ["signature", "stamp"] as const) {
+    const f = formData.get(`${key}_file`);
+    if (formData.get(`${key}_remove`) === "on") { row[`${key}_path`] = null; continue; }
+    if (f instanceof File && f.size > 0) {
+      const ext = (f.name.split(".").pop() || "png").toLowerCase();
+      const path = `${id}/${key}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("brand").upload(path, f, { contentType: f.type || "image/png", upsert: true });
+      if (upErr) redirect(`/sales/companies?error=${encodeURIComponent("อัปโหลด" + (key === "signature" ? "ลายเซ็น" : "ตราประทับ") + "ไม่สำเร็จ: " + upErr.message + " (รัน SQL 0022 แล้วหรือยัง?)")}`);
+      row[`${key}_path`] = supabase.storage.from("brand").getPublicUrl(path).data.publicUrl;
+    }
+  }
+  let { error } = await supabase.from("companies").update(row).eq("id", id);
+  if (error && /signature_path|stamp_path/.test(error.message)) { delete row.signature_path; delete row.stamp_path; ({ error } = await supabase.from("companies").update(row).eq("id", id)); }   // ก่อนรัน 0022
   if (error) redirect(`/sales/companies?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/sales/companies");
   redirect("/sales/companies?saved=1");
