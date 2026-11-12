@@ -309,3 +309,37 @@ export async function parseGenericPdf(formData: FormData): Promise<{ docNo: stri
     return { error: (e as Error).message };
   }
 }
+
+// ---------------- คลังฝากขาย (0024) ----------------
+export async function saveConsignLocation(id: string | null, formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const contacts = formData.getAll("contact_ids").map(String).filter(Boolean);
+  const { data, error } = await supabase.rpc("save_consign_location", {
+    p_id: id, p_name: String(formData.get("name")).trim(), p_contacts: contacts, p_color: nul(formData.get("color")), p_note: nul(formData.get("note")), p_active: formData.get("is_active") !== "off",
+  });
+  const back = id ? `/stock/consign/${id}?tab=settings` : "/stock/consign";
+  if (error) redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/stock/consign");
+  redirect(`/stock/consign/${(data as { id: string }).id}?saved=1`);
+}
+
+export async function consignReturn(locId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const items = JSON.parse(String(formData.get("items") ?? "[]"));
+  const { error } = await supabase.rpc("consign_return", { p_loc: locId, p_date: nul(formData.get("date")), p_ref: nul(formData.get("ref")), p_note: nul(formData.get("note")), p_items: items });
+  if (error) redirect(`/stock/consign/${locId}?tab=return&error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/stock/consign/${locId}`);
+  redirect(`/stock/consign/${locId}?done=return`);
+}
+
+export async function consignReconcile(locId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const items = JSON.parse(String(formData.get("items") ?? "[]"));
+  const { data, error } = await supabase.rpc("consign_reconcile", { p_loc: locId, p_ref: nul(formData.get("ref")), p_note: nul(formData.get("note")), p_items: items });
+  if (error) redirect(`/stock/consign/${locId}?tab=reconcile&error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/stock/consign/${locId}`);
+  redirect(`/stock/consign/${locId}?done=reconcile&n=${data}`);
+}

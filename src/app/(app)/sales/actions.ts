@@ -10,6 +10,13 @@ import { extractPdfRows, type PdfParsed } from "@/lib/sales/store-report";
 const nul = (v: FormDataEntryValue | null) => { const s = (v ?? "").toString().trim(); return s === "" ? null : s; };
 const num = (v: FormDataEntryValue | null) => { const s = nul(v); return s === null ? 0 : Number(s); };
 
+// คลังฝากขาย (0024): "" = ไม่ระบุ (ระบบหาเองจากลูกค้า), "none" = ไม่ใช่ฝากขาย, uuid = ห้างที่เลือก
+async function saveConsignChoice(supabase: Awaited<ReturnType<typeof createClient>>, id: string, formData: FormData) {
+  if (!formData.has("consign")) return;
+  const v = String(formData.get("consign") ?? "");
+  await supabase.from("sales_docs").update({ consign_location_id: v && v !== "none" ? v : null, consign_skip: v === "none" }).eq("id", id);   // ก่อนรัน 0024 จะ error เงียบ ๆ
+}
+
 export async function createSalesDoc(formData: FormData) {
   await getSession();
   const supabase = await createClient();
@@ -45,6 +52,7 @@ export async function createSalesDoc(formData: FormData) {
     p_source: nul(formData.get("source")) ?? "system",
   });
   if (error) redirect(`/sales/docs/new?type=${type}&error=${encodeURIComponent(error.message)}`);
+  await saveConsignChoice(supabase, data.id, formData);
   revalidatePath("/sales");
   redirect(`/sales/docs/${data.id}?created=1`);
 }
@@ -77,6 +85,7 @@ export async function updateSalesDoc(id: string, formData: FormData) {
     deduct_stock: formData.get("deduct_stock") === "on",
   }).eq("id", id).eq("status", "draft");
   if (error) redirect(`/sales/docs/${id}/edit?error=${encodeURIComponent(error.message)}`);
+  await saveConsignChoice(supabase, id, formData);
   const { error: e2 } = await supabase.rpc("replace_sales_items", { p_doc: id, p_items: items });
   if (e2) redirect(`/sales/docs/${id}/edit?error=${encodeURIComponent(e2.message)}`);
   revalidatePath(`/sales/docs/${id}`);

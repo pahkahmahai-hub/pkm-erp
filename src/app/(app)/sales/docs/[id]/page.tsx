@@ -24,6 +24,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
   ]);
   if (!doc) notFound();
   const d = doc as SalesDoc;
+  if (d.consign_location_id) d.consign_locations = (await supabase.from("consign_locations").select("id, name").eq("id", d.consign_location_id).maybeSingle()).data;
   const meta = DOC_META[d.doc_type];
   const lines = (items ?? []) as SalesDocItem[];
   const isDraft = d.status === "draft";
@@ -60,6 +61,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
               {d.po_no && <div><span className="text-ink-soft">PO:</span> {d.po_no}</div>}
               {d.ref_doc_no && <div><span className="text-ink-soft">อ้างอิง:</span> {d.ref_doc_id ? <Link href={`/sales/docs/${d.ref_doc_id}`} className="text-purple underline">{d.ref_doc_no}</Link> : d.ref_doc_no}</div>}
               {d.seller_name && <div><span className="text-ink-soft">ผู้ขาย:</span> {d.seller_name}</div>}
+              {d.consign_location_id && <div><span className="text-ink-soft">คลังฝากขาย:</span> <Link href={`/stock/consign/${d.consign_location_id}`} className="text-purple underline">{d.consign_locations?.name ?? "ดู"}</Link> <span className="text-[11px] text-ink-soft">{d.doc_type === "temp_delivery" ? "(โอนเข้าคลังห้าง)" : "(ตัดจากคลังห้าง)"}</span></div>}
               {d.stock_issue_id && <div><span className="text-ink-soft">ใบเบิกคลัง:</span> <Link href={`/stock/issues/${d.stock_issue_id}`} className="text-purple underline">ดู</Link></div>}
             </div>
           </div>

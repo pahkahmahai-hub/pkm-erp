@@ -7,7 +7,7 @@ import { NavFeedback } from "@/components/NavFeedback";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
-  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange, Store,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { SessionInfo } from "@/lib/types";
@@ -40,6 +40,7 @@ const NAV: Record<string, NavGroup[]> = {
         { href: "/stock/products", label: "สินค้า", icon: Boxes },
         { href: "/stock/receipts", label: "รับเข้า", icon: PackagePlus },
         { href: "/stock/issues", label: "ใบเบิก", icon: PackageMinus },
+        { href: "/stock/consign", label: "คลังฝากขาย", icon: Store },
         { href: "/stock/defects", label: "ของเสีย / ส่งคืน", icon: AlertTriangle },
         { href: "/stock/materials", label: "ลายผ้า & แพคเกจจิ้ง", icon: Scissors },
         { href: "/stock/movements", label: "ประวัติเคลื่อนไหว", icon: History },

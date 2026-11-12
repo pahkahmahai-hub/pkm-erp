@@ -12,8 +12,8 @@ interface Line { key: string; product_id: string | null; description: string; ba
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function DocEditor({ docType, companies, products, customers, doc, items, prefill }: {
-  docType: SalesDocType; companies: Company[]; products: ProductLite[]; customers: ContactLite[];
+export function DocEditor({ docType, companies, products, customers, doc, items, prefill, consignLocations = [] }: {
+  docType: SalesDocType; companies: Company[]; products: ProductLite[]; customers: ContactLite[]; consignLocations?: { id: string; name: string; contact_ids: string[] }[];
   doc?: SalesDoc | null; items?: SalesDocItem[]; prefill?: { ref_doc_id?: string; ref_doc_no?: string };
 }) {
   const meta = DOC_META[docType];
@@ -65,6 +65,11 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
 
   const payload = lines.map((l) => ({ product_id: l.product_id, description: l.description, barcode: l.barcode, qty: l.qty, unit: l.unit, unit_price: l.unit_price, discount_pct: l.discount_pct, note: l.note }));
   const isDeliveryType = docType === "invoice" || docType === "temp_delivery";
+  // คลังฝากขาย: ลูกค้าที่ผูกกับห้างฝากขาย → TD = โอนเข้าคลังห้าง, INV = ตัดจากคลังห้าง
+  const custLoc = consignLocations.find((l) => cust.id && l.contact_ids.includes(cust.id)) ?? null;
+  const [consignPick, setConsignPick] = useState<string>(doc?.consign_skip ? "none" : doc?.consign_location_id ?? "auto");
+  const consignId = consignPick === "none" ? null : consignPick === "auto" ? custLoc?.id ?? null : consignPick;
+  const consignLoc = consignLocations.find((l) => l.id === consignId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -159,7 +164,21 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
             </>}
             {docType === "receipt" && <div><label className="label">หัก ณ ที่จ่าย %</label><input name="wht_pct" type="number" step="0.5" value={wht} onChange={(e) => setWht(Number(e.target.value))} className="input" /></div>}
           </div>
-          {isDeliveryType && <label className="flex items-center gap-2 text-sm pt-1"><input type="checkbox" name="deduct_stock" defaultChecked={doc?.deduct_stock ?? true} className="accent-purple" /> ตัดสต็อกคลังใหญ่เมื่อออกเอกสาร (เฉพาะรายการที่เป็นสินค้าในคลัง)</label>}
+          {isDeliveryType && consignLocations.length > 0 && (
+            <div className={`rounded-xl border p-3 space-y-2 ${consignLoc ? "border-purple bg-lavender/20" : "border-line"}`}>
+              <input type="hidden" name="consign" value={consignPick === "auto" ? (custLoc ? custLoc.id : "") : consignPick} />
+              <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-semibold">คลังฝากขาย</span>
+                <select value={consignPick} onChange={(e) => setConsignPick(e.target.value)} className="input !py-1 !w-auto text-sm">
+                  <option value="auto">{custLoc ? `อัตโนมัติ: ${custLoc.name}` : "อัตโนมัติ (ลูกค้านี้ไม่ใช่ห้างฝากขาย)"}</option>
+                  {consignLocations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  <option value="none">ไม่ใช่ฝากขาย — ตัดคลังหลักตามปกติ</option>
+                </select></div>
+              {consignLoc && <p className="text-xs text-purple">{docType === "temp_delivery"
+                ? `ออกเอกสารแล้ว = โอนของจากคลังหลักไปคลังฝากขาย "${consignLoc.name}" (ยังไม่นับเป็นยอดขาย คลังหลักลดลงเพื่อกันขายเกิน)`
+                : `ออกเอกสารแล้ว = ตัดจากคลังฝากขาย "${consignLoc.name}" ตามรายการที่ห้างขายได้ (ไม่แตะคลังหลัก)`}</p>}
+            </div>
+          )}
+          {isDeliveryType && !consignLoc && <label className="flex items-center gap-2 text-sm pt-1"><input type="checkbox" name="deduct_stock" defaultChecked={doc?.deduct_stock ?? true} className="accent-purple" /> ตัดสต็อกคลังใหญ่เมื่อออกเอกสาร (เฉพาะรายการที่เป็นสินค้าในคลัง)</label>}
           <div><label className="label">หมายเหตุบนเอกสาร</label><textarea name="notes" defaultValue={doc?.notes ?? ""} className="input" rows={2} placeholder="เงื่อนไขชำระเงิน / ข้อความถึงลูกค้า" /></div>
           <div><label className="label">บันทึกภายใน (ไม่แสดงบนเอกสาร)</label><input name="internal_note" defaultValue={doc?.internal_note ?? ""} className="input" /></div>
         </div>

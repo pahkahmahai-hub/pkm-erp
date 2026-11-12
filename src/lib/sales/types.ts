@@ -18,6 +18,7 @@ export interface SalesDoc {
   vat_mode: VatMode; vat_rate: number; discount_pct: number; discount_amount: number; deposit_amount: number; deposit_ref: string | null; wht_pct: number;
   subtotal: number; discount_total: number; net_before_vat: number; vat_amount: number; grand_total: number; wht_amount: number; paid_total: number;
   payment_method: string | null; payment_date: string | null; payment_ref: string | null; deduct_stock: boolean; stock_issue_id: string | null;
+  consign_location_id?: string | null; consign_skip?: boolean; consign_locations?: { id: string; name: string } | null;
   notes: string | null; internal_note: string | null; seller_name: string | null; source: string; created_by: string | null; created_at: string;
   companies?: Company | null; app_users?: { display_name: string | null } | null;
 }
