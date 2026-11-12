@@ -36,3 +36,12 @@ export function fillEmployees<T extends { employees?: unknown }>(rows: T[] | nul
   const map = new Map(dir.map((e) => [e.id, e]));
   return (rows ?? []).map((r) => (r.employees ? r : { ...r, employees: map.get(r[idKey] as unknown as string) ?? null }));
 }
+
+/** โหลดห้าง + สิทธิ์ของผู้ใช้ในห้อง (สมาชิก / หัวหน้า ★) — redirect ออกถ้าไม่ใช่สมาชิก */
+export async function loadRoomAccess(supabase: SupabaseClient, key: string, session: { isAdmin: boolean; employee?: { id: string } | null }) {
+  const { data: room } = await supabase.from("work_rooms").select("*").eq("key", key).maybeSingle();
+  if (!room) return null;
+  const { data: mem } = await supabase.from("work_room_members").select("employee_id, is_lead").eq("room_id", room.id);
+  const me = (mem ?? []).find((m) => m.employee_id === session.employee?.id);
+  return { room: room as Room, isMember: session.isAdmin || !!me, isLead: !!me?.is_lead };
+}

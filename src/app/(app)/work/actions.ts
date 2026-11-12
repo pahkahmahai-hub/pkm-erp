@@ -385,3 +385,113 @@ export async function deleteHoliday(id: string, year: string) {
   revalidatePath("/work/company-calendar");
   redirect(`/work/holidays?year=${year}&deleted=1`);
 }
+
+// ---------- โน้ต / แกลเลอรี ของห้อง (0025) ----------
+export interface NotePayload { id?: string | null; room_id: string; title: string; body: string | null; color: string; pinned: boolean; files: { url: string; name: string; is_image: boolean }[]; remove_file_ids: string[] }
+export async function saveNote(roomKey: string, p: NotePayload): Promise<{ error?: string; id?: string }> {
+  const s = await getSession();
+  const supabase = await createClient();
+  const row = { title: p.title.trim() || "ไม่มีหัวข้อ", body: p.body?.trim() || null, color: p.color, pinned: p.pinned, updated_by: s.appUser.id, updated_at: new Date().toISOString() };
+  const { data, error } = p.id
+    ? await supabase.from("work_notes").update(row).eq("id", p.id).select("id").single()
+    : await supabase.from("work_notes").insert({ ...row, room_id: p.room_id, created_by: s.appUser.id }).select("id").single();
+  if (error || !data) return { error: error?.message ?? "บันทึกไม่สำเร็จ (อาจไม่มีสิทธิ์แก้โน้ตนี้)" };
+  if (p.remove_file_ids.length) await supabase.from("work_note_files").delete().in("id", p.remove_file_ids);
+  if (p.files.length) {
+    const { count } = await supabase.from("work_note_files").select("id", { count: "exact", head: true }).eq("note_id", data.id);
+    const { error: fe } = await supabase.from("work_note_files").insert(p.files.map((f, i) => ({ note_id: data.id, url: f.url, name: f.name, is_image: f.is_image, sort_order: (count ?? 0) + i, created_by: s.appUser.id })));
+    if (fe) return { error: fe.message, id: data.id };
+  }
+  revalidatePath(`/work/rooms/${roomKey}/notes`);
+  return { id: data.id };
+}
+
+export async function deleteNote(roomKey: string, id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_notes").delete().eq("id", id);
+  if (error) redirect(`/work/rooms/${roomKey}/notes/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/rooms/${roomKey}/notes`);
+  redirect(`/work/rooms/${roomKey}/notes?deleted=1`);
+}
+
+export async function toggleNotePin(roomKey: string, id: string, pinned: boolean) {
+  await getSession();
+  const supabase = await createClient();
+  await supabase.from("work_notes").update({ pinned }).eq("id", id);
+  revalidatePath(`/work/rooms/${roomKey}/notes`);
+}
+
+export async function createAlbum(roomKey: string, roomId: string, formData: FormData) {
+  const s = await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("work_albums").insert({ room_id: roomId, title: String(formData.get("title")).trim(), description: nul(formData.get("description")), event_date: nul(formData.get("event_date")), created_by: s.appUser.id }).select("id").single();
+  if (error || !data) redirect(`/work/rooms/${roomKey}/gallery?error=${encodeURIComponent(error?.message ?? "สร้างไม่สำเร็จ")}`);
+  revalidatePath(`/work/rooms/${roomKey}/gallery`);
+  redirect(`/work/rooms/${roomKey}/gallery/${data.id}?new=1`);
+}
+
+export async function updateAlbum(roomKey: string, id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_albums").update({ title: String(formData.get("title")).trim(), description: nul(formData.get("description")), event_date: nul(formData.get("event_date")), updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) redirect(`/work/rooms/${roomKey}/gallery/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/rooms/${roomKey}/gallery`);
+  redirect(`/work/rooms/${roomKey}/gallery/${id}`);
+}
+
+export async function deleteAlbum(roomKey: string, id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_albums").delete().eq("id", id);
+  if (error) redirect(`/work/rooms/${roomKey}/gallery/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/rooms/${roomKey}/gallery`);
+  redirect(`/work/rooms/${roomKey}/gallery?deleted=1`);
+}
+
+export async function addAlbumPhotos(roomKey: string, albumId: string, photos: { url: string; caption: string | null }[]): Promise<{ error?: string }> {
+  const s = await getSession();
+  const supabase = await createClient();
+  const { count } = await supabase.from("work_album_photos").select("id", { count: "exact", head: true }).eq("album_id", albumId);
+  const { error } = await supabase.from("work_album_photos").insert(photos.map((p, i) => ({ album_id: albumId, url: p.url, caption: p.caption, sort_order: (count ?? 0) + i, created_by: s.appUser.id })));
+  if (error) return { error: error.message };
+  const { data: a } = await supabase.from("work_albums").select("cover_url").eq("id", albumId).single();
+  if (a && !a.cover_url && photos[0]) await supabase.from("work_albums").update({ cover_url: photos[0].url }).eq("id", albumId);
+  await supabase.from("work_albums").update({ updated_at: new Date().toISOString() }).eq("id", albumId);
+  revalidatePath(`/work/rooms/${roomKey}/gallery/${albumId}`);
+  revalidatePath(`/work/rooms/${roomKey}/gallery`);
+  return {};
+}
+
+export async function deleteAlbumPhoto(roomKey: string, albumId: string, photoId: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data: ph } = await supabase.from("work_album_photos").select("url").eq("id", photoId).single();
+  const { error, count } = await supabase.from("work_album_photos").delete({ count: "exact" }).eq("id", photoId);
+  if (error || !count) return { error: error?.message ?? "ลบไม่ได้ — ลบได้เฉพาะรูปของตัวเอง เจ้าของอัลบั้ม หัวหน้าห้อง หรือผู้บริหาร" };
+  const { data: a } = await supabase.from("work_albums").select("cover_url").eq("id", albumId).single();
+  if (a?.cover_url && ph?.url === a.cover_url) {
+    const { data: next } = await supabase.from("work_album_photos").select("url").eq("album_id", albumId).order("sort_order").limit(1).maybeSingle();
+    await supabase.from("work_albums").update({ cover_url: next?.url ?? null }).eq("id", albumId);
+  }
+  revalidatePath(`/work/rooms/${roomKey}/gallery/${albumId}`);
+  return {};
+}
+
+export async function setAlbumCover(roomKey: string, albumId: string, url: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_albums").update({ cover_url: url }).eq("id", albumId);
+  if (error) return { error: error.message };
+  revalidatePath(`/work/rooms/${roomKey}/gallery`);
+  return {};
+}
+
+export async function setPhotoCaption(roomKey: string, albumId: string, photoId: string, caption: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_album_photos").update({ caption: caption.trim() || null }).eq("id", photoId);
+  if (error) return { error: error.message };
+  revalidatePath(`/work/rooms/${roomKey}/gallery/${albumId}`);
+  return {};
+}

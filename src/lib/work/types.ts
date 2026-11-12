@@ -42,3 +42,10 @@ export interface CompanyEvent {
   recur: "weekly" | "monthly" | null; recur_until: string | null; created_by: string | null; created_at: string; updated_at: string;
   event_categories?: EventCategory | null;
 }
+
+// โน้ต / แกลเลอรี (0025)
+export interface Note { id: string; room_id: string; title: string; body: string | null; color: string; pinned: boolean; created_by: string | null; updated_by: string | null; created_at: string; updated_at: string; work_note_files?: NoteFile[]; app_users?: { display_name: string | null; email: string } | null }
+export interface NoteFile { id: string; note_id: string; url: string; name: string | null; is_image: boolean; sort_order: number }
+export interface Album { id: string; room_id: string; title: string; description: string | null; event_date: string | null; cover_url: string | null; created_by: string | null; created_at: string; updated_at: string; work_album_photos?: { count: number }[] }
+export interface AlbumPhoto { id: string; album_id: string; url: string; caption: string | null; sort_order: number; created_by: string | null; created_at: string; app_users?: { display_name: string | null } | null }
+export const NOTE_COLORS = ["#fff8e6", "#eaf7ef", "#e8f1fb", "#f3ecfb", "#fdecef", "#ffffff"];

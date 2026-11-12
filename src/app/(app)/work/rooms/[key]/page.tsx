@@ -9,8 +9,8 @@ import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp 
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
+import { RoomTabs } from "@/components/work/RoomTabs";
 import type { ChatMessage } from "@/components/work/ChatBox";
-import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
@@ -47,7 +47,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     return (
       <div className="space-y-4">
         <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
-        <RoomTabs roomKey={key} tab={tab} />
+        <RoomTabs roomKey={key} tab={tab === "chat" ? "chat" : "tasks"} />
         <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} />
         <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · พิมพ์ @ชื่อ เพื่อเอ่ยถึง แล้วกด “สั่งงานให้…” ใต้ข้อความเพื่อมอบหมายเป็นงานสั่ง</p>
       </div>
@@ -65,7 +65,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     <div className="space-y-6">
       <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงานในห้องนี้</Link>} />
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบงานแล้ว</div>}
-      <RoomTabs roomKey={key} tab={tab} />
+      <RoomTabs roomKey={key} tab={tab === "chat" ? "chat" : "tasks"} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="flex items-center gap-1 text-ink-soft"><Users size={14} /></span>
         <Link href={`/work/rooms/${key}${history ? "?history=1" : ""}`} className={!who ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>ทุกคน</Link>
@@ -102,14 +102,3 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   );
 }
 
-function RoomTabs({ roomKey, tab }: { roomKey: string; tab: string }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Link href={`/work/rooms/${roomKey}`} className={tab !== "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><ListChecks size={16} /> งาน</Link>
-      <Link href={`/work/rooms/${roomKey}?tab=chat`} className={tab === "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><MessageCircle size={16} /> แชทห้อง</Link>
-      <Link href={`/work/rooms/${roomKey}/calendar`} className="btn-outline py-1.5 px-4"><CalendarDays size={16} /> ปฏิทิน{roomKey === "teamwork" ? "ทีม" : ""}</Link>
-      {roomKey === "teamwork" && <Link href="/work/company-calendar" className="btn-outline py-1.5 px-4"><CalendarRange size={16} /> ปฏิทินบริษัท</Link>}
-      {roomKey === "sw-room" && <Link href="/work/deliveries" className="btn-outline py-1.5 px-4"><Truck size={16} /> ตารางส่งห้าง</Link>}
-    </div>
-  );
-}

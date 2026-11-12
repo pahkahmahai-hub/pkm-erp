@@ -7,6 +7,7 @@ import { Header, type Crumb } from "@/components/ui";
 import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees } from "@/lib/work/queries";
 import type { Room, RoomMember, Task, Topic } from "@/lib/work/types";
 import { WeekCalendar } from "@/components/work/WeekCalendar";
+import { RoomTabs } from "@/components/work/RoomTabs";
 import { addDays, mondayOf, fmtDM } from "@/lib/work/deliveries";
 import { todayBkk } from "@/lib/today";
 
@@ -43,6 +44,7 @@ export default async function RoomCalendarPage({ params, searchParams }: { param
     <div className="space-y-4">
       <Header crumbs={[...WORK, { href: `/work/rooms/${key}`, label: r.name }]} title={`ปฏิทิน ${r.name}`} sub="ทุกคนลงงานของตัวเองได้ · เห็นพร้อมกันทั้งทีม · กดช่องว่างเพื่อลงงาน กดงานเพื่อเปิดรายละเอียด/แนบรูป"
         action={<span className="flex gap-2"><Link href={`/work/rooms/${key}`} className="btn-outline"><ListChecks size={16} /> บอร์ดงาน</Link><Link href={`/work/rooms/${key}/topics`} className="btn-outline"><Tags size={16} /> หัวข้อ Routine</Link></span>} />
+      <RoomTabs roomKey={key} tab="calendar" />
       {sp.created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลงงาน #{sp.created} แล้ว</div>}
       {sp.error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{sp.error}</div>}
       <div className="flex flex-wrap items-center gap-2 text-sm">
