@@ -20,11 +20,12 @@ export default async function WorkHome() {
   const rooms = await myRooms(supabase, session.employee?.id ?? null, session.isAdmin);
   const empId = session.employee?.id;
 
-  const [{ data: tasksRaw }, { count: unread }, { data: chatUnread }, dir] = await Promise.all([
+  const [{ data: tasksRaw }, { count: unread }, { data: chatUnread }, dir, { data: adminList }] = await Promise.all([
     supabase.from("work_tasks").select(TASK_SELECT).not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500),
     supabase.from("work_notifications").select("id", { count: "exact", head: true }).eq("user_id", session.appUser.id).is("read_at", null),
     supabase.rpc("room_unread_counts"),
     loadDirectory(supabase),
+    supabase.from("app_users").select("id, display_name, email").eq("role", "admin"),
   ]);
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
@@ -33,6 +34,21 @@ export default async function WorkHome() {
   const leadRoomIds = new Set(rooms.filter((r) => r.is_lead).map((r) => r.id));
   // ผู้บริหารเห็นงานค้างที่สั่งไปทั้งหมด แม้ไม่ได้สั่งเอง · หัวหน้าเห็นของลูกทีมในห้อง + ที่ตัวเองสั่ง
   const assignedByMe = tasks.filter((t) => t.assignee_id !== empId && (session.isAdmin || t.created_by === session.appUser.id || leadRoomIds.has(t.room_id)));
+  // แยกงานที่สั่งตามผู้สั่ง: ฉัน / ผู้บริหารอีกคน / หัวหน้า-ทีม / งานประจำที่ระบบสร้าง
+  const otherAdmins = new Map(((adminList ?? []) as { id: string; display_name: string | null; email: string }[]).filter((u) => u.id !== session.appUser.id).map((u) => [u.id, u.display_name ?? u.email]));
+  const byOrderer = (list: Task[]) => {
+    const groups: { key: string; label: string; tone: string; list: Task[] }[] = [
+      { key: "me", label: session.isAdmin ? "ผมสั่ง (ฉัน)" : "ฉันสั่ง", tone: "text-purple", list: [] },
+      ...[...otherAdmins].map(([id, name]) => ({ key: id, label: `${name} สั่ง`, tone: "text-coral", list: [] as Task[] })),
+      { key: "lead", label: "หัวหน้า / ทีมสั่ง", tone: "text-green", list: [] },
+      { key: "routine", label: "งานประจำ (ระบบสร้างให้)", tone: "text-ink-soft", list: [] },
+    ];
+    for (const t of list) {
+      const k = t.routine_id ? "routine" : t.created_by === session.appUser.id ? "me" : t.created_by && otherAdmins.has(t.created_by) ? t.created_by : "lead";
+      groups.find((g) => g.key === k)!.list.push(t);
+    }
+    return groups.filter((g) => g.list.length);
+  };
   const review = tasks.filter((t) => t.status === "done" && t.assignee_id !== empId && (session.isAdmin || t.created_by === session.appUser.id || leadRoomIds.has(t.room_id)));
   const overdue = tasks.filter(isOverdue);
   const countByRoom = Object.fromEntries(rooms.map((r) => [r.id, tasks.filter((t) => t.room_id === r.id).length]));
@@ -103,10 +119,16 @@ export default async function WorkHome() {
               return (
                 <div key={side.label}>
                   <h3 className="font-display font-semibold mb-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${side.tone}`} />{side.label} ({list.length})</h3>
-                  <div className="space-y-2">
-                    {list.slice(0, 15).map((t) => <TaskCard key={t.id} t={t} />)}
-                    {!list.length && <div className="card p-5 text-center text-ink-soft text-sm">ไม่มีงานค้าง</div>}
-                    {list.length > 15 && <p className="text-xs text-ink-soft">+ อีก {list.length - 15} งาน — ดูในห้อง</p>}
+                  {!list.length && <div className="card p-5 text-center text-ink-soft text-sm">ไม่มีงานค้าง</div>}
+                  <div className="space-y-4">
+                    {byOrderer(list).map((g) => (
+                      <div key={g.key} className="rounded-2xl border border-line bg-white/50 p-3">
+                        <div className="flex items-center justify-between mb-2 px-1"><span className={`text-sm font-semibold ${g.tone}`}>{g.label}</span><span className="text-xs text-ink-soft">{g.list.length} งาน</span></div>
+                        <div className="space-y-2">
+                          {g.list.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}
+                          {g.list.length > 10 && <p className="text-xs text-ink-soft px-1">+ อีก {g.list.length - 10} งาน — ดูในห้อง</p>}
+                        </div>
+                      </div>))}
                   </div>
                 </div>);
             })}
