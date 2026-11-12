@@ -1,7 +1,7 @@
 export type TaskStatus = "open" | "in_progress" | "done" | "accepted" | "returned" | "cancelled";
 export type TaskPriority = "normal" | "urgent";
 
-export interface Room { id: string; key: string; name: string; color: string; description: string | null; sort_order: number; is_active: boolean }
+export interface Room { id: string; key: string; name: string; color: string; description: string | null; sort_order: number; is_active: boolean; is_lead?: boolean }
 export interface RoomMember { room_id: string; employee_id: string; is_lead: boolean; employees?: { id: string; first_name: string; nickname: string | null; emp_code: string } | null }
 
 export interface Task {

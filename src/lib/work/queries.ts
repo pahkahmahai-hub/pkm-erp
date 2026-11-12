@@ -8,9 +8,9 @@ export const TASK_SELECT = "*, work_rooms(key, name, color), employees!work_task
 export async function myRooms(supabase: SupabaseClient, employeeId: string | null, isAdmin: boolean): Promise<Room[]> {
   const { data: rooms } = await supabase.from("work_rooms").select("*").eq("is_active", true).order("sort_order");
   if (isAdmin || !employeeId) return (rooms ?? []) as Room[];
-  const { data: mem } = await supabase.from("work_room_members").select("room_id").eq("employee_id", employeeId);
-  const ids = new Set((mem ?? []).map((m) => m.room_id));
-  return ((rooms ?? []) as Room[]).filter((r) => ids.has(r.id));
+  const { data: mem } = await supabase.from("work_room_members").select("room_id, is_lead").eq("employee_id", employeeId);
+  const lead = new Map((mem ?? []).map((m) => [m.room_id as string, !!m.is_lead]));
+  return ((rooms ?? []) as Room[]).filter((r) => lead.has(r.id)).map((r) => ({ ...r, is_lead: lead.get(r.id) }));
 }
 
 export function isOverdue(t: Task) {

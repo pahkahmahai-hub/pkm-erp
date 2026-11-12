@@ -40,8 +40,10 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const myEmp = session.employee?.id;
   // ผู้บริหาร / ผู้สั่งงาน / หัวหน้าห้อง (★) แก้ไข โอนงาน ตรวจรับ และลบได้
   const isLead = !!session.employee && members.some((m) => m.employee_id === session.employee!.id && m.is_lead);
-  const isOwner = session.isAdmin || task.created_by === me || isLead;
   const isAssignee = task.assignee_id === myEmp;
+  const isOwner = session.isAdmin || task.created_by === me || isLead;
+  // ตรวจรับ/ตีกลับ: งานของตัวเองต้องให้ผู้บริหาร (งานของหัวหน้าห้อง = ผม/ภรรยาอนุมัติ)
+  const canReview = session.isAdmin || (isOwner && !isAssignee);
   const overdue = !!task.due_date && task.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status);
   const items = (checklist ?? []) as Checklist[];
   const doneCount = items.filter((c) => c.is_done).length;
@@ -120,7 +122,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 <p className="text-[11px] text-ink-soft">แนบรูปผลงานได้ในช่องคอมเมนต์ด้านซ้าย</p>
               </form>
             )}
-            {isOwner && task.status === "done" && (
+            {canReview && task.status === "done" && (
               <form className="space-y-2">
                 <input name="note" className="input" placeholder="หมายเหตุ (ถ้ามี)" />
                 <div className="grid grid-cols-2 gap-2">

@@ -29,8 +29,11 @@ export default async function WorkHome() {
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
   const mine = tasks.filter((t) => t.assignee_id === empId);
-  const assignedByMe = tasks.filter((t) => t.created_by === session.appUser.id && t.assignee_id !== empId);
-  const review = tasks.filter((t) => t.status === "done" && (session.isAdmin || t.created_by === session.appUser.id));
+  // ห้องที่ฉันเป็นหัวหน้า ★ — เห็นงานค้าง/ตรวจรับของลูกทีมในห้องนั้น (ยกเว้นงานของตัวเอง ซึ่งผู้บริหารตรวจ)
+  const leadRoomIds = new Set(rooms.filter((r) => r.is_lead).map((r) => r.id));
+  // ผู้บริหารเห็นงานค้างที่สั่งไปทั้งหมด แม้ไม่ได้สั่งเอง · หัวหน้าเห็นของลูกทีมในห้อง + ที่ตัวเองสั่ง
+  const assignedByMe = tasks.filter((t) => t.assignee_id !== empId && (session.isAdmin || t.created_by === session.appUser.id || leadRoomIds.has(t.room_id)));
+  const review = tasks.filter((t) => t.status === "done" && t.assignee_id !== empId && (session.isAdmin || t.created_by === session.appUser.id || leadRoomIds.has(t.room_id)));
   const overdue = tasks.filter(isOverdue);
   const countByRoom = Object.fromEntries(rooms.map((r) => [r.id, tasks.filter((t) => t.room_id === r.id).length]));
 
@@ -47,7 +50,7 @@ export default async function WorkHome() {
         <Stat label="งานของฉัน" value={mine.length} tone="purple" />
         <Stat label="เลยกำหนด" value={overdue.length} tone="coral" />
         <Stat label="รอฉันตรวจรับ" value={review.length} tone="teal" />
-        <Stat label="ที่ฉันสั่ง (ค้าง)" value={assignedByMe.length} tone="yellow" />
+        <Stat label={session.isAdmin ? "งานที่สั่งไป (ค้าง)" : "ที่ฉันสั่ง (ค้าง)"} value={assignedByMe.length} tone="yellow" />
       </div>
 
       <section className="space-y-4">
@@ -93,7 +96,7 @@ export default async function WorkHome() {
 
       {assignedByMe.length > 0 && (
         <section>
-          <h2 className="font-display font-bold mb-3">ที่ฉันสั่ง ({assignedByMe.length})</h2>
+          <h2 className="font-display font-bold mb-3">{session.isAdmin ? "งานที่สั่งไป ทั้งบริษัท" : "ที่ฉันสั่ง / ลูกทีม"} ({assignedByMe.length})</h2>
           <div className="grid lg:grid-cols-2 gap-6">
             {[{ label: "ฝั่ง GC", keys: GC_KEYS, tone: "bg-purple" }, { label: "ฝั่ง SW", keys: SW_KEYS, tone: "bg-coral" }].map((side) => {
               const list = assignedByMe.filter((t) => side.keys.includes(t.work_rooms?.key ?? ""));
