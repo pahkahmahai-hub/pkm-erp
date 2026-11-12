@@ -46,7 +46,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
         {[2, 3, 4, 6].map((n) => <Link key={n} href={`/work/deliveries?from=${from}&months=${n}`} className={n === span ? "btn-primary py-1 px-3 text-xs" : "btn-outline py-1 px-3 text-xs"}>{n} เดือน</Link>)}
         {!canEdit && <span className="ml-auto text-xs text-ink-soft">ดูได้อย่างเดียว (แก้ไขโดยทีม SW และผู้บริหาร)</span>}
       </div>
-      <DeliveryBoard stores={(stores ?? []) as DeliveryStore[]} deliveries={fillEmployees(rows as StoreDelivery[], emps, "assignee_id")} weeks={weeks} employees={emps as EmpLite[]} salesDocs={(docs ?? []) as SalesDocLite[]} canEdit={canEdit} today={today} userNames={userNames} />
+      <DeliveryBoard key={`${from}-${span}`} stores={(stores ?? []) as DeliveryStore[]} deliveries={fillEmployees(rows as StoreDelivery[], emps, "assignee_id")} weeks={weeks} employees={emps as EmpLite[]} salesDocs={(docs ?? []) as SalesDocLite[]} canEdit={canEdit} today={today} userNames={userNames} />
     </div>
   );
 }

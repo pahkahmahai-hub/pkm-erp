@@ -38,7 +38,7 @@ export default async function CompanyCalendarPage({ searchParams }: { searchPara
       </div>
       {(catErr || evErr) && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">โหลดปฏิทินไม่ได้: {(catErr ?? evErr)?.message} — ถ้ายังไม่ได้รัน SQL 0020 ให้รันก่อนครับ</div>}
       <div className="space-y-4">
-        <MonthCalendar month={month} today={today} events={events} categories={(cats ?? []) as EventCategory[]} meId={session.appUser.id} isAdmin={session.isAdmin} />
+        <MonthCalendar key={month} month={month} today={today} events={events} categories={(cats ?? []) as EventCategory[]} meId={session.appUser.id} isAdmin={session.isAdmin} />
         <div className="card p-4">
           <h2 className="font-display font-bold mb-2">30 วันข้างหน้า</h2>
           <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-sm">
