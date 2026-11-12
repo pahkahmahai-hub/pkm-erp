@@ -331,3 +331,31 @@ export async function deleteTaskFile(taskId: string, fileId: string) {
   revalidatePath(`/work/tasks/${taskId}`);
   redirect(`/work/tasks/${taskId}`);
 }
+
+// ---------- ปฏิทินบริษัท (0020) ----------
+export async function saveCompanyEvent(formData: FormData): Promise<{ error?: string; row?: Record<string, unknown> }> {
+  const s = await getSession();
+  const supabase = await createClient();
+  const id = nul(formData.get("id"));
+  const start = String(formData.get("start_date"));
+  const row = {
+    title: String(formData.get("title")).trim(), category_id: nul(formData.get("category_id")), start_date: start, end_date: nul(formData.get("end_date")) ?? start,
+    start_time: nul(formData.get("start_time")), end_time: nul(formData.get("end_time")), location: nul(formData.get("location")), note: nul(formData.get("note")),
+    recur: nul(formData.get("recur")), recur_until: nul(formData.get("recur_until")),
+  };
+  if (row.end_date < row.start_date) row.end_date = row.start_date;
+  const q = id ? supabase.from("company_events").update(row).eq("id", id).select("*, event_categories(*)").single() : supabase.from("company_events").insert({ ...row, created_by: s.appUser.id }).select("*, event_categories(*)").single();
+  const { data, error } = await q;
+  if (error) return { error: error.message };
+  revalidatePath("/work/company-calendar");
+  return { row: data as Record<string, unknown> };
+}
+
+export async function deleteCompanyEvent(id: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("company_events").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/work/company-calendar");
+  return {};
+}

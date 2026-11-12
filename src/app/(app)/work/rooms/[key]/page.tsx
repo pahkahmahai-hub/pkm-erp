@@ -10,7 +10,7 @@ import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } fro
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
 import type { ChatMessage } from "@/components/work/ChatBox";
-import { MessageCircle, ListChecks, Truck, CalendarDays } from "lucide-react";
+import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
@@ -106,7 +106,8 @@ function RoomTabs({ roomKey, tab }: { roomKey: string; tab: string }) {
     <div className="flex flex-wrap gap-2">
       <Link href={`/work/rooms/${roomKey}`} className={tab !== "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><ListChecks size={16} /> งาน</Link>
       <Link href={`/work/rooms/${roomKey}?tab=chat`} className={tab === "chat" ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}><MessageCircle size={16} /> แชทห้อง</Link>
-      <Link href={`/work/rooms/${roomKey}/calendar`} className="btn-outline py-1.5 px-4"><CalendarDays size={16} /> ปฏิทิน</Link>
+      <Link href={`/work/rooms/${roomKey}/calendar`} className="btn-outline py-1.5 px-4"><CalendarDays size={16} /> ปฏิทิน{roomKey === "teamwork" ? "ทีม" : ""}</Link>
+      {roomKey === "teamwork" && <Link href="/work/company-calendar" className="btn-outline py-1.5 px-4"><CalendarRange size={16} /> ปฏิทินบริษัท</Link>}
       {roomKey === "sw-room" && <Link href="/work/deliveries" className="btn-outline py-1.5 px-4"><Truck size={16} /> ตารางส่งห้าง</Link>}
     </div>
   );

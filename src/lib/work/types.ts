@@ -31,3 +31,11 @@ export interface Notification { id: string; task_id: string | null; message: str
 export const STATUS_TH: Record<TaskStatus, string> = { open: "ใหม่", in_progress: "กำลังทำ", done: "รอตรวจรับ", accepted: "เสร็จสิ้น", returned: "ตีกลับ", cancelled: "ยกเลิก" };
 export const STATUS_BADGE: Record<TaskStatus, string> = { open: "badge-off", in_progress: "badge-pending", done: "badge-ok", accepted: "badge-approved", returned: "badge-rejected", cancelled: "badge-off" };
 export const DOW_TH = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+
+// ปฏิทินบริษัท (0020)
+export interface EventCategory { id: string; key: string; name: string; color: string; sort_order: number; is_active: boolean }
+export interface CompanyEvent {
+  id: string; title: string; category_id: string | null; start_date: string; end_date: string; start_time: string | null; end_time: string | null; location: string | null; note: string | null;
+  recur: "weekly" | "monthly" | null; recur_until: string | null; created_by: string | null; created_at: string; updated_at: string;
+  event_categories?: EventCategory | null;
+}
