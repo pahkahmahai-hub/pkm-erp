@@ -9,6 +9,8 @@ import type { Task } from "@/lib/work/types";
 import { fmtDate, todayBkk } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+const GC_KEYS = ["gc-room", "graphic", "visual", "content"];
+const SW_KEYS = ["sw-room", "office", "operation", "online"];
 const MAIN_ROOMS = ["teamwork", "gc-room", "sw-room"];
 
 export default async function WorkHome() {
@@ -86,14 +88,34 @@ export default async function WorkHome() {
               <div className="space-y-2">{overdue.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}</div>
             </div>
           )}
-          {assignedByMe.length > 0 && (
-            <div>
-              <h2 className="font-display font-bold mb-3">ที่ฉันสั่ง ({assignedByMe.length})</h2>
-              <div className="space-y-2">{assignedByMe.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}</div>
+        </section>
+      </div>
+
+      {assignedByMe.length > 0 && (
+        <section>
+          <h2 className="font-display font-bold mb-3">ที่ฉันสั่ง ({assignedByMe.length})</h2>
+          <div className="grid lg:grid-cols-2 gap-6">
+            {[{ label: "ฝั่ง GC", keys: GC_KEYS, tone: "bg-purple" }, { label: "ฝั่ง SW", keys: SW_KEYS, tone: "bg-coral" }].map((side) => {
+              const list = assignedByMe.filter((t) => side.keys.includes(t.work_rooms?.key ?? ""));
+              return (
+                <div key={side.label}>
+                  <h3 className="font-display font-semibold mb-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${side.tone}`} />{side.label} ({list.length})</h3>
+                  <div className="space-y-2">
+                    {list.slice(0, 15).map((t) => <TaskCard key={t.id} t={t} />)}
+                    {!list.length && <div className="card p-5 text-center text-ink-soft text-sm">ไม่มีงานค้าง</div>}
+                    {list.length > 15 && <p className="text-xs text-ink-soft">+ อีก {list.length - 15} งาน — ดูในห้อง</p>}
+                  </div>
+                </div>);
+            })}
+          </div>
+          {assignedByMe.some((t) => !GC_KEYS.includes(t.work_rooms?.key ?? "") && !SW_KEYS.includes(t.work_rooms?.key ?? "")) && (
+            <div className="mt-6">
+              <h3 className="font-display font-semibold mb-2">TEAMWORK / อื่น ๆ</h3>
+              <div className="space-y-2">{assignedByMe.filter((t) => !GC_KEYS.includes(t.work_rooms?.key ?? "") && !SW_KEYS.includes(t.work_rooms?.key ?? "")).slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}</div>
             </div>
           )}
         </section>
-      </div>
+      )}
     </div>
   );
 }
