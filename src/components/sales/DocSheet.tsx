@@ -6,6 +6,9 @@ const dmy = (d: string | null) => (d ? d.split("-").reverse().join("/") : "");
 
 export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
   const c = d.companies!;
+  // ลายเซ็น/ตราประทับ: ใช้ที่อัปโหลดในข้อมูลบริษัท ถ้าไม่มีใช้ไฟล์ในระบบของ PKM
+  const sigSrc = c.signature_path ?? (c.code === "PKM" ? "/brand/pkm-signature.png" : null);
+  const stampSrc = c.stamp_path ?? (c.code === "PKM" ? "/brand/pkm-stamp.png" : null);
   const meta = DOC_META[d.doc_type];
   const en = c.doc_lang === "en";
   const title = en ? meta.en : meta.th;
@@ -47,19 +50,19 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
           .bank { margin-top: 8px; font-size: 10.5px; color: #333; }
           .foot { margin-top: auto; padding-top: 28px; }
           .inname { display: flex; justify-content: space-between; font-size: 10.5px; color: #444; }
-          .signs { display: flex; justify-content: space-between; margin-top: 44px; gap: 30px; position: relative; }
+          .signs { display: flex; justify-content: space-between; margin-top: 56px; gap: 30px; position: relative; }
           .sig { flex: 1; display: flex; gap: 12px; }
           .sig div { flex: 1; border-top: 1px solid #999; padding-top: 4px; font-size: 10px; color: #555; text-align: center; position: relative; }
           .sig .mark { position: absolute; left: 0; right: 0; bottom: 100%; height: 0; pointer-events: none; }
-          .sig .mark .sigimg { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); height: 40px; max-width: 90%; object-fit: contain; }
+          .sig .mark .sigimg { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); height: 62px; max-width: 90%; object-fit: contain; }
           .sig .mark .sigdate { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 11px; color: #222; }
           /* ตราประทับ: ขนาดใหญ่ วางตรงกลางระหว่างสองกลุ่มลายเซ็น ค่อนไปทางซ้ายของช่องผู้อนุมัติ (ตามแบบ FlowAccount) */
-          .signs .stampimg { position: absolute; left: 50%; bottom: 10px; transform: translateX(-88%); height: 60px; width: auto; max-width: 160px; object-fit: contain; opacity: 0.95; }
+          .signs .stampimg { position: absolute; left: 50%; top: -64px; transform: translateX(-90%); height: 66px; width: auto; max-width: 170px; object-fit: contain; opacity: 0.95; }
           body[data-sig="0"] .sigimg, body[data-sig="0"] .sigdate, body[data-stamp="0"] .stampimg { display: none; }
           .pageno { position: absolute; bottom: 8mm; left: 14mm; font-size: 9px; color: #999; }
           @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; } .noprint { display: none !important; } }
         `}</style>
-        <PrintButton hasSignature={!!c.signature_path} hasStamp={!!c.stamp_path} />
+        <PrintButton hasSignature={!!sigSrc} hasStamp={!!stampSrc} />
         {copies.map((copy, ci) => (
           <div className="page" key={ci}>
             <div className="corner"><span>{ci + 1}</span></div>
@@ -138,9 +141,9 @@ export function DocSheet({ d, lines }: { d: SalesDoc; lines: SalesDocItem[] }) {
             <div className="foot">
               <div className="inname"><span>{en ? "For" : "ในนาม"} {d.customer_name}</span><span>{en ? "For" : "ในนาม"} {en ? c.name_en : c.name_th}</span></div>
               <div className="signs">
-                {c.stamp_path && <img className="stampimg" src={c.stamp_path} alt="" />}
+                {stampSrc && <img className="stampimg" src={stampSrc} alt="" />}
                 <div className="sig"><div>{en ? "Received by" : meta.sign[0]}</div><div>{en ? "Date" : "วันที่"}</div></div>
-                <div className="sig"><div><span className="mark">{c.signature_path && <img className="sigimg" src={c.signature_path} alt="" />}</span>{en ? "Authorized signature" : meta.sign[1]}{c.signer_name && <><br />({c.signer_name})</>}</div><div><span className="mark">{c.signature_path && <span className="sigdate">{dmy(d.doc_date)}</span>}</span>{en ? "Date" : "วันที่"}</div></div>
+                <div className="sig"><div><span className="mark">{sigSrc && <img className="sigimg" src={sigSrc} alt="" />}</span>{en ? "Authorized signature" : meta.sign[1]}{c.signer_name && <><br />({c.signer_name})</>}</div><div><span className="mark">{sigSrc && <span className="sigdate">{dmy(d.doc_date)}</span>}</span>{en ? "Date" : "วันที่"}</div></div>
               </div>
             </div>
             <div className="pageno">{d.doc_no} · {copy}</div>
