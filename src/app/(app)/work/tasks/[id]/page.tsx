@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees } from "@/lib/work/queries";
-import { STATUS_BADGE, STATUS_TH, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic } from "@/lib/work/types";
+import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic } from "@/lib/work/types";
 import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
@@ -44,13 +44,16 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const isOwner = session.isAdmin || task.created_by === me || isLead;
   // ตรวจรับ/ตีกลับ: งานของตัวเองต้องให้ผู้บริหาร (งานของหัวหน้าห้อง = ผม/ภรรยาอนุมัติ)
   const canReview = session.isAdmin || (isOwner && !isAssignee);
+  // SW ROOM: ขั้นส่งห้างต่อจากตรวจรับ — เฉพาะหัวหน้าห้อง SW (★) และผู้บริหาร
+  const isSw = task.work_rooms?.key === "sw-room";
+  const canStage = session.isAdmin || isLead;
   const overdue = !!task.due_date && task.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status);
   const items = (checklist ?? []) as Checklist[];
   const doneCount = items.filter((c) => c.is_done).length;
 
   return (
     <div className="space-y-6">
-      <Header crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${task.work_rooms?.key}`, label: task.work_rooms?.name ?? "ห้อง" }]} title={`#${task.task_no} ${task.title}`} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{STATUS_TH[task.status]}</span>} />
+      <Header crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${task.work_rooms?.key}`, label: task.work_rooms?.name ?? "ห้อง" }]} title={`#${task.task_no} ${task.title}`} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{statusLabel(task.status, task.work_rooms?.key)}</span>} />
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สั่งงานแล้ว ผู้รับจะเห็นในหน้างานของตัวเอง</div>}
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
@@ -126,9 +129,21 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <form className="space-y-2">
                 <input name="note" className="input" placeholder="หมายเหตุ (ถ้ามี)" />
                 <div className="grid grid-cols-2 gap-2">
-                  <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary">ตรวจรับ</button>
+                  {isSw && canStage
+                    ? <button formAction={setTaskStatus.bind(null, id, "prep")} className="btn-primary">อนุมัติ → เตรียมส่ง</button>
+                    : <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary">ตรวจรับ</button>}
                   <button formAction={setTaskStatus.bind(null, id, "returned")} className="btn-danger">ตีกลับ</button>
                 </div>
+                {isSw && !canStage && <p className="text-[11px] text-ink-soft">ขั้นส่งห้าง (เตรียมส่ง → ส่งแล้ว → ถึงแล้ว → เข้าระบบ) กดได้โดยหัวหน้าห้อง SW และผู้บริหาร</p>}
+              </form>
+            )}
+            {isSw && canStage && ["prep", "shipped", "arrived"].includes(task.status) && (
+              <form className="space-y-2">
+                <div className="flex items-center gap-1 text-[11px] text-ink-soft flex-wrap">{(["prep", "shipped", "arrived", "accepted"] as TaskStatus[]).map((s, i) => <span key={s} className={`rounded-full px-2 py-0.5 ${task.status === s ? "bg-purple text-white font-semibold" : (["prep", "shipped", "arrived", "accepted"].indexOf(task.status) > i ? "bg-green/15 text-green" : "bg-cream")}`}>{i + 1}. {statusLabel(s, "sw-room")}</span>)}</div>
+                <input name="note" className="input" placeholder="หมายเหตุ (ถ้ามี) เช่น เลขพัสดุ / ผู้รับ" />
+                {task.status === "prep" && <button formAction={setTaskStatus.bind(null, id, "shipped")} className="btn-primary w-full">🚚 ส่งสินค้าแล้ว</button>}
+                {task.status === "shipped" && <button formAction={setTaskStatus.bind(null, id, "arrived")} className="btn-primary w-full">📦 สินค้าถึงห้างแล้ว</button>}
+                {task.status === "arrived" && <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary w-full">✔ เข้าระบบเรียบร้อย — ปิดงาน</button>}
               </form>
             )}
             {isOwner && !["accepted", "cancelled"].includes(task.status) && (
@@ -137,7 +152,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             {isOwner && task.status === "accepted" && (
               <form action={setTaskStatus.bind(null, id, "open")}><button className="btn-ghost w-full text-ink-soft">เปิดงานอีกครั้ง</button></form>
             )}
-            {task.status === "accepted" && <div className="text-sm text-green font-semibold text-center">เสร็จสิ้น ✔ {task.reviewed_at && fmtDate(task.reviewed_at)}</div>}
+            {task.status === "accepted" && <div className="text-sm text-green font-semibold text-center">{isSw ? "เข้าระบบเรียบร้อย" : "เสร็จสิ้น"} ✔ {task.reviewed_at && fmtDate(task.reviewed_at)}</div>}
           </div>
 
           <div className="card p-5 text-xs text-ink-soft space-y-1">

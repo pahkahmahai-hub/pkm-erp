@@ -15,6 +15,7 @@ import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange } from "l
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 const COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done"];
+const SW_COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done", "prep", "shipped", "arrived"];
 
 export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string; tab?: string }> }) {
   const { key } = await params;
@@ -85,12 +86,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       {history ? (
         <div className="space-y-2">{tasks.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}{!tasks.length && <div className="card p-6 text-center text-ink-soft text-sm">ยังไม่มีงานที่เสร็จ</div>}</div>
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {COLUMNS.map((col) => {
+        <div className={`grid md:grid-cols-2 gap-4 ${key === "sw-room" ? "xl:grid-cols-7" : "xl:grid-cols-4"}`}>
+          {(key === "sw-room" ? SW_COLUMNS : COLUMNS).map((col) => {
             const list = tasks.filter((t) => t.status === col);
             return (
               <div key={col} className="rounded-2xl bg-white/60 border border-line p-3 min-h-40">
-                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{STATUS_TH[col]}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
+                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{STATUS_TH[col]}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
                 <div className="space-y-2">{list.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}</div>
               </div>
             );

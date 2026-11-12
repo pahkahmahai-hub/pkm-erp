@@ -1,4 +1,4 @@
-export type TaskStatus = "open" | "in_progress" | "done" | "accepted" | "returned" | "cancelled";
+export type TaskStatus = "open" | "in_progress" | "done" | "prep" | "shipped" | "arrived" | "accepted" | "returned" | "cancelled";
 export type TaskPriority = "normal" | "urgent";
 
 export interface Room { id: string; key: string; name: string; color: string; description: string | null; sort_order: number; is_active: boolean; is_lead?: boolean }
@@ -28,8 +28,11 @@ export interface Routine { id: string; room_id: string; title: string; descripti
   rule?: RoutineRule; month_days?: number[] | null; due_friday?: boolean; due_time?: string | null; topic_id?: string | null; plan_ahead?: boolean; priority?: TaskPriority; work_topics?: Pick<Topic, "id" | "name" | "color"> | null; work_rooms?: Pick<Room, "key" | "name" | "color"> | null; employees?: { first_name: string; nickname: string | null } | null }
 export interface Notification { id: string; task_id: string | null; message: string; read_at: string | null; created_at: string }
 
-export const STATUS_TH: Record<TaskStatus, string> = { open: "ใหม่", in_progress: "กำลังทำ", done: "รอตรวจรับ", accepted: "เสร็จสิ้น", returned: "ตีกลับ", cancelled: "ยกเลิก" };
-export const STATUS_BADGE: Record<TaskStatus, string> = { open: "badge-off", in_progress: "badge-pending", done: "badge-ok", accepted: "badge-approved", returned: "badge-rejected", cancelled: "badge-off" };
+export const STATUS_TH: Record<TaskStatus, string> = { open: "ใหม่", in_progress: "กำลังทำ", done: "รอตรวจรับ", prep: "เตรียมส่ง", shipped: "ส่งสินค้าแล้ว", arrived: "สินค้าถึงแล้ว", accepted: "เสร็จสิ้น", returned: "ตีกลับ", cancelled: "ยกเลิก" };
+/** SW ROOM: ขั้นส่งห้างต่อจากรอตรวจรับ — accepted = เข้าระบบเรียบร้อย */
+export const SW_STAGES: TaskStatus[] = ["prep", "shipped", "arrived"];
+export const statusLabel = (s: TaskStatus, roomKey?: string | null) => (roomKey === "sw-room" && s === "accepted" ? "เข้าระบบเรียบร้อย" : STATUS_TH[s]);
+export const STATUS_BADGE: Record<TaskStatus, string> = { open: "badge-off", in_progress: "badge-pending", done: "badge-ok", prep: "badge-pending", shipped: "badge-ok", arrived: "badge-ok", accepted: "badge-approved", returned: "badge-rejected", cancelled: "badge-off" };
 export const DOW_TH = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 
 // ปฏิทินบริษัท (0020)
