@@ -37,11 +37,11 @@ export default async function CompanyCalendarPage({ searchParams }: { searchPara
         <span className="font-display font-bold text-lg ml-2">{TH_MONTHS[m - 1]} {y + 543}</span>
       </div>
       {(catErr || evErr) && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">โหลดปฏิทินไม่ได้: {(catErr ?? evErr)?.message} — ถ้ายังไม่ได้รัน SQL 0020 ให้รันก่อนครับ</div>}
-      <div className="grid lg:grid-cols-[1fr_280px] gap-4 items-start">
+      <div className="space-y-4">
         <MonthCalendar month={month} today={today} events={events} categories={(cats ?? []) as EventCategory[]} meId={session.appUser.id} isAdmin={session.isAdmin} />
         <div className="card p-4">
           <h2 className="font-display font-bold mb-2">30 วันข้างหน้า</h2>
-          <ul className="space-y-1.5 text-sm">
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-sm">
             {upcoming.map((o) => <li key={o.ev.id + o.start} className="flex gap-2"><span className="mt-1.5 h-2.5 w-2.5 rounded-full shrink-0" style={{ background: o.ev.event_categories?.color ?? "#6b7280" }} /><div><div className="font-medium leading-tight">{o.ev.title}</div><div className="text-[11px] text-ink-soft">{fmtDM(o.start)}{o.end !== o.start ? ` – ${fmtDM(o.end)}` : ""}{o.ev.start_time ? ` · ${o.ev.start_time.slice(0, 5)}` : ""}{o.ev.location ? ` · ${o.ev.location}` : ""}</div></div></li>)}
             {!upcoming.length && <li className="text-ink-soft text-xs">ยังไม่มีกิจกรรม</li>}
           </ul>

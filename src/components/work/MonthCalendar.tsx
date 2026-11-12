@@ -61,15 +61,15 @@ export function MonthCalendar({ month, today, events, categories, meId, isAdmin 
         <span className="text-ink-soft ml-1">· แถบ = ช่วงหลายวัน · จุด = งานวันเดียว · กดวันที่เพื่อเพิ่ม กดงานเพื่อแก้</span>
       </div>
       <div className="card overflow-hidden">
-        <div className="grid grid-cols-7 bg-cream text-xs font-semibold text-center border-b border-line">{DOW.map((d, i) => <div key={d} className={`py-2 ${i >= 5 ? "text-ink-soft" : ""}`}>{d}</div>)}</div>
+        <div className="grid grid-cols-7 bg-cream text-sm font-semibold text-center border-b border-line">{DOW.map((d, i) => <div key={d} className={`py-2.5 ${i >= 5 ? "text-ink-soft" : ""}`}>{d}</div>)}</div>
         {weeks.map((w) => (
-          <div key={w.wk} className="grid grid-cols-7 border-b border-line last:border-b-0 relative" style={{ gridTemplateRows: `24px repeat(${w.lanes}, 24px) 10px` }}>
+          <div key={w.wk} className="grid grid-cols-7 border-b border-line last:border-b-0 relative min-h-[120px]" style={{ gridTemplateRows: `30px repeat(${w.lanes}, 28px) minmax(12px, 1fr)` }}>
             {w.days.map((d, i) => {
               const inMonth = d.slice(0, 7) === month; const isToday = d === today;
               return (
                 <div key={d} className={`row-span-full border-l first:border-l-0 border-line ${!inMonth ? "bg-cream/40" : i >= 5 ? "bg-cream/20" : ""}`} style={{ gridColumn: i + 1, gridRow: "1 / -1" }}>
                   <button type="button" onClick={() => openNew(d)} className="w-full h-full text-left group flex items-start" aria-label="เพิ่มกิจกรรม">
-                    <span className={`inline-grid place-items-center h-6 min-w-6 px-1 m-0.5 rounded-full text-xs ${isToday ? "bg-red text-white font-bold" : inMonth ? "text-ink" : "text-ink-soft/60"}`}>{Number(d.slice(8))}</span>
+                    <span className={`inline-grid place-items-center h-7 min-w-7 px-1 m-1 rounded-full text-sm ${isToday ? "bg-red text-white font-bold" : inMonth ? "text-ink" : "text-ink-soft/60"}`}>{Number(d.slice(8))}</span>
                     <Plus size={12} className="inline text-ink-soft/0 group-hover:text-ink-soft" />
                   </button>
                 </div>);
@@ -78,9 +78,9 @@ export function MonthCalendar({ month, today, events, categories, meId, isAdmin 
               const c = catOf(s.occ.ev); const single = s.occ.start === s.occ.end;
               return (
                 <button key={s.occ.ev.id + s.occ.start} type="button" onClick={() => openEdit(s.occ.ev)} title={`${s.occ.ev.title}${s.occ.ev.location ? " · " + s.occ.ev.location : ""}\n${fmtDM(s.occ.start)}${s.occ.start !== s.occ.end ? " – " + fmtDM(s.occ.end) : ""}`}
-                  className={`z-10 mx-0.5 h-5 text-[11px] font-semibold leading-5 truncate text-left px-1.5 ${single ? "bg-white text-ink ring-1 ring-line rounded-md" : `text-white ${s.isStart ? "rounded-l-md ml-1" : ""} ${s.isEnd ? "rounded-r-md mr-1" : ""}`}`}
+                  className={`z-10 mx-1 h-6 text-[13px] font-semibold leading-6 truncate text-left px-2 ${single ? "bg-white text-ink ring-1 ring-line rounded-md" : `text-white ${s.isStart ? "rounded-l-md ml-1" : ""} ${s.isEnd ? "rounded-r-md mr-1" : ""}`}`}
                   style={{ gridColumn: `${s.col + 1} / span ${s.span}`, gridRow: s.lane + 2, background: single ? undefined : c?.color ?? "#6b7280" }}>
-                  {single && <span className="inline-block h-2 w-2 rounded-full mr-1 align-middle" style={{ background: c?.color ?? "#6b7280" }} />}
+                  {single && <span className="inline-block h-2.5 w-2.5 rounded-full mr-1.5 align-middle" style={{ background: c?.color ?? "#6b7280" }} />}
                   {s.occ.ev.recur && <Repeat size={10} className="inline mr-0.5 opacity-80" />}{s.occ.ev.start_time && single ? s.occ.ev.start_time.slice(0, 5) + " " : ""}{s.occ.ev.title}
                 </button>);
             })}
