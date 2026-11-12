@@ -3,7 +3,8 @@ import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
-import { MonthCalendar, expandEvents } from "@/components/work/MonthCalendar";
+import { MonthCalendar } from "@/components/work/MonthCalendar";
+import { expandEvents } from "@/lib/work/events";
 import type { CompanyEvent, EventCategory } from "@/lib/work/types";
 import { addMonths, addDays, fmtDM, TH_MONTHS } from "@/lib/work/deliveries";
 import { todayBkk } from "@/lib/today";
@@ -18,7 +19,7 @@ export default async function CompanyCalendarPage({ searchParams }: { searchPara
   const today = todayBkk();
   const month = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : today.slice(0, 7);
   const from = addDays(month + "-01", -7); const to = addDays(addMonths(month, 1) + "-01", 13);
-  const [{ data: cats }, { data: evs }] = await Promise.all([
+  const [{ data: cats, error: catErr }, { data: evs, error: evErr }] = await Promise.all([
     supabase.from("event_categories").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("company_events").select("*, event_categories(*)").or(`and(start_date.lte.${to},end_date.gte.${from}),recur.not.is.null`).order("start_date"),
   ]);
@@ -35,6 +36,7 @@ export default async function CompanyCalendarPage({ searchParams }: { searchPara
         <Link href={href(addMonths(month, 1))} className="btn-outline py-1 px-2"><ChevronRight size={16} /></Link>
         <span className="font-display font-bold text-lg ml-2">{TH_MONTHS[m - 1]} {y + 543}</span>
       </div>
+      {(catErr || evErr) && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">โหลดปฏิทินไม่ได้: {(catErr ?? evErr)?.message} — ถ้ายังไม่ได้รัน SQL 0020 ให้รันก่อนครับ</div>}
       <div className="grid lg:grid-cols-[1fr_280px] gap-4 items-start">
         <MonthCalendar month={month} today={today} events={events} categories={(cats ?? []) as EventCategory[]} meId={session.appUser.id} isAdmin={session.isAdmin} />
         <div className="card p-4">
