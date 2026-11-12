@@ -18,7 +18,8 @@ export function isOverdue(t: Task) {
 }
 
 export async function ensureRoutines(supabase: SupabaseClient) {
-  await supabase.rpc("generate_routine_tasks");
+  const { error } = await supabase.rpc("generate_routine_tasks_ahead");   // 0018: วันนี้ + ล่วงหน้า 14 วัน (plan_ahead)
+  if (error) await supabase.rpc("generate_routine_tasks");                // ก่อนรัน 0018
 }
 
 // ---------------------------------------------------------------------

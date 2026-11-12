@@ -47,6 +47,7 @@ export async function updateTask(id: string, formData: FormData) {
     assignee_id: nul(formData.get("assignee_id")),
     due_date: nul(formData.get("due_date")),
     priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
+    ...(formData.has("start_date") ? { start_date: nul(formData.get("start_date")), due_time: nul(formData.get("due_time")), topic_id: nul(formData.get("topic_id")) } : {}),
   }).eq("id", id);
   if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/work/tasks/${id}`);
@@ -121,8 +122,14 @@ export async function saveRoutine(id: string | null, formData: FormData) {
   await getSession();
   const supabase = await createClient();
   const weekdays = [1, 2, 3, 4, 5, 6, 7].filter((d) => formData.get(`wd_${d}`) === "on");
-  const row = { room_id: formData.get("room_id"), title: String(formData.get("title")).trim(), description: nul(formData.get("description")), assignee_id: nul(formData.get("assignee_id")), weekdays, is_active: formData.get("is_active") !== "off" };
-  const { error } = id ? await supabase.from("work_routines").update(row).eq("id", id) : await supabase.from("work_routines").insert(row);
+  const base = { room_id: formData.get("room_id"), title: String(formData.get("title")).trim(), description: nul(formData.get("description")), assignee_id: nul(formData.get("assignee_id")), weekdays, is_active: formData.get("is_active") !== "off" };
+  const ext = formData.has("rule") ? {   // 0018
+    rule: String(formData.get("rule")), month_days: String(formData.get("month_days") ?? "").split(/[,\s]+/).map(Number).filter((n) => n >= 1 && n <= 31),
+    due_friday: formData.get("due_friday") === "on", plan_ahead: formData.get("plan_ahead") === "on", priority: formData.get("urgent") === "on" ? "urgent" : "normal",
+  } : {};
+  const row: Record<string, unknown> = { ...base, ...ext };
+  let { error } = id ? await supabase.from("work_routines").update(row).eq("id", id) : await supabase.from("work_routines").insert(row);
+  if (error && formData.has("rule")) ({ error } = id ? await supabase.from("work_routines").update(base).eq("id", id) : await supabase.from("work_routines").insert(base));   // ก่อนรัน 0018
   if (error) redirect(`/work/routines?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/work/routines");
   redirect("/work/routines?saved=1");
@@ -257,4 +264,70 @@ export async function createDeliveryTask(id: string, title: string, description:
   if (error) return { error: error.message };
   revalidatePath("/work");
   return { taskId: (data as { id: string }).id };
+}
+
+
+// ---------- ปฏิทินงาน (0018) ----------
+export async function createCalendarTask(formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const roomKey = String(formData.get("room_key"));
+  const week = nul(formData.get("week")) ?? "";
+  const checklist = String(formData.get("checklist") ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
+  const { data, error } = await supabase.rpc("create_calendar_task", {
+    p_room: String(formData.get("room_id")), p_title: String(formData.get("title")).trim(), p_description: nul(formData.get("description")), p_assignee: nul(formData.get("assignee_id")),
+    p_start: nul(formData.get("start_date")), p_due: nul(formData.get("due_date")), p_due_time: nul(formData.get("due_time")), p_priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
+    p_topic: nul(formData.get("topic_id")), p_checklist: checklist,
+  });
+  const back = `/work/rooms/${roomKey}/calendar${week ? `?week=${week}` : ""}`;
+  if (error) redirect(`${back}${week ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/work");
+  if (formData.get("open") === "1") redirect(`/work/tasks/${data.id}?created=1`);
+  redirect(`${back}${week ? "&" : "?"}created=${data.task_no}`);
+}
+
+export async function saveTopic(roomKey: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const id = nul(formData.get("id"));
+  const row = { room_id: String(formData.get("room_id")), employee_id: nul(formData.get("employee_id")), name: String(formData.get("name")).trim(), color: nul(formData.get("color")) ?? "#452a79", sort_order: Number(formData.get("sort_order") ?? 100) };
+  const { error } = id ? await supabase.from("work_topics").update(row).eq("id", id) : await supabase.from("work_topics").insert(row);
+  if (error) redirect(`/work/rooms/${roomKey}/topics?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/rooms/${roomKey}`);
+  redirect(`/work/rooms/${roomKey}/topics?saved=1`);
+}
+
+export async function deleteTopic(roomKey: string, id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("work_topics").delete().eq("id", id);
+  if (error) redirect(`/work/rooms/${roomKey}/topics?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/rooms/${roomKey}`);
+  redirect(`/work/rooms/${roomKey}/topics?deleted=1`);
+}
+
+/** storyboard: แนบรูป/ไฟล์หลายไฟล์ให้งาน */
+export async function addTaskFiles(taskId: string, roomId: string, formData: FormData) {
+  const s = await getSession();
+  const supabase = await createClient();
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const caption = nul(formData.get("caption"));
+  const { count } = await supabase.from("work_task_files").select("id", { count: "exact", head: true }).eq("task_id", taskId);
+  let i = count ?? 0;
+  for (const f of files) {
+    try {
+      const url = await uploadWorkFile(roomId, f);
+      await supabase.from("work_task_files").insert({ task_id: taskId, url, name: f.name, caption, sort_order: i++, created_by: s.appUser.id });
+    } catch (e) { redirect(`/work/tasks/${taskId}?error=${encodeURIComponent((e as Error).message)}`); }
+  }
+  revalidatePath(`/work/tasks/${taskId}`);
+  redirect(`/work/tasks/${taskId}`);
+}
+
+export async function deleteTaskFile(taskId: string, fileId: string) {
+  await getSession();
+  const supabase = await createClient();
+  await supabase.from("work_task_files").delete().eq("id", fileId);
+  revalidatePath(`/work/tasks/${taskId}`);
+  redirect(`/work/tasks/${taskId}`);
 }

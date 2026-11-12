@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flame, Repeat, Trash2 } from "lucide-react";
+import { Flame, Repeat, Trash2, CalendarDays } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees } from "@/lib/work/queries";
-import { STATUS_BADGE, STATUS_TH, type Task, type Checklist, type Comment, type RoomMember } from "@/lib/work/types";
-import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem } from "../../actions";
+import { STATUS_BADGE, STATUS_TH, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic } from "@/lib/work/types";
+import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
+import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 
@@ -18,14 +19,19 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const { created, saved, error, edit } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
-  const [{ data: t }, { data: checklist }, { data: comments }] = await Promise.all([
-    supabase.from("work_tasks").select(TASK_SELECT).eq("id", id).maybeSingle(),
+  const [tRes, { data: checklist }, { data: comments }, { data: filesRaw }] = await Promise.all([
+    supabase.from("work_tasks").select(TASK_SELECT + ", work_topics(id, name, color)").eq("id", id).maybeSingle(),
     supabase.from("work_checklist").select("*").eq("task_id", id).order("sort_order"),
     supabase.from("work_comments").select("*, app_users(display_name, email)").eq("task_id", id).order("created_at"),
+    supabase.from("work_task_files").select("*").eq("task_id", id).order("sort_order").order("created_at"),
   ]);
+  const t = tRes.error ? (await supabase.from("work_tasks").select(TASK_SELECT).eq("id", id).maybeSingle()).data : tRes.data;   // ก่อนรัน 0018
   if (!t) notFound();
-  const task = t as Task;
-  const [{ data: membersRaw }, dir] = await Promise.all([supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id), loadDirectory(supabase)]);
+  const task = t as unknown as Task;
+  const files = (filesRaw ?? []) as TaskFile[];
+  const hasCalendar = !tRes.error;
+  const [{ data: membersRaw }, dir, { data: topicsRaw }] = await Promise.all([supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id), loadDirectory(supabase), hasCalendar ? supabase.from("work_topics").select("*").eq("room_id", task.room_id).eq("is_active", true).order("sort_order") : Promise.resolve({ data: [] })]);
+  const topics = (topicsRaw ?? []) as Topic[];
   const members = fillEmployees(membersRaw as RoomMember[], dir, "employee_id");
   if (!task.employees && task.assignee_id) task.employees = dir.find((e) => e.id === task.assignee_id) ?? null;
   const mem = (members ?? []) as RoomMember[];
@@ -56,7 +62,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" defaultValue={task.description ?? ""} className="input" rows={3} /></div>
               <div><label className="label">มอบหมายให้</label>
                 <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
-              <div><label className="label">กำหนดเสร็จ</label><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" /></div>
+              <div><label className="label">กำหนดเสร็จ</label><div className="flex gap-2"><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
+              {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input name="start_date" type="date" defaultValue={task.start_date ?? ""} className="input" /></div>
+                <div><label className="label">หัวข้อ Routine</label><select name="topic_id" defaultValue={task.topic_id ?? ""} className="input"><option value="">—</option>{topics.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}{tp.employee_id ? "" : " (ห้อง)"}</option>)}</select></div></>}
               <div className="md:col-span-2 flex gap-4 text-sm"><label className="flex items-center gap-2"><input type="radio" name="priority" value="normal" defaultChecked={task.priority === "normal"} className="accent-purple" /> ปกติ</label><label className="flex items-center gap-2"><input type="radio" name="priority" value="urgent" defaultChecked={task.priority === "urgent"} className="accent-purple" /> 🔥 ด่วน</label></div>
               <div className="md:col-span-2 flex gap-2"><button className="btn-primary">บันทึก</button><Link href={`/work/tasks/${id}`} className="btn-ghost">ยกเลิก</Link></div>
             </form>
@@ -64,7 +72,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             <div className="card p-5 space-y-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <div><span className="text-ink-soft">ผู้รับ:</span> <b>{task.employees ? (task.employees.nickname ?? task.employees.first_name) : "ยังไม่มอบหมาย"}</b></div>
-                <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{overdue && " (เลยกำหนด)"}</b></div>
+                <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{task.due_time ? " " + task.due_time.slice(0, 5) + " น." : ""}{overdue && " (เลยกำหนด)"}</b></div>
+                {task.start_date && <div className="flex items-center gap-1"><CalendarDays size={14} className="text-ink-soft" /><span className="text-ink-soft">ลงปฏิทิน:</span> <b>{fmtDate(task.start_date, { weekday: "short" })}</b></div>}
+                {task.work_topics && <div><span className="rounded-md px-2 py-0.5 text-xs font-semibold border" style={{ borderColor: task.work_topics.color, color: task.work_topics.color }}>{task.work_topics.name}</span></div>}
                 {task.priority === "urgent" && <div className="text-red font-semibold flex items-center gap-1"><Flame size={14} /> ด่วน</div>}
                 {task.routine_id && <div className="text-ink-soft flex items-center gap-1"><Repeat size={14} /> งานประจำ</div>}
               </div>
@@ -76,6 +86,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           )}
 
           {/* checklist */}
+          {hasCalendar && <Storyboard taskId={id} files={files} canEdit={isOwner || isAssignee} addAction={addTaskFiles.bind(null, id, task.room_id)} deleteAction={deleteTaskFile} />}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2"><h2 className="font-display font-bold">เช็คลิสต์</h2>{items.length > 0 && <span className="text-xs text-ink-soft">{doneCount}/{items.length}</span>}</div>
             {items.length > 0 && <div className="h-1.5 rounded-full bg-lavender/40 mb-3"><div className="h-full rounded-full bg-teal" style={{ width: `${(doneCount / items.length) * 100}%` }} /></div>}
