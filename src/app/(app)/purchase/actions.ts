@@ -89,3 +89,24 @@ export async function cancelPurchaseDoc(type: "pr" | "po", id: string, formData:
   if (error) redirect(`${base(type)}/${id}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/purchase"); redirect(`${base(type)}/${id}?cancelled=1`);
 }
+
+// ---------- ไฟล์แนบ PR/PO (0033) ----------
+export interface PurchaseFileIn { path: string; name: string; mime: string | null; size: number; kind: "quote" | "image" | "other" }
+export async function addPurchaseFiles(docId: string, files: PurchaseFileIn[], note: string | null): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("purchase_doc_files").insert(files.map((f) => ({ doc_id: docId, path: f.path, file_name: f.name, mime: f.mime, size_bytes: f.size, kind: f.kind, note })));
+  if (error) return { error: error.message };
+  revalidatePath(`/purchase/orders/${docId}`); revalidatePath(`/purchase/requests/${docId}`);
+  return {};
+}
+export async function deletePurchaseFile(id: string, docId: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("purchase_doc_files").delete().eq("id", id).select("path");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "ลบไม่ได้ — เฉพาะคนที่แนบหรือผู้บริหาร" };
+  await supabase.storage.from("purchase-files").remove(data.map((d) => d.path as string));
+  revalidatePath(`/purchase/orders/${docId}`); revalidatePath(`/purchase/requests/${docId}`);
+  return {};
+}

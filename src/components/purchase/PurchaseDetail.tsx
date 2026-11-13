@@ -10,9 +10,10 @@ import { todayBkk } from "@/lib/today";
 
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
 
-export function PurchaseDetail({ d, items, receipts, derived: children, session, categories, flash }: {
+export function PurchaseDetail({ d, items, receipts, derived: children, session, categories, flash, filesSlot }: {
   d: PurchaseDoc & { companies: { code: string; name_th: string }; creator: { email: string } | null; approver: { email: string } | null; expenses?: { exp_no: string; status: string } | null };
   items: PurchaseItem[]; receipts: PurchaseReceipt[]; derived: { id: string; doc_no: string; status: string }[]; session: SessionInfo; categories: ExpenseCategory[];
+  filesSlot?: React.ReactNode;
   flash: { error?: string; created?: string; saved?: string; submitted?: string; reviewed?: string; issued?: string; received?: string; cancelled?: string };
 }) {
   const isPo = d.doc_type === "po";
@@ -75,6 +76,7 @@ export function PurchaseDetail({ d, items, receipts, derived: children, session,
             <div className="card p-5"><h3 className="font-display font-bold mb-2">ประวัติการรับของ</h3>
               <ul className="text-sm space-y-1">{receipts.map((r) => <li key={r.id} className="flex flex-wrap gap-2"><span>{fmtDate(r.received_at)}</span><span className="text-ink-soft">{r.lines.reduce((a, l) => a + Number(l.qty), 0)} หน่วย</span>{r.stock_receipt_id && <Link href={`/stock/receipts/${r.stock_receipt_id}`} className="text-purple underline text-xs">ใบรับเข้าคลัง</Link>}{r.note && <span className="text-xs text-ink-soft">· {r.note}</span>}</li>)}</ul></div>
           )}
+          {filesSlot}
         </div>
 
         <div className="space-y-4">
