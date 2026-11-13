@@ -219,11 +219,27 @@ export async function moveMaterial(id: string, formData: FormData) {
   const type = String(formData.get("type"));
   const q = Number(formData.get("qty"));
   const { error } = await supabase.rpc("move_material", {
-    p_material_id: id, p_type: type, p_qty: type === "issue" ? -Math.abs(q) : Math.abs(q), p_note: nul(formData.get("note")), p_supplier_id: nul(formData.get("contact_id")),
+    p_material_id: id, p_type: type, p_qty: type === "issue" || type === "writeoff" ? -Math.abs(q) : Math.abs(q), p_note: nul(formData.get("note")), p_supplier_id: nul(formData.get("contact_id")),
   });
   if (error) redirect(`/stock/materials/${id}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/stock/materials/${id}`);
   revalidatePath("/stock/materials");
+  redirect(`/stock/materials/${id}?saved=1`);
+}
+
+/** ตัดทิ้งยอดคงเหลือทั้งหมด (ของเสื่อม/ใช้ไม่ได้) — ไม่ต้องทำใบเบิก · เลือกซ่อนรายการได้ */
+export async function writeOffMaterial(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { data: m } = await supabase.from("materials").select("qty, kind").eq("id", id).single();
+  const qty = Number(m?.qty ?? 0);
+  if (qty > 0) {
+    const { error } = await supabase.rpc("move_material", { p_material_id: id, p_type: "writeoff", p_qty: -qty, p_note: nul(formData.get("reason")) ?? "ตัดทิ้ง — เสื่อมสภาพ/ใช้ไม่ได้", p_supplier_id: null });
+    if (error) redirect(`/stock/materials/${id}?error=${encodeURIComponent(error.message)}`);
+  }
+  if (formData.get("hide") === "on") await supabase.from("materials").update({ is_active: false }).eq("id", id);
+  revalidatePath("/stock/materials");
+  if (formData.get("hide") === "on") redirect(`/stock/materials?kind=${m?.kind ?? "display"}&writeoff=1`);
   redirect(`/stock/materials/${id}?saved=1`);
 }
 

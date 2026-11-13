@@ -6,8 +6,8 @@ import { MATERIAL_TH, type Material, type MaterialKind } from "@/lib/stock/types
 
 export const dynamic = "force-dynamic";
 
-export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ kind?: string; error?: string; deleted?: string }> }) {
-  const { kind = "fabric", error, deleted } = await searchParams;
+export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ kind?: string; error?: string; deleted?: string; writeoff?: string }> }) {
+  const { kind = "fabric", error, deleted, writeoff } = await searchParams;
   const k = (["packaging", "accessory", "display"].includes(kind) ? kind : "fabric") as MaterialKind;
   const supabase = await createClient();
   const { data } = await supabase.from("materials").select("*").eq("kind", k).eq("is_active", true).order("name");
@@ -16,6 +16,7 @@ export default async function MaterialsPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-6">
       <Header title="ลายผ้า · แพคเกจจิ้ง · อุปกรณ์ · Display" sub={`${MATERIAL_TH[k].name} ${rows.length} รายการ · รวม ${rows.reduce((a, r) => a + Number(r.qty), 0).toLocaleString()} ${MATERIAL_TH[k].unit}`} />
+      {writeoff && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ตัดทิ้งและซ่อนรายการแล้ว — ประวัติยังดูได้ในเมนูความเคลื่อนไหว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการแล้ว</div>}
       <div className="flex gap-2">

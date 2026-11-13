@@ -9,7 +9,7 @@ import { MATERIAL_TH, type MaterialMovement, type MaterialKind } from "@/lib/sto
 
 export const dynamic = "force-dynamic";
 
-const MAT_TYPE_TH: Record<string, string> = { opening: "ยอดเริ่มต้น", receive: "รับเข้า", issue: "เบิกออก", adjust: "ปรับยอด" };
+const MAT_TYPE_TH: Record<string, string> = { opening: "ยอดเริ่มต้น", receive: "รับเข้า", in: "รับเข้า", issue: "เบิกออก", adjust: "ปรับยอด", writeoff: "ตัดทิ้ง" };
 type MatMove = MaterialMovement & { materials: { name: string; code: string | null; kind: MaterialKind; unit: string } | null; contacts: { name: string } | null };
 
 export default async function MovementsPage({ searchParams }: { searchParams: Promise<{ ym?: string; type?: string; q?: string; kind?: string }> }) {

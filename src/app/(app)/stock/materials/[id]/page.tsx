@@ -3,14 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDateTime } from "@/lib/format";
-import { saveMaterial, moveMaterial, uploadImage, deleteMaterial } from "../../actions";
+import { saveMaterial, moveMaterial, writeOffMaterial, uploadImage, deleteMaterial } from "../../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { ContactPicker } from "@/components/stock/ContactPicker";
 import { ImageUploader } from "@/components/stock/ImageUploader";
 import { MATERIAL_TH, type Material, type MaterialMovement } from "@/lib/stock/types";
 
 export const dynamic = "force-dynamic";
-const TYPE_TH: Record<string, string> = { opening: "ยอดเริ่มต้น", receive: "รับเข้า", issue: "เบิกออก", adjust: "ปรับยอด" };
+const TYPE_TH: Record<string, string> = { opening: "ยอดเริ่มต้น", receive: "รับเข้า", in: "รับเข้า", issue: "เบิกออก", adjust: "ปรับยอด", writeoff: "ตัดทิ้ง (เสื่อม/ใช้ไม่ได้)" };
 
 export default async function MaterialDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { id } = await params;
@@ -47,13 +47,23 @@ export default async function MaterialDetail({ params, searchParams }: { params:
             <h2 className="font-display font-bold">รับเข้า / เบิกออก</h2>
             <div className="grid md:grid-cols-3 gap-4">
               <div><label className="label">รายการ</label>
-                <select name="type" className="input"><option value="receive">รับเข้า</option><option value="issue">เบิกออก</option></select></div>
+                <select name="type" className="input"><option value="receive">รับเข้า</option><option value="issue">เบิกออก</option><option value="writeoff">ตัดทิ้ง (เสื่อม/ชำรุด/ใช้ไม่ได้)</option></select></div>
               <div><label className="label">จำนวน ({mat.unit})</label><input name="qty" type="number" step="0.01" min="0.01" className="input" required /></div>
               <ContactPicker kind="supplier" contacts={suppliers ?? []} label="ซัพพลายเออร์ (กรณีรับเข้า)" />
-              <div className="md:col-span-3"><label className="label">หมายเหตุ / เบิกไปทำอะไร</label><input name="note" className="input" /></div>
+              <div className="md:col-span-3"><label className="label">หมายเหตุ / เบิกไปทำอะไร / เหตุผลที่ตัดทิ้ง</label><input name="note" className="input" /></div>
             </div>
             <button className="btn-primary">บันทึก</button>
           </form>
+
+          {Number(mat.qty) > 0 && (
+            <form action={writeOffMaterial.bind(null, id)} className="card p-6 space-y-3 border-red/30">
+              <h2 className="font-display font-bold">ตัดทิ้งทั้งหมด</h2>
+              <p className="text-sm text-ink-soft">ของเสื่อม ชำรุด หรือเลิกใช้ — ตัดยอดคงเหลือ <b>{Number(mat.qty).toLocaleString()} {mat.unit}</b> ออกจากสต็อกทันที ไม่ต้องทำใบเบิก (ประวัติยังเก็บไว้)</p>
+              <input name="reason" className="input" placeholder="เหตุผล เช่น ใช้ออกบูธหลายรอบ ชำรุด" />
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="hide" className="accent-purple" defaultChecked={mat.kind === "display"} /> ซ่อนรายการนี้จากคลังด้วย (เลิกใช้แล้ว)</label>
+              <button className="btn-danger">ตัดทิ้ง {Number(mat.qty).toLocaleString()} {mat.unit}</button>
+            </form>
+          )}
 
           <form action={saveMaterial.bind(null, id)} className="card p-6 space-y-4">
             <h2 className="font-display font-bold">ข้อมูล</h2>
