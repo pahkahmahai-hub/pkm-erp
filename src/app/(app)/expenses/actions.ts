@@ -95,7 +95,7 @@ export async function reviewExpense(id: string, decision: "approved" | "rejected
 export async function payExpense(id: string, formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.rpc("pay_expense", { p_id: id, p_paid_date: nul(formData.get("paid_date")), p_method: nul(formData.get("paid_method")), p_ref: nul(formData.get("paid_ref")), p_issue_wht: formData.get("issue_wht") !== "off" });
+  const { error } = await supabase.rpc("pay_expense", { p_id: id, p_paid_date: nul(formData.get("paid_date")), p_method: nul(formData.get("paid_method")), p_ref: nul(formData.get("paid_ref")), p_issue_wht: formData.get("wht_box") === "1" ? formData.get("issue_wht") === "on" : true });
   if (error) redirect(`/expenses/${id}?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/expenses");
   const back = nul(formData.get("back"));
@@ -249,4 +249,23 @@ export async function splitExpenseDeposit(id: string, deposit: number, due: stri
   const { data: c } = await supabase.from("expenses").select("id").eq("parent_expense_id", id).maybeSingle();
   revalidatePath("/expenses"); revalidatePath(`/expenses/${id}`); revalidatePath("/expenses/payables");
   return { childId: c?.id as string | undefined };
+}
+
+// ---------------- ออก 50 ทวิ จากบิลที่จ่ายแล้ว ตามวันที่โอน (1 คลิก) ----------------
+export async function whtFromExpense(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data: e } = await supabase.from("expenses").select("*, expense_categories(wht_income_type)").eq("id", id).maybeSingle();
+  if (!e) redirect(`/expenses/${id}?error=${encodeURIComponent("ไม่พบรายการ")}`);
+  const x = e as Record<string, unknown> & { expense_categories: { wht_income_type: string | null } | null };
+  if (!(Number(x.wht_amount) > 0)) redirect(`/expenses/${id}?error=${encodeURIComponent("บิลนี้ไม่มีหัก ณ ที่จ่าย")}`);
+  const { data: w, error } = await supabase.rpc("create_wht_cert", {
+    p_company: x.company_id, p_form: x.supplier_is_company ? "pnd53" : "pnd3", p_payee_name: x.supplier_name, p_payee_tax_id: x.supplier_tax_id ?? null,
+    p_payee_address: x.supplier_address ?? null, p_payee_branch: x.supplier_branch ?? null, p_pay_date: x.paid_date ?? x.bill_date, p_income_row: 5,
+    p_income_type: x.expense_categories?.wht_income_type ?? "ค่าจ้าง/ค่าบริการ มาตรา 40(8)", p_income_amount: Number(x.net_before_vat), p_wht_pct: Number(x.wht_pct),
+    p_wht_amount: Number(x.wht_amount), p_payer_condition: 1, p_note: null, p_expense: id,
+  });
+  if (error) redirect(`/expenses/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/expenses/${id}`); revalidatePath("/expenses/wht");
+  redirect(`/expenses/${id}?wht=${(w as { id: string }).id}`);
 }

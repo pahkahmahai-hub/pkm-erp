@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
-import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense } from "../actions";
+import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense, whtFromExpense } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
 import { SplitDeposit } from "@/components/expenses/SplitDeposit";
@@ -108,11 +108,15 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
                     <div><label className="label">วิธี</label><select name="paid_method" className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
                   </div>
                   <div><label className="label">อ้างอิง (เลขสลิป / ธนาคาร)</label><input name="paid_ref" className="input" /></div>
-                  {Number(x.wht_amount) > 0 && <label className="text-xs flex items-center gap-2"><input type="checkbox" name="issue_wht" defaultChecked value="on" /> ออกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) {fmt(x.wht_amount)} บาท</label>}
+                  {Number(x.wht_amount) > 0 && <label className="text-xs flex items-center gap-2"><input type="hidden" name="wht_box" value="1" /><input type="checkbox" name="issue_wht" defaultChecked value="on" /> ออกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) {fmt(x.wht_amount)} บาท · ลงวันที่ตามวันที่จ่าย</label>}
                   <button className="btn-primary w-full">จ่ายแล้ว {fmt(x.net_pay)} บาท</button>
                 </form>
               )}
-              {!wc && x.status === "paid" && <Link href={`/expenses/wht/new?expense=${id}`} className="btn-outline w-full">ออกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</Link>}
+              {!wc && x.status === "paid" && Number(x.wht_amount) > 0 && (session.isAdmin || x.created_by === session.appUser.id) && <form action={whtFromExpense.bind(null, id)} className="card p-4 space-y-2">
+                <div className="text-sm font-display font-bold">หัก ณ ที่จ่าย {fmt(x.wht_amount)} บาท · ยังไม่ออก 50 ทวิ</div>
+                <button className="btn-primary w-full">สร้าง 50 ทวิ ลงวันที่โอน {x.paid_date ? `${Number(x.paid_date.slice(8, 10))}/${Number(x.paid_date.slice(5, 7))}/${Number(x.paid_date.slice(0, 4)) + 543}` : ""}</button>
+                <Link href={`/expenses/wht/new?expense=${id}`} className="block text-center text-xs text-purple underline">หรือกรอก/แก้ข้อมูลเองก่อนออก</Link>
+              </form>}
               {wc && <div className="card p-5 text-sm space-y-1"><div className="font-display font-bold">หนังสือรับรองหัก ณ ที่จ่าย</div><div>{wc.cert_no} · {wc.form === "pnd53" ? "ภ.ง.ด.53" : wc.form === "pnd1" ? "ภ.ง.ด.1" : wc.form === "pnd1a" ? "ภ.ง.ด.1ก" : "ภ.ง.ด.3"}</div><div className="text-xs text-ink-soft">{wc.income_type} · ฐาน {fmt(wc.income_amount)} · หัก {fmt(wc.wht_amount)}</div><a href={`/print/wht/${wc.id}`} target="_blank" className="text-purple text-xs underline">พิมพ์</a></div>}
               {rel.parent && <Link href={`/expenses/${rel.parent.id}`} className="card p-4 block text-sm hover:border-purple">💰 มัดจำของบิลนี้: <b>{rel.parent.exp_no}</b> <span className="text-ink-soft">({STATUS_TH[rel.parent.status as keyof typeof STATUS_TH] ?? rel.parent.status} · {fmt(rel.parent.net_pay)})</span></Link>}
               {rel.child && <Link href={`/expenses/${rel.child.id}`} className="card p-4 block text-sm hover:border-purple">⏳ ส่วนที่เหลือ: <b>{rel.child.exp_no}</b> <span className="text-ink-soft">ครบกำหนด {rel.child.due_date ? fmtDate(rel.child.due_date) : "—"} · {STATUS_TH[rel.child.status as keyof typeof STATUS_TH] ?? rel.child.status} · {fmt(rel.child.net_pay)}</span></Link>}
