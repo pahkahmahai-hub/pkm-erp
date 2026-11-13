@@ -185,6 +185,7 @@ export async function savePayrollLine(lineId: string, runId: string, formData: F
   for (const k of numKeys) upd[k] = num(formData.get(k));
   upd.sso_on = formData.get("sso_on") === "on";
   upd.deduct_late = formData.get("deduct_late") === "on";
+  upd.deduct_absence = formData.get("deduct_absence") === "on";
   upd.tax_method = String(formData.get("tax_method") ?? line.tax_method);
   upd.tax_manual = formData.get("tax_manual") === "on";
   if (upd.tax_manual) upd.tax_wht = num(formData.get("tax_wht"));
@@ -205,13 +206,13 @@ export async function setPayrollRunStatus(runId: string, status: "draft" | "clos
 }
 
 /** เปิด/ปิด การหักสาย ทั้งงวด */
-export async function setRunDeductLate(runId: string, on: boolean) {
+export async function setRunDeductLate(runId: string, on: boolean, field: "deduct_late" | "deduct_absence" = "deduct_late") {
   const { sb } = await requirePayroll(`${BASE}/${runId}`);
   const s = await loadPayrollSettings(sb);
   const [{ data: run }, { data: lines }] = await Promise.all([sb.from("payroll_runs").select("status").eq("id", runId).single(), sb.from("payroll_lines").select("*").eq("run_id", runId)]);
   if (run?.status !== "draft") redirect(`${BASE}/${runId}?error=${encodeURIComponent("งวดปิดแล้ว — เปิดแก้ไขก่อน")}`);
   for (const l of (lines ?? []) as PayrollLine[]) {
-    const c = computeLine({ ...l, deduct_late: on }, s, null);
+    const c = computeLine({ ...l, [field]: on }, s, null);
     await sb.from("payroll_lines").update(stripId(c)).eq("id", l.id);
   }
   revalidatePath(`${BASE}/${runId}`);

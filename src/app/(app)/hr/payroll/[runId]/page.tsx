@@ -34,12 +34,12 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
 
       <div className="flex flex-wrap gap-2 items-center">
         {draft && <form action={refreshPayrollAuto.bind(null, runId)}><button className="btn-outline text-sm"><RefreshCw size={14} /> ดึง OT / สาย / ขาด ใหม่</button></form>}
-        {draft && (() => { const allOn = L.length > 0 && L.every((l) => l.deduct_late !== false); return (
-          <form action={setRunDeductLate.bind(null, runId, !allOn)} className="flex items-center gap-2 rounded-xl border border-line px-3 py-1.5 text-sm">
-            <span>หักสาย</span>
-            <button className={`relative h-6 w-11 rounded-full transition ${allOn ? "bg-purple" : "bg-line"}`} aria-label="เปิด/ปิด หักสาย ทั้งงวด" title={allOn ? "กดเพื่อปิดการหักสายทั้งงวด" : "กดเพื่อเปิดการหักสายทั้งงวด"}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${allOn ? "left-[22px]" : "left-0.5"}`} /></button>
-            <span className="text-xs text-ink-soft">{allOn ? "เปิด" : L.some((l) => l.deduct_late !== false) ? "บางคน" : "ปิด"}</span>
-          </form>); })()}
+        {draft && ([["deduct_late", "หักสาย"], ["deduct_absence", "หักขาดงาน"]] as const).map(([f, label]) => { const allOn = L.length > 0 && L.every((l) => l[f] !== false); const some = L.some((l) => l[f] !== false); return (
+          <form key={f} action={setRunDeductLate.bind(null, runId, !allOn, f)} className="flex items-center gap-2 rounded-xl border border-line px-3 py-1.5 text-sm">
+            <span>{label}</span>
+            <button className={`relative h-6 w-11 rounded-full transition ${allOn ? "bg-purple" : "bg-line"}`} aria-label={`เปิด/ปิด ${label} ทั้งงวด`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${allOn ? "left-[22px]" : "left-0.5"}`} /></button>
+            <span className="text-xs text-ink-soft">{allOn ? "เปิด" : some ? "บางคน" : "ปิด"}</span>
+          </form>); })}
         <a href={`/print/payslips/${runId}`} target="_blank" rel="noreferrer" className="btn-outline text-sm"><Printer size={14} /> พิมพ์สลิปทั้งหมด</a>
         <a href={`/hr/payroll/${runId}/export?type=summary`} className="btn-outline text-sm"><FileSpreadsheet size={14} /> Excel สำหรับสำนักงานบัญชี</a>
         <a href={`/hr/payroll/${runId}/export?type=bank`} className="btn-outline text-sm"><Landmark size={14} /> ไฟล์โอนเงิน</a>
@@ -55,22 +55,22 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
         <table className="tbl text-sm">
           <thead><tr>
             <th>พนักงาน</th><th className="text-right">เงินเดือน+ตำแหน่ง</th><th className="text-right">OT</th><th className="text-right">คอมมิชชั่น</th><th className="text-right">อื่นๆ (ขยัน/โบนัส/อื่น)</th>
-            <th className="text-right">รายได้รวม</th><th className="text-right">หักสาย/ขาด</th><th className="text-right">ประกันสังคม</th><th className="text-right">ภาษี</th><th className="text-right">เบิก/หักอื่น</th><th className="text-right">รับสุทธิ</th>
+            <th className="text-right">รายได้รวม</th><th className="text-right">หักสาย</th><th className="text-right">หักขาด</th><th className="text-right">ประกันสังคม</th><th className="text-right">ภาษี</th><th className="text-right">เบิก/หักอื่น</th><th className="text-right">รับสุทธิ</th>
           </tr></thead>
           <tbody>
             {L.map((l) => { const e = E.get(l.employee_id); return (
               <tr key={l.id} className={sp.saved === l.id ? "bg-green/5" : ""}>
-                <td><Link href={`/hr/payroll/${runId}/${l.id}`} className="text-purple font-semibold hover:underline">{e?.nickname ?? e?.first_name} {e?.last_name}</Link><div className="text-[11px] text-ink-soft">{e?.emp_code as string}{l.late_minutes ? ` · สาย ${l.late_minutes} น.${l.deduct_late === false ? " (ไม่หัก)" : ""}` : ""}{l.absent_days ? ` · ขาด ${l.absent_days} วัน` : ""}{l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3 ? ` · OT ${l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3} ชม.` : ""}</div></td>
+                <td><Link href={`/hr/payroll/${runId}/${l.id}`} className="text-purple font-semibold hover:underline">{e?.nickname ?? e?.first_name} {e?.last_name}</Link><div className="text-[11px] text-ink-soft">{e?.emp_code as string}{l.late_minutes ? ` · สาย ${l.late_minutes} น.${l.deduct_late === false ? " (ไม่หัก)" : ""}` : ""}{l.absent_days ? ` · ขาด ${l.absent_days} วัน${l.deduct_absence === false ? " (ไม่หัก)" : ""}` : ""}{l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3 ? ` · OT ${l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3} ชม.` : ""}</div></td>
                 <td className="text-right">{money(l.salary + l.position_allowance)}</td><td className="text-right">{money(l.ot_amount)}</td><td className="text-right">{money(l.commission_amount)}</td>
                 <td className="text-right">{money(l.diligence + l.bonus + l.other_income)}</td><td className="text-right font-semibold">{money(l.earnings)}</td>
-                <td className="text-right text-red">{money(l.late_deduct + l.absence_deduct)}</td><td className="text-right">{l.sso_on ? money(l.sso_employee) : <span className="text-ink-soft text-xs">ไม่หัก</span>}</td>
+                <td className="text-right text-red">{money(l.late_deduct)}</td><td className="text-right text-red">{money(l.absence_deduct)}</td><td className="text-right">{l.sso_on ? money(l.sso_employee) : <span className="text-ink-soft text-xs">ไม่หัก</span>}</td>
                 <td className="text-right">{money(l.tax_wht)}</td><td className="text-right">{money(l.advance + l.other_deduct)}</td><td className="text-right font-bold">{money(l.net_pay)}</td>
               </tr>); })}
-            {!L.length && <tr><td colSpan={11} className="text-center text-ink-soft py-6">ไม่มีพนักงานในงวดนี้</td></tr>}
+            {!L.length && <tr><td colSpan={12} className="text-center text-ink-soft py-6">ไม่มีพนักงานในงวดนี้</td></tr>}
           </tbody>
           {L.length > 0 && <tfoot><tr className="font-bold">
             <td>รวม {L.length} คน</td><td className="text-right">{money(sum("salary") + sum("position_allowance"))}</td><td className="text-right">{money(sum("ot_amount"))}</td><td className="text-right">{money(sum("commission_amount"))}</td>
-            <td className="text-right">{money(sum("diligence") + sum("bonus") + sum("other_income"))}</td><td className="text-right">{money(sum("earnings"))}</td><td className="text-right">{money(sum("late_deduct") + sum("absence_deduct"))}</td>
+            <td className="text-right">{money(sum("diligence") + sum("bonus") + sum("other_income"))}</td><td className="text-right">{money(sum("earnings"))}</td><td className="text-right">{money(sum("late_deduct"))}</td><td className="text-right">{money(sum("absence_deduct"))}</td>
             <td className="text-right">{money(sum("sso_employee"))}</td><td className="text-right">{money(sum("tax_wht"))}</td><td className="text-right">{money(sum("advance") + sum("other_deduct"))}</td><td className="text-right">{money(sum("net_pay"))}</td>
           </tr></tfoot>}
         </table>

@@ -15,7 +15,7 @@ export interface PayrollLine {
   id: string; run_id: string; employee_id: string;
   salary: number; position_allowance: number; ot_hours_weekday: number; ot_hours_holiday1: number; ot_hours_holiday3: number; hourly_rate: number;
   commission_sales: number; commission_rate: number; commission_amount: number; diligence: number; bonus: number; other_income: number; other_income_note: string | null;
-  late_minutes: number; deduct_late?: boolean; absent_days: number; unpaid_leave_days: number; sso_on: boolean; tax_method: TaxMethod; tax_manual: boolean;
+  late_minutes: number; deduct_late?: boolean; deduct_absence?: boolean; absent_days: number; unpaid_leave_days: number; sso_on: boolean; tax_method: TaxMethod; tax_manual: boolean;
   advance: number; other_deduct: number; other_deduct_note: string | null;
   ot_amount: number; late_deduct: number; absence_deduct: number; earnings: number; sso_base: number; sso_employee: number; sso_employer: number;
   tax_wht: number; total_deduct: number; net_pay: number; bank_name: string | null; bank_account: string | null; account_name: string | null; note: string | null;
@@ -53,7 +53,7 @@ export function computeLine(input: PayrollLine, s: PayrollSettings, p: Pick<Payr
   L.ot_amount = r2(hourly * (n(L.ot_hours_weekday) * n(s.ot_weekday_mult) + n(L.ot_hours_holiday1) * n(s.holiday_work_mult) + n(L.ot_hours_holiday3) * n(s.ot_holiday_mult)));
   if (n(L.commission_sales) > 0 && n(L.commission_rate) > 0) L.commission_amount = r2(n(L.commission_sales) * n(L.commission_rate) / 100);
   L.late_deduct = L.deduct_late === false || (L.deduct_late == null && p?.deduct_late === false) ? 0 : r2(n(L.late_minutes) * hourly / 60);
-  L.absence_deduct = r2((n(L.absent_days) + n(L.unpaid_leave_days)) * dayRate);
+  L.absence_deduct = L.deduct_absence === false ? 0 : r2((n(L.absent_days) + n(L.unpaid_leave_days)) * dayRate);
   L.earnings = r2(n(L.salary) + n(L.position_allowance) + L.ot_amount + n(L.commission_amount) + n(L.diligence) + n(L.bonus) + n(L.other_income));
 
   // ประกันสังคม: ค่าจ้าง = เงินเดือน + ค่าตำแหน่ง + OT + คอมมิชชั่น − สาย − ขาด (ไม่รวมโบนัส/เบี้ยขยัน/รายได้อื่น)
