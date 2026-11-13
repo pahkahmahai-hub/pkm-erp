@@ -174,7 +174,7 @@ begin
   select password_hash into v_hash from public.payroll_secret where id = 1;
   if v_hash is not null and (p_old is null or crypt(p_old, v_hash) <> v_hash) then raise exception 'รหัสผ่านเดิมไม่ถูกต้อง'; end if;
   update public.payroll_secret set password_hash = crypt(p_new, gen_salt('bf', 10)) where id = 1;
-  delete from public.payroll_sessions;   -- ทุกคนต้องปลดล็อกใหม่
+  delete from public.payroll_sessions where true;   -- ทุกคนต้องปลดล็อกใหม่ (Supabase บังคับ DELETE ต้องมี WHERE)
 end $$;
 
 grant execute on function public.payroll_unlocked(), public.payroll_has_password(), public.payroll_unlock(text), public.payroll_touch(), public.payroll_lock(), public.payroll_set_password(text, text) to authenticated;
