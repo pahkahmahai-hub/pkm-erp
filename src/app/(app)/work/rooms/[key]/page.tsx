@@ -97,9 +97,9 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
           {(key === "sw-room" ? SW_COLUMNS : COLUMNS).map((col) => {
             const list = tasks.filter((t) => t.status === col);
             return (
-              <div key={col} className={`rounded-2xl border p-3 min-h-40 ${key === "sw-room" ? "w-[240px] shrink-0" : ""} ${col === "accepted" ? "bg-green/5 border-green/40" : "bg-white/60 border-line"}`}>
+              <div key={col} className={`rounded-2xl border p-3 min-h-40 ${key === "sw-room" ? "w-[190px] shrink-0" : ""} ${col === "accepted" ? "bg-green/5 border-green/40" : "bg-white/60 border-line"}`}>
                 <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{statusLabel(col, key)}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}{col === "accepted" && <span className="ml-1 text-[10px] text-ink-soft">(7 วันล่าสุด)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
-                <div className="space-y-2">{list.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}</div>
+                <div className="space-y-1.5">{list.map((t) => <TaskCard key={t.id} t={t} showRoom={false} compact />)}</div>
               </div>
             );
           })}
