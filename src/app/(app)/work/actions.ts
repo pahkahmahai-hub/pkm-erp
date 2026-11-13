@@ -40,6 +40,16 @@ export async function setTaskStatus(id: string, status: string, formData?: FormD
   revalidatePath("/work");
 }
 
+/** SW ROOM: ย้อนขั้นส่งห้างกลับ 1 ขั้น (0030) */
+export async function swStepBack(id: string, formData?: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sw_step_back", { p_task: id, p_note: formData ? nul(formData.get("note")) : null });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  revalidatePath("/work");
+}
+
 export async function updateTask(id: string, formData: FormData) {
   await getSession();
   const supabase = await createClient();

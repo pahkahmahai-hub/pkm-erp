@@ -8,7 +8,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -142,6 +142,11 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 {isSw && !canStage && <p className="text-[11px] text-ink-soft">ขั้นส่งห้าง (เตรียมส่ง → ส่งแล้ว → ถึงแล้ว → อัพเข้าระบบ) กดได้โดยหัวหน้าห้อง SW และผู้บริหาร</p>}
               </form>
             )}
+            {isSw && canStage && task.status === "accepted" && (
+              <form action={swStepBack.bind(null, id)} className="space-y-1">
+                <button className="btn-outline w-full text-xs py-1.5">↩ ย้อนกลับไป “สินค้าถึงแล้ว” (ยังไม่ได้อัพเข้าระบบ)</button>
+              </form>
+            )}
             {isSw && canStage && ["prep", "shipped", "arrived"].includes(task.status) && (
               <form className="space-y-2">
                 <div className="flex items-center gap-1 text-[11px] text-ink-soft flex-wrap">{(["prep", "shipped", "arrived", "accepted"] as TaskStatus[]).map((s, i) => <span key={s} className={`rounded-full px-2 py-0.5 ${task.status === s ? "bg-purple text-white font-semibold" : (["prep", "shipped", "arrived", "accepted"].indexOf(task.status) > i ? "bg-green/15 text-green" : "bg-cream")}`}>{i + 1}. {statusLabel(s, "sw-room")}</span>)}</div>
@@ -149,6 +154,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 {task.status === "prep" && <button formAction={setTaskStatus.bind(null, id, "shipped")} className="btn-primary w-full">🚚 ส่งสินค้าแล้ว</button>}
                 {task.status === "shipped" && <button formAction={setTaskStatus.bind(null, id, "arrived")} className="btn-primary w-full">📦 สินค้าถึงห้างแล้ว</button>}
                 {task.status === "arrived" && <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary w-full">✔ อัพเข้าระบบเรียบร้อย — ปิดงาน</button>}
+                <button formAction={swStepBack.bind(null, id)} className="btn-outline w-full text-xs py-1.5">↩ ย้อนกลับไป “{task.status === "prep" ? "รอตรวจรับ" : task.status === "shipped" ? "เตรียมส่ง" : "ส่งสินค้าแล้ว"}”</button>
               </form>
             )}
             {isOwner && !["accepted", "cancelled"].includes(task.status) && (
