@@ -78,7 +78,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
             <div className="card p-5 text-sm space-y-1.5">
               <R l="รวมรายการ" v={x.subtotal} />{Number(x.discount_amount) > 0 && <R l="ส่วนลด" v={-x.discount_amount} />}
               {x.vat_mode !== "none" && <><R l="มูลค่าก่อน VAT" v={x.net_before_vat} /><R l="VAT 7%" v={x.vat_amount} /></>}
-              <R l="ยอดตามบิล" v={x.grand_total} bold />{Number(x.wht_pct) > 0 && <R l={`หัก ณ ที่จ่าย ${x.wht_pct}%`} v={-x.wht_amount} red />}
+              <R l="ยอดตามบิล" v={x.grand_total} bold />{Number(x.wht_pct) > 0 && <R l={`หัก ณ ที่จ่าย ${x.wht_pct}%`} v={-x.wht_amount} red />}{Number((x as { deposit_amount?: number }).deposit_amount ?? 0) > 0 && <><R l="หักมัดจำที่จ่ายแล้ว" v={-Number((x as { deposit_amount?: number }).deposit_amount)} red />{(x as { deposit_note?: string | null }).deposit_note && <div className="text-[11px] text-ink-soft text-right">{(x as { deposit_note?: string | null }).deposit_note}</div>}</>}
               <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง</span><span className="font-display text-xl font-bold text-purple">{fmt(x.net_pay)}</span></div>
               {x.status === "paid" && <div className="text-xs text-green pt-2">จ่ายแล้ว {fmtDate(x.paid_date)} · {x.paid_method}{x.paid_ref ? ` · ${x.paid_ref}` : ""}</div>}
             </div>

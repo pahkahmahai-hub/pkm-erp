@@ -34,9 +34,19 @@ function commonArgs(formData: FormData) {
 async function applyLineDiscounts(supabase: Awaited<ReturnType<typeof createClient>>, id: string, formData: FormData): Promise<string | null> {
   const items = JSON.parse(String(formData.get("items") ?? "[]")) as { discount?: number }[];
   const d = items.map((i) => Number(i.discount) || 0);
-  if (!d.some((x) => x > 0)) return null;
-  const { error } = await supabase.rpc("set_expense_item_discounts", { p_id: id, p_discounts: d });
-  return error ? `บันทึกส่วนลดรายบรรทัดไม่ได้: ${error.message}` : null;
+  if (d.some((x) => x > 0)) {
+    const { error } = await supabase.rpc("set_expense_item_discounts", { p_id: id, p_discounts: d });
+    if (error) return `บันทึกส่วนลดรายบรรทัดไม่ได้: ${error.message}`;
+  }
+  // มัดจำ (0045) — ส่งเมื่อมีช่องนี้ในฟอร์ม
+  if (formData.has("deposit_amount")) {
+    const amt = Number(formData.get("deposit_amount")) || 0; const note = nul(formData.get("deposit_note"));
+    if (amt > 0 || note || formData.get("deposit_had") === "1") {
+      const { error } = await supabase.rpc("set_expense_deposit", { p_id: id, p_amount: amt, p_note: note });
+      if (error) return `บันทึกมัดจำไม่ได้: ${error.message}`;
+    }
+  }
+  return null;
 }
 
 export async function createExpense(formData: FormData) {
