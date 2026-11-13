@@ -232,3 +232,14 @@ export async function expenseToStock(id: string, lines: StockLineIn[]): Promise<
   const r = data as { materials: number; products: number };
   return { materials: r.materials, products: r.products };
 }
+
+// ---------------- แยกจ่ายมัดจำ (0046) ----------------
+export async function splitExpenseDeposit(id: string, deposit: number, due: string, round: string | null): Promise<{ error?: string; childId?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("split_expense_deposit", { p_id: id, p_deposit: deposit, p_due: due, p_round: round });
+  if (error) return { error: error.message };
+  const { data: c } = await supabase.from("expenses").select("id").eq("parent_expense_id", id).maybeSingle();
+  revalidatePath("/expenses"); revalidatePath(`/expenses/${id}`); revalidatePath("/expenses/payables");
+  return { childId: c?.id as string | undefined };
+}

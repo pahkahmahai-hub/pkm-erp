@@ -37,6 +37,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const [discInput, setDiscInput] = useState(String(Number(e?.discount_amount ?? 0) || ""));
   const [discPct, setDiscPct] = useState(false);
   const [deposit, setDeposit] = useState(String(Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) || ""));
+  const [depPct, setDepPct] = useState(false);
   const [depositNote, setDepositNote] = useState((e as { deposit_note?: string | null } | null | undefined)?.deposit_note ?? "");
   const [wht, setWht] = useState(Number(e?.wht_pct ?? 0));
   const [payRound, setPayRound] = useState(e?.pay_round ?? nextPayRound(today()));
@@ -131,7 +132,8 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const vat = vatMode === "inclusive" ? r2(after - net) : vatMode === "exclusive" ? r2(after * 0.07) : 0;
   const grand = vatMode === "exclusive" ? r2(net + vat) : after;
   const whtAmt = r2(net * wht / 100);
-  const pay = r2(grand - whtAmt) - (parseFloat(deposit) || 0);
+  const depAmt = depPct ? r2(grand * (parseFloat(deposit) || 0) / 100) : (parseFloat(deposit) || 0);
+  const pay = r2(grand - whtAmt - depAmt);
   const aiGrand = ai.bill?.grand_total != null ? Number(ai.bill.grand_total) : null;
   const mismatch = aiGrand != null && Math.abs(aiGrand - grand) > 0.5;
 
@@ -247,7 +249,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
               <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" value={wht} onChange={(ev) => setWht(Number(ev.target.value))} className="input">{WHT_CHOICES.map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div>
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
-              <div><label className="label">มัดจำที่จ่ายไปแล้ว (บาท)</label>{Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) > 0 && <input type="hidden" name="deposit_had" value="1" />}<input type="number" step="0.01" min="0" name="deposit_amount" value={deposit} onChange={(ev) => setDeposit(ev.target.value)} className="input" placeholder="0" /></div>
+              <div><label className="label flex items-center gap-1.5">มัดจำที่จ่ายไปแล้ว <span className="inline-flex rounded-md border border-line text-[11px] overflow-hidden">{(["฿", "%"] as const).map((m) => <button key={m} type="button" onClick={() => setDepPct(m === "%")} className={`px-1.5 ${(m === "%") === depPct ? "bg-purple text-white" : ""}`}>{m}</button>)}</span></label>{Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) > 0 && <input type="hidden" name="deposit_had" value="1" />}<input type="number" step="0.01" min="0" value={deposit} onChange={(ev) => setDeposit(ev.target.value)} className="input" placeholder="0" /><input type="hidden" name="deposit_amount" value={depAmt} />{depPct && depAmt > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(depAmt)} บาท ({deposit}% ของยอดตามบิล)</div>}</div>
               <div className="sm:col-span-2"><label className="label">รายละเอียดมัดจำ</label><input name="deposit_note" value={depositNote} onChange={(ev) => setDepositNote(ev.target.value)} className="input" placeholder="เช่น โอนมัดจำ 50% วันที่ 1/11 · อ้างอิง EXP…" /></div>
             </div>
             <div><label className="label">หมายเหตุภายใน</label><textarea name="note" value={note} onChange={(ev) => setNote(ev.target.value)} className="input" rows={2} /></div>
@@ -258,7 +260,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             {vatMode !== "none" && <><Row l="มูลค่าก่อน VAT" v={net} /><Row l="VAT 7%" v={vat} /></>}
             <Row l="ยอดตามบิล" v={grand} bold />
             {wht > 0 && <Row l={`หัก ณ ที่จ่าย ${wht}%`} v={-whtAmt} red />}
-            {(parseFloat(deposit) || 0) > 0 && <Row l="หักมัดจำที่จ่ายแล้ว" v={-(parseFloat(deposit) || 0)} red />}
+            {depAmt > 0 && <Row l="หักมัดจำที่จ่ายแล้ว" v={-depAmt} red />}
             <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง</span><span className="font-display text-xl font-bold text-purple">{fmt(pay)}</span></div>
           </div>
         </div>

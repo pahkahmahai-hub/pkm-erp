@@ -9,6 +9,7 @@ import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type 
 import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
+import { SplitDeposit } from "@/components/expenses/SplitDeposit";
 
 import { todayBkk } from "@/lib/today";
 
@@ -28,6 +29,11 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
   if (!e) notFound();
   type Row = Expense & { expense_categories: { name: string; wht_income_type: string | null } | null; companies: { code: string; name_th: string }; approver: { email: string } | null; creator: { email: string } | null };
   const x = e as Row;
+  const [{ data: parentRow }, { data: childRow }] = await Promise.all([
+    (x as { parent_expense_id?: string | null }).parent_expense_id ? supabase.from("expenses").select("id, exp_no, status, net_pay, due_date").eq("id", (x as { parent_expense_id?: string }).parent_expense_id!).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from("expenses").select("id, exp_no, status, net_pay, due_date").eq("parent_expense_id", id).maybeSingle(),
+  ]);
+  const rel = { parent: parentRow as { id: string; exp_no: string; status: string; net_pay: number; due_date: string | null } | null, child: childRow as { id: string; exp_no: string; status: string; net_pay: number; due_date: string | null } | null };
   const fl = (files ?? []) as ExpenseFile[];
   const urls = await signExpenseFiles(fl.map((f) => f.path));
   const editable = (["draft", "pending", "rejected"].includes(x.status) && (session.isAdmin || x.created_by === session.appUser.id)) || (session.isAdmin && x.status !== "cancelled");
@@ -108,6 +114,9 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
               )}
               {!wc && x.status === "paid" && <Link href={`/expenses/wht/new?expense=${id}`} className="btn-outline w-full">ออกหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ)</Link>}
               {wc && <div className="card p-5 text-sm space-y-1"><div className="font-display font-bold">หนังสือรับรองหัก ณ ที่จ่าย</div><div>{wc.cert_no} · {wc.form === "pnd53" ? "ภ.ง.ด.53" : wc.form === "pnd1" ? "ภ.ง.ด.1" : wc.form === "pnd1a" ? "ภ.ง.ด.1ก" : "ภ.ง.ด.3"}</div><div className="text-xs text-ink-soft">{wc.income_type} · ฐาน {fmt(wc.income_amount)} · หัก {fmt(wc.wht_amount)}</div><a href={`/print/wht/${wc.id}`} target="_blank" className="text-purple text-xs underline">พิมพ์</a></div>}
+              {rel.parent && <Link href={`/expenses/${rel.parent.id}`} className="card p-4 block text-sm hover:border-purple">💰 มัดจำของบิลนี้: <b>{rel.parent.exp_no}</b> <span className="text-ink-soft">({STATUS_TH[rel.parent.status as keyof typeof STATUS_TH] ?? rel.parent.status} · {fmt(rel.parent.net_pay)})</span></Link>}
+              {rel.child && <Link href={`/expenses/${rel.child.id}`} className="card p-4 block text-sm hover:border-purple">⏳ ส่วนที่เหลือ: <b>{rel.child.exp_no}</b> <span className="text-ink-soft">ครบกำหนด {rel.child.due_date ? fmtDate(rel.child.due_date) : "—"} · {STATUS_TH[rel.child.status as keyof typeof STATUS_TH] ?? rel.child.status} · {fmt(rel.child.net_pay)}</span></Link>}
+              {!rel.child && !rel.parent && ["draft", "pending", "approved"].includes(x.status) && (session.isAdmin || x.created_by === session.appUser.id) && !(Number((x as { deposit_amount?: number }).deposit_amount ?? 0) > 0) && <SplitDeposit id={id} grand={Number(x.grand_total)} whtPct={Number(x.wht_pct)} billDate={x.bill_date} />}
               {x.status !== "cancelled" && (session.isAdmin || x.created_by === session.appUser.id) && x.status !== "paid" && (
                 <ConfirmDelete action={cancelExpense.bind(null, id, new FormData())} label="ยกเลิกรายการ" warning="รายการนี้จะถูกยกเลิก ไม่นับเป็นค่าใช้จ่าย/เจ้าหนี้" />
               )}
