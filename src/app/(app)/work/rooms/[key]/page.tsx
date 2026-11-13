@@ -57,13 +57,13 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   let q = supabase.from("work_tasks").select(TASK_SELECT).eq("room_id", r.id);
   q = history ? q.in("status", ["accepted", "cancelled"]).order("reviewed_at", { ascending: false }).limit(200)
               : q.not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500);
-  if (who) q = q.eq("assignee_id", who);
+  if (who) q = q.or(`assignee_id.eq.${who},co_assignee_ids.cs.{${who}}`);
   const { data } = await q;
   // SW ROOM: คอลัมน์สุดท้าย "เข้าระบบเรียบร้อย" แสดงงานที่ปิดใน 7 วันล่าสุด
   let doneRecent: Task[] = [];
   if (key === "sw-room" && !history) {
     let dq = supabase.from("work_tasks").select(TASK_SELECT).eq("room_id", r.id).eq("status", "accepted").gte("reviewed_at", new Date(Date.now() - 7 * 86400_000).toISOString()).order("reviewed_at", { ascending: false }).limit(100);
-    if (who) dq = dq.eq("assignee_id", who);
+    if (who) dq = dq.or(`assignee_id.eq.${who},co_assignee_ids.cs.{${who}}`);
     doneRecent = ((await dq).data ?? []) as Task[];
   }
   const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id").filter((t) => history || !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้

@@ -1,3 +1,4 @@
+import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
 import { SwDeadlineStrip } from "@/components/work/TaskCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -41,7 +42,8 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const myEmp = session.employee?.id;
   // ผู้บริหาร / ผู้สั่งงาน / หัวหน้าห้อง (★) แก้ไข โอนงาน ตรวจรับ และลบได้
   const isLead = (await roomRights(supabase, task.room_id, session.isAdmin)).isLead || (!!session.employee && members.some((m) => m.employee_id === session.employee!.id && m.is_lead));
-  const isAssignee = task.assignee_id === myEmp;
+  const isAssignee = task.assignee_id === myEmp || (!!myEmp && (task.co_assignee_ids ?? []).includes(myEmp));
+  const coNames = (task.co_assignee_ids ?? []).filter((x) => x !== task.assignee_id).map((x) => { const e = dir.find((d) => d.id === x); return e ? e.nickname ?? e.first_name : "?"; });
   const isOwner = session.isAdmin || task.created_by === me || isLead;
   // ตรวจรับ/ตีกลับ: งานของตัวเองต้องให้ผู้บริหาร (งานของหัวหน้าห้อง = ผม/ภรรยาอนุมัติ)
   const canReview = session.isAdmin || (isOwner && !isAssignee);
@@ -68,6 +70,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" defaultValue={task.description ?? ""} className="input" rows={3} /></div>
               <div><label className="label">มอบหมายให้</label>
                 <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
+              <div className="md:col-span-2"><CoAssigneePicker options={mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" }))} defaultIds={task.co_assignee_ids ?? []} primaryId={task.assignee_id} /></div>
               {isSw && <div><label className="label">② กำหนดส่งถึงห้าง</label><input name="arrive_due" type="date" defaultValue={task.arrive_due ?? ""} className="input" /></div>}
               <div><label className="label">{isSw ? "① กำหนดจัดของเสร็จ" : "กำหนดเสร็จ"}</label><div className="flex gap-2"><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
               {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input name="start_date" type="date" defaultValue={task.start_date ?? ""} className="input" /></div>
@@ -78,7 +81,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           ) : (
             <div className="card p-5 space-y-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <div><span className="text-ink-soft">ผู้รับ:</span> <b>{task.employees ? (task.employees.nickname ?? task.employees.first_name) : "ยังไม่มอบหมาย"}</b></div>
+                <div><span className="text-ink-soft">ผู้รับ:</span> <b>{task.employees ? (task.employees.nickname ?? task.employees.first_name) : "ยังไม่มอบหมาย"}</b>{coNames.length > 0 && <span> + ผู้ร่วมงาน <b>{coNames.join(", ")}</b></span>}</div>
                 {!isSw && <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{task.due_time ? " " + task.due_time.slice(0, 5) + " น." : ""}{overdue && " (เลยกำหนด)"}</b></div>}
                 {task.start_date && <div className="flex items-center gap-1"><CalendarDays size={14} className="text-ink-soft" /><span className="text-ink-soft">ลงปฏิทิน:</span> <b>{fmtDate(task.start_date, { weekday: "short" })}</b></div>}
                 {task.work_topics && <div><span className="rounded-md px-2 py-0.5 text-xs font-semibold border" style={{ borderColor: task.work_topics.color, color: task.work_topics.color }}>{task.work_topics.name}</span></div>}

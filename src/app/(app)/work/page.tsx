@@ -41,7 +41,7 @@ export default async function WorkHome() {
   const parentIdOf = new Map(rp.filter((x) => x.parent_key).map((x) => [x.id, rp.find((p) => p.key === x.parent_key)?.id]));
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id").filter((t) => !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้
-  const mine = tasks.filter((t) => t.assignee_id === empId);
+  const mine = tasks.filter((t) => t.assignee_id === empId || (!!empId && (t.co_assignee_ids ?? []).includes(empId)));
   // ห้องที่ฉันเป็นหัวหน้า ★ — เห็นงานค้าง/ตรวจรับของลูกทีมในห้องนั้น (ยกเว้นงานของตัวเอง ซึ่งผู้บริหารตรวจ)
   const leadRoomIds = new Set(rooms.filter((r) => r.is_lead).map((r) => r.id));
   // ผู้บริหารเห็นงานค้างที่สั่งไปทั้งหมด แม้ไม่ได้สั่งเอง · หัวหน้าเห็นของลูกทีมในห้อง + ที่ตัวเองสั่ง

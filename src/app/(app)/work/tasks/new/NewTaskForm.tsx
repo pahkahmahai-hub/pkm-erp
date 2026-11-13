@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { Room, RoomMember } from "@/lib/work/types";
+import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
 
 type Emp = { id: string; first_name: string; nickname: string | null; emp_code: string };
 
 export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAdmin, initialTitle, fromMessage, initialAssignee }: { rooms: Room[]; members: RoomMember[]; allEmployees: Emp[]; initialRoomKey?: string; isAdmin: boolean; initialTitle?: string; fromMessage?: string; initialAssignee?: string }) {
   const [roomId, setRoomId] = useState(rooms.find((r) => r.key === initialRoomKey)?.id ?? rooms[0]?.id ?? "");
+  const [primary, setPrimary] = useState(initialAssignee ?? "");
   const isSwRoom = rooms.find((r) => r.id === roomId)?.key === "sw-room";
   const options = useMemo(() => {
     const inRoom = members.filter((m) => m.room_id === roomId).map((m) => m.employees).filter(Boolean) as Emp[];
@@ -27,11 +29,12 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
       </div>
       <div>
         <label className="label">มอบหมายให้</label>
-        <select name="assignee_id" className="input" defaultValue={initialAssignee ?? ""}>
+        <select name="assignee_id" className="input" value={primary} onChange={(e) => setPrimary(e.target.value)}>
           <option value="">— ยังไม่ระบุ —</option>
           {options.map((e) => <option key={e.id} value={e.id}>{e.nickname ? `${e.nickname} (${e.first_name})` : e.first_name}</option>)}
         </select>
       </div>
+      <div className="md:col-span-2"><CoAssigneePicker key={roomId} options={options.map((e) => ({ id: e.id, name: e.nickname ?? e.first_name }))} primaryId={primary} /></div>
       <div className="md:col-span-2"><label className="label">ชื่องาน *</label><input name="title" defaultValue={initialTitle ?? ""} className="input" required autoFocus placeholder="เช่น ออกแบบกล่องของขวัญปีใหม่ 2570" />{fromMessage && <input type="hidden" name="from_message" value={fromMessage} />}</div>
       <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={3} placeholder="อธิบายสิ่งที่ต้องการ ขนาด จำนวน ลิงก์อ้างอิง…" /></div>
       {isSwRoom ? (<>

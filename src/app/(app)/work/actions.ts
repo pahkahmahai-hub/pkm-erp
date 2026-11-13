@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession, requireAdmin } from "@/lib/session";
 
 const nul = (v: FormDataEntryValue | null) => { const s = (v ?? "").toString().trim(); return s === "" ? null : s; };
+/** ผู้ร่วมงานจากฟอร์ม (0035) — undefined = ฟอร์มนี้ไม่มีช่องผู้ร่วมงาน */
+const coAssignees = (formData: FormData, primary: string | null) =>
+  formData.get("co_assignee_set") ? [...new Set(formData.getAll("co_assignee").map(String).filter((x) => x && x !== primary))] : undefined;
 
 export async function createTask(formData: FormData) {
   await getSession();
@@ -26,6 +29,8 @@ export async function createTask(formData: FormData) {
   if (fromMessage) await supabase.from("work_room_messages").update({ task_id: data.id }).eq("id", fromMessage);
   const arriveDue = nul(formData.get("arrive_due"));
   if (arriveDue) await supabase.from("work_tasks").update({ arrive_due: arriveDue }).eq("id", data.id);
+  const co = coAssignees(formData, nul(formData.get("assignee_id")));
+  if (co?.length) await supabase.from("work_tasks").update({ co_assignee_ids: co }).eq("id", data.id);
   revalidatePath("/work");
   redirect(`/work/tasks/${data.id}?created=1`);
 }
@@ -60,6 +65,7 @@ export async function updateTask(id: string, formData: FormData) {
     due_date: nul(formData.get("due_date")),
     priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
     ...(formData.has("arrive_due") ? { arrive_due: nul(formData.get("arrive_due")) } : {}),
+    ...(formData.get("co_assignee_set") ? { co_assignee_ids: coAssignees(formData, nul(formData.get("assignee_id"))) ?? [] } : {}),
     ...(formData.has("start_date") ? { start_date: nul(formData.get("start_date")), due_time: nul(formData.get("due_time")), topic_id: nul(formData.get("topic_id")) } : {}),
   }).eq("id", id);
   if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
@@ -311,6 +317,8 @@ export async function createCalendarTask(formData: FormData) {
   const back = `/work/rooms/${roomKey}/calendar${qs ? `?${qs}` : ""}`;
   if (error) redirect(`${back}${qs ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
   revalidatePath("/work");
+  const co = coAssignees(formData, nul(formData.get("assignee_id")));
+  if (co?.length) await supabase.from("work_tasks").update({ co_assignee_ids: co }).eq("id", data.id);
   if (formData.get("open") === "1") redirect(`/work/tasks/${data.id}?created=1`);
   redirect(`${back}${qs ? "&" : "?"}created=${data.task_no}`);
 }

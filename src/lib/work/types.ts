@@ -9,6 +9,7 @@ export interface Task {
   due_date: string | null; priority: TaskPriority; status: TaskStatus; routine_id: string | null; routine_date: string | null;
   start_date?: string | null; due_time?: string | null; topic_id?: string | null;
   arrive_due?: string | null; arrived_at?: string | null;   // SW ROOM (0029)
+  co_assignee_ids?: string[] | null;   // ผู้ร่วมงาน (0035)
   work_topics?: Pick<Topic, "id" | "name" | "color"> | null;
   started_at: string | null; done_at: string | null; done_note: string | null; reviewed_at: string | null; review_note: string | null;
   created_at: string; updated_at: string;

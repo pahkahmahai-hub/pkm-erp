@@ -1,5 +1,7 @@
 "use client";
 
+import { CoAssigneePicker } from "./CoAssigneePicker";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Flame, Plus, X, Repeat, Image as ImageIcon } from "lucide-react";
@@ -16,7 +18,7 @@ const fridayOf = (d: string) => { const i = (new Date(d + "T00:00:00Z").getUTCDa
 export function WeekCalendar({ roomId, roomKey, week, today, rows, tasks, topics, myEmployeeId, isAdmin, amLead }: Props) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(week, i)), [week]);
   const [draft, setDraft] = useState<{ assignee: string; date: string } | null>(null);
-  const byCell = useMemo(() => { const m = new Map<string, Task[]>(); for (const t of tasks) { const d = t.start_date ?? t.due_date; if (!d) continue; const k = (t.assignee_id ?? "none") + "|" + d; m.set(k, [...(m.get(k) ?? []), t]); } return m; }, [tasks]);
+  const byCell = useMemo(() => { const m = new Map<string, Task[]>(); for (const t of tasks) { const d = t.start_date ?? t.due_date; if (!d) continue; for (const who of [t.assignee_id ?? "none", ...(t.co_assignee_ids ?? []).filter((x) => x !== t.assignee_id)]) { const k = who + "|" + d; m.set(k, [...(m.get(k) ?? []), t]); } } return m; }, [tasks]);
   const allRows = useMemo(() => (tasks.some((t) => !t.assignee_id) ? [...rows, { id: "none", name: "ยังไม่ระบุผู้รับ", is_lead: false }] : rows), [rows, tasks]);
   const canAddFor = (empId: string) => isAdmin || !!amLead || rows.some((r) => r.id === myEmployeeId && r.is_lead) || empId === myEmployeeId || empId === "none";
 
@@ -91,7 +93,7 @@ export function MonthTaskCalendar({ roomId, roomKey, month, today, rows, tasks, 
     const out: string[] = []; for (let d = start; d <= last || out.length % 7; d = addDays(d, 1)) out.push(d);
     return out;
   }, [month]);
-  const byDay = useMemo(() => { const mp = new Map<string, Task[]>(); for (const t of tasks) { if (who !== "all" && (t.assignee_id ?? "none") !== who) continue; const d = t.start_date ?? t.due_date; if (!d) continue; mp.set(d, [...(mp.get(d) ?? []), t]); } return mp; }, [tasks, who]);
+  const byDay = useMemo(() => { const mp = new Map<string, Task[]>(); for (const t of tasks) { if (who !== "all" && (t.assignee_id ?? "none") !== who && !(t.co_assignee_ids ?? []).includes(who)) continue; const d = t.start_date ?? t.due_date; if (!d) continue; mp.set(d, [...(mp.get(d) ?? []), t]); } return mp; }, [tasks, who]);
   const addFor = who !== "all" ? (who === "none" ? "" : who) : (isLead ? "" : myEmployeeId ?? "");
   const canAdd = isLead || !!myEmployeeId;
 
@@ -113,7 +115,7 @@ export function MonthTaskCalendar({ roomId, roomKey, month, today, rows, tasks, 
                   <span className={`text-[11px] font-semibold ${d === today ? "rounded-full bg-purple text-white px-1.5" : "text-ink-soft"}`}>{Number(d.slice(8))}</span>
                   {canAdd && inMonth && <button type="button" onClick={() => setDraft({ assignee: addFor, date: d })} className="opacity-0 group-hover:opacity-100 text-ink-soft hover:text-purple" aria-label="ลงงาน"><Plus size={13} /></button>}
                 </div>
-                {list.map((t) => <Chip key={t.id} t={t} who={who === "all" ? (t.assignee_id ? nameOf.get(t.assignee_id) ?? "" : "—") : undefined} />)}
+                {list.map((t) => <Chip key={t.id} t={t} who={who === "all" ? (t.assignee_id ? nameOf.get(t.assignee_id) ?? "" : "—") + ((t.co_assignee_ids ?? []).length ? ` +${(t.co_assignee_ids ?? []).length}` : "") : undefined} />)}
               </div>);
           })}
         </div>
@@ -137,6 +139,7 @@ function NewTaskFields({ rows, topics, draft }: { rows: Row[]; topics: Topic[]; 
       <div className="sm:col-span-2"><label className="label">ชื่องาน *</label><input name="title" className="input" required autoFocus placeholder="เช่น ภาพโปรโมชัน 12.12 / รีวิวลูกค้า" /></div>
       <div><label className="label">ผู้รับผิดชอบ</label><select name="assignee_id" value={assignee} onChange={(e) => setAssignee(e.target.value)} className="input"><option value="">— ยังไม่ระบุ —</option>{rows.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
       <div><label className="label">หัวข้อ Routine</label><select name="topic_id" className="input" defaultValue=""><option value="">— ไม่ระบุ —</option>{myTopics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+      <div className="sm:col-span-2"><CoAssigneePicker options={rows.map((r) => ({ id: r.id, name: r.name }))} primaryId={assignee} /></div>
       <div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input type="date" name="start_date" value={start} onChange={(e) => { setStart(e.target.value); if (e.target.value) setDue(fridayOf(e.target.value)); }} className="input" required /></div>
       <div><label className="label">กำหนดเสร็จ <span className="text-ink-soft font-normal">(ว่าง = ศุกร์ 17:30)</span></label><div className="flex gap-2"><input type="date" name="due_date" value={due} onChange={(e) => setDue(e.target.value)} className="input" /><input type="time" name="due_time" defaultValue="17:30" className="input w-28" /></div></div>
       <div className="sm:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={2} placeholder="brief / ลิงก์อ้างอิง / ขนาด" /></div>
