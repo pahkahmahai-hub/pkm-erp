@@ -45,7 +45,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       </div>
       <div className="card overflow-x-auto">
         <table className="tbl">
-          <thead><tr><th>เลขที่</th><th>วันที่บิล</th><th>ซัพพลายเออร์</th><th>หมวด</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th>รอบจ่าย</th><th>สถานะ</th></tr></thead>
+          <thead><tr><th>เลขที่</th><th>วันที่บิล</th><th>ซัพพลายเออร์</th><th>หมวด</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th>รอบจ่าย</th><th>วันที่จ่าย</th><th>สถานะ</th></tr></thead>
           <tbody>
             {list.map((r) => (
               <tr key={r.id}>
@@ -57,10 +57,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}</td>
                 <td className="text-right font-semibold">{fmt(r.net_pay)}</td>
                 <td className="text-xs whitespace-nowrap">{r.pay_round ? fmtDate(r.pay_round) : "—"}</td>
+                <td className="text-xs whitespace-nowrap">{r.paid_date ? <span className="text-green font-medium">{fmtDate(r.paid_date)}</span> : "—"}</td>
                 <td><span className={STATUS_BADGE[r.status as ExpenseStatus]}>{STATUS_TH[r.status as ExpenseStatus]}</span></td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={9} className="text-center text-ink-soft py-10">ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย</td></tr>}
+            {!list.length && <tr><td colSpan={10} className="text-center text-ink-soft py-10">ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย</td></tr>}
           </tbody>
         </table>
       </div>
