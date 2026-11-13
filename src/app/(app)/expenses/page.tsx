@@ -4,13 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/session";
 import { Header, Stat } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
-import { STATUS_TH, STATUS_BADGE, type Expense, type ExpenseStatus } from "@/lib/expenses/types";
+import { STATUS_TH, STATUS_BADGE, whtMissing, type Expense, type ExpenseStatus } from "@/lib/expenses/types";
 
 import { monthBkk } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
-const TABS: { key: string; label: string }[] = [{ key: "", label: "ทั้งหมด" }, { key: "pending", label: "รออนุมัติ" }, { key: "approved", label: "รอจ่าย" }, { key: "paid", label: "จ่ายแล้ว" }, { key: "rejected", label: "ไม่อนุมัติ" }, { key: "draft", label: "ร่าง" }];
+const TABS: { key: string; label: string }[] = [{ key: "", label: "ทั้งหมด" }, { key: "pending", label: "รออนุมัติ" }, { key: "approved", label: "รอจ่าย" }, { key: "paid", label: "จ่ายแล้ว" }, { key: "rejected", label: "ไม่อนุมัติ" }, { key: "draft", label: "ร่าง" }, { key: "wht_missing", label: "⚠ หัก ณ ที่จ่ายข้อมูลไม่ครบ" }];
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; month?: string; deleted?: string }> }) {
   const { status = "", q = "", month, deleted } = await searchParams;
@@ -19,11 +19,13 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const ym = month ?? monthBkk();
   const from = `${ym}-01`; const to = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).toISOString().slice(0, 10);
   let query = supabase.from("expenses").select("*, expense_categories(name), companies(code)").order("bill_date", { ascending: false }).order("created_at", { ascending: false }).limit(200);
-  if (status) query = query.eq("status", status);
+  if (status === "wht_missing") query = query.gt("wht_amount", 0).neq("status", "cancelled").neq("status", "rejected");
+  else if (status) query = query.eq("status", status);
   if (q) query = query.or(`supplier_name.ilike.%${q}%,bill_no.ilike.%${q}%,exp_no.ilike.%${q}%,description.ilike.%${q}%`);
   const [{ data: rows }, { data: sum }] = await Promise.all([query, supabase.rpc("expense_summary", { p_from: from, p_to: to })]);
   type Row = Expense & { expense_categories: { name: string } | null; companies: { code: string } | null };
-  const list = (rows ?? []) as Row[];
+  const missOf = (r: Row) => (Number(r.wht_amount) > 0 ? whtMissing({ name: r.supplier_name, tax_id: r.supplier_tax_id, address: r.supplier_address }) : []);
+  const list = ((rows ?? []) as Row[]).filter((r) => status !== "wht_missing" || missOf(r).length > 0);
 
   return (
     <div className="space-y-6">
@@ -53,14 +55,14 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <td><div className="font-medium">{r.supplier_name}</div>{r.description && <div className="text-xs text-ink-soft truncate max-w-[220px]">{r.description}</div>}</td>
                 <td className="text-xs max-w-[130px]">{r.expense_categories?.name ?? "—"}</td>
                 <td className="text-right">{fmt(r.grand_total)}</td>
-                <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}</td>
+                <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}{missOf(r).length > 0 && <Link href={`/expenses/${r.id}/edit`} title={`ขาด: ${missOf(r).join(", ")}`} className="block mt-0.5 text-[10px] font-semibold text-[#b45309] bg-yellow/25 rounded px-1 whitespace-nowrap">⚠ ข้อมูลไม่ครบ</Link>}</td>
                 <td className="text-right font-semibold">{fmt(r.net_pay)}</td>
                 <td className="text-xs whitespace-nowrap">{r.pay_round ? fmtDate(r.pay_round) : "—"}</td>
                 <td className="text-xs whitespace-nowrap">{r.paid_date ? <span className="text-green font-medium">{fmtDate(r.paid_date)}</span> : "—"}</td>
                 <td><span className={STATUS_BADGE[r.status as ExpenseStatus]}>{STATUS_TH[r.status as ExpenseStatus]}</span></td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={9} className="text-center text-ink-soft py-10">ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย</td></tr>}
+            {!list.length && <tr><td colSpan={9} className="text-center text-ink-soft py-10">{status === "wht_missing" ? "ข้อมูลหัก ณ ที่จ่ายครบทุกบิลแล้ว 👍" : "ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย"}</td></tr>}
           </tbody>
         </table>
       </div>

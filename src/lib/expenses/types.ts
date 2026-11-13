@@ -45,3 +45,13 @@ export function nextPayRound(fromIso: string): string {
   const r = day < 15 ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 1);
   return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, "0")}-${String(r.getDate()).padStart(2, "0")}`;
 }
+
+/** ข้อมูลผู้ถูกหัก ณ ที่จ่ายที่ยังขาด (ใช้ออก 50 ทวิ / ยื่น ภ.ง.ด.) */
+export function whtMissing(x: { tax_id?: string | null; address?: string | null; name?: string | null }): string[] {
+  const m: string[] = [];
+  if (!x.name?.trim()) m.push("ชื่อ");
+  const t = (x.tax_id ?? "").replace(/\D/g, "");
+  if (!t) m.push("เลขผู้เสียภาษี"); else if (t.length !== 13) m.push("เลขผู้เสียภาษีไม่ครบ 13 หลัก");
+  if (!x.address?.trim()) m.push("ที่อยู่");
+  return m;
+}

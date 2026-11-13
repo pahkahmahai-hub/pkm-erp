@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
-import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
+import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, whtMissing, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
 import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense, whtFromExpense, editPaidDate } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
@@ -45,6 +45,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
       <Header title={`${x.exp_no}`} sub={`${x.companies.name_th} · บันทึกโดย ${x.creator?.email ?? "—"} · ${fmtDateTime(x.created_at)}`}
         action={<div className="flex gap-2">{editable && <Link href={`/expenses/${id}/edit`} className="btn-outline"><Pencil size={16} /> แก้ไข</Link>}{wc && <a href={`/print/wht/${wc.id}`} target="_blank" className="btn-outline"><Printer size={16} /> พิมพ์ 50 ทวิ</a>}{x.status !== "cancelled" && <Link href={`/expenses/${id}/stock`} className="btn-outline">📦 เข้าสต็อก</Link>}{deletable && <ConfirmDelete action={deleteExpense.bind(null, id)} label="ลบ" warning={`ลบ ${x.exp_no} ถาวร พร้อมรายการและรูปบิล — กู้คืนไม่ได้${x.status === "paid" ? " · รายการนี้จ่ายเงินแล้ว" : ""}${wc ? " · หนังสือรับรองหัก ณ ที่จ่ายที่ออกไปแล้วจะยังอยู่ (ลบแยกที่เมนูหัก ณ ที่จ่าย)" : ""}`} />}</div>} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
+      {Number(x.wht_amount) > 0 && x.status !== "cancelled" && (() => { const m = whtMissing({ name: x.supplier_name, tax_id: x.supplier_tax_id, address: x.supplier_address }); return m.length > 0 && <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm px-4 py-3 flex flex-wrap items-center gap-2">⚠ ข้อมูลหัก ณ ที่จ่ายยังไม่ครบ — ขาด {m.join(", ")}{editable && <Link href={`/expenses/${id}/edit`} className="underline font-semibold ml-auto">เติมข้อมูล</Link>}</div>; })()}
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว — {x.status === "pending" ? "รอผู้บริหารอนุมัติ" : "ยังเป็นฉบับร่าง"}</div>}
       {paid && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกการจ่ายแล้ว{wc ? ` · ออกหนังสือรับรองหัก ณ ที่จ่าย ${wc.cert_no}` : ""}</div>}
 

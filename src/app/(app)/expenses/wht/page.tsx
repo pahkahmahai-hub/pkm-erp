@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
-import type { WhtCertificate } from "@/lib/expenses/types";
+import { whtMissing, type WhtCertificate } from "@/lib/expenses/types";
 
 import { monthBkk } from "@/lib/today";
 
@@ -32,7 +32,7 @@ export default async function WhtList({ searchParams }: { searchParams: Promise<
       </div>
       <div className="card overflow-x-auto"><table className="tbl">
         <thead><tr><th>เลขที่</th><th>แบบ</th><th>วันที่จ่าย</th><th>ผู้ถูกหัก</th><th>เลขผู้เสียภาษี</th><th>ประเภทเงินได้</th><th className="text-right">ฐานเงินได้</th><th className="text-right">%</th><th className="text-right">ภาษีที่หัก</th><th></th></tr></thead>
-        <tbody>{rows.map((r) => <tr key={r.id}><td className="font-mono text-xs">{r.cert_no}<div className="text-[10px] text-ink-soft">{r.companies.code}</div></td><td className="text-xs">{r.form === "pnd53" ? "ภ.ง.ด.53" : r.form === "pnd1" ? "ภ.ง.ด.1 (เงินเดือน)" : r.form === "pnd1a" ? "ภ.ง.ด.1ก (ทั้งปี)" : "ภ.ง.ด.3"}</td><td>{fmtDate(r.pay_date)}</td><td className="font-medium">{r.payee_name}</td><td className="font-mono text-xs">{r.payee_tax_id ?? "—"}</td><td className="text-xs">{r.income_type}</td><td className="text-right">{fmt(r.income_amount)}</td><td className="text-right">{Number(r.wht_pct)}</td><td className="text-right font-bold">{fmt(r.wht_amount)}</td><td><a href={`/print/wht/${r.id}`} target="_blank" className="text-xs text-purple underline">พิมพ์</a>{r.expense_id && <Link href={`/expenses/${r.expense_id}`} className="text-xs text-ink-soft ml-2">บิล</Link>}</td></tr>)}
+        <tbody>{rows.map((r) => <tr key={r.id}><td className="font-mono text-xs">{r.cert_no}<div className="text-[10px] text-ink-soft">{r.companies.code}</div></td><td className="text-xs">{r.form === "pnd53" ? "ภ.ง.ด.53" : r.form === "pnd1" ? "ภ.ง.ด.1 (เงินเดือน)" : r.form === "pnd1a" ? "ภ.ง.ด.1ก (ทั้งปี)" : "ภ.ง.ด.3"}</td><td>{fmtDate(r.pay_date)}</td><td className="font-medium">{r.payee_name}</td><td className="font-mono text-xs">{r.payee_tax_id ?? "—"}{(() => { const m = r.form === "pnd1" || r.form === "pnd1a" ? [] : whtMissing({ name: r.payee_name, tax_id: r.payee_tax_id, address: r.payee_address }); return m.length > 0 && <Link href={r.expense_id ? `/expenses/${r.expense_id}/edit` : `/print/wht/${r.id}`} title={`ขาด: ${m.join(", ")}`} className="block mt-0.5 font-sans text-[10px] font-semibold text-[#b45309] bg-yellow/25 rounded px-1 whitespace-nowrap w-fit">⚠ ขาด{m.join(", ").replace("เลขผู้เสียภาษีไม่ครบ 13 หลัก", "เลข 13 หลัก")}</Link>; })()}</td><td className="text-xs">{r.income_type}</td><td className="text-right">{fmt(r.income_amount)}</td><td className="text-right">{Number(r.wht_pct)}</td><td className="text-right font-bold">{fmt(r.wht_amount)}</td><td><a href={`/print/wht/${r.id}`} target="_blank" className="text-xs text-purple underline">พิมพ์</a>{r.expense_id && <Link href={`/expenses/${r.expense_id}`} className="text-xs text-ink-soft ml-2">บิล</Link>}</td></tr>)}
           {!rows.length && <tr><td colSpan={10} className="text-center text-ink-soft py-8">ไม่มีการหัก ณ ที่จ่ายในเดือนนี้</td></tr>}</tbody></table></div>
     </div>
   );
