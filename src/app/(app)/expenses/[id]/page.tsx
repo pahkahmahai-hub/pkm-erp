@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
-import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense, whtFromExpense } from "../actions";
+import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense, whtFromExpense, editPaidDate } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
 import { SplitDeposit } from "@/components/expenses/SplitDeposit";
@@ -86,7 +86,19 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
               {x.vat_mode !== "none" && <><R l="มูลค่าก่อน VAT" v={x.net_before_vat} /><R l="VAT 7%" v={x.vat_amount} /></>}
               <R l="ยอดตามบิล" v={x.grand_total} bold />{Number(x.wht_pct) > 0 && <R l={`หัก ณ ที่จ่าย ${x.wht_pct}%`} v={-x.wht_amount} red />}{Number((x as { deposit_amount?: number }).deposit_amount ?? 0) > 0 && <><R l="หักมัดจำที่จ่ายแล้ว" v={-Number((x as { deposit_amount?: number }).deposit_amount)} red />{(x as { deposit_note?: string | null }).deposit_note && <div className="text-[11px] text-ink-soft text-right">{(x as { deposit_note?: string | null }).deposit_note}</div>}</>}
               <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง</span><span className="font-display text-xl font-bold text-purple">{fmt(x.net_pay)}</span></div>
-              {x.status === "paid" && <div className="text-xs text-green pt-2">จ่ายแล้ว {fmtDate(x.paid_date)} · {x.paid_method}{x.paid_ref ? ` · ${x.paid_ref}` : ""}</div>}
+              {x.status === "paid" && (session.isAdmin ? (
+                <details className="pt-2 text-xs"><summary className="cursor-pointer text-green list-none">จ่ายแล้ว {fmtDate(x.paid_date)} · {x.paid_method}{x.paid_ref ? ` · ${x.paid_ref}` : ""} <span className="text-purple underline ml-1">แก้วันที่จ่าย</span></summary>
+                  <form action={editPaidDate.bind(null, id)} className="mt-2 space-y-2 rounded-lg border border-line p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><label className="label">วันที่จ่าย</label><input type="date" name="paid_date" defaultValue={x.paid_date ?? ""} className="input" required /></div>
+                      <div><label className="label">วิธี</label><select name="paid_method" defaultValue={x.paid_method ?? ""} className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
+                    </div>
+                    <div><label className="label">อ้างอิง</label><input name="paid_ref" defaultValue={x.paid_ref ?? ""} className="input" /></div>
+                    {wc && <label className="flex items-center gap-2"><input type="checkbox" name="sync_wht" defaultChecked /> เปลี่ยนวันที่ใน 50 ทวิ ({wc.cert_no}) ให้ตรงกัน</label>}
+                    <button className="btn-primary w-full">บันทึกวันที่จ่าย</button>
+                  </form>
+                </details>
+              ) : <div className="text-xs text-green pt-2">จ่ายแล้ว {fmtDate(x.paid_date)} · {x.paid_method}{x.paid_ref ? ` · ${x.paid_ref}` : ""}</div>)}
             </div>
 
             <div className="space-y-4">

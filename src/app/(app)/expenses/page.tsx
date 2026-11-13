@@ -43,16 +43,15 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         {TABS.map((t) => <Link key={t.key} href={`/expenses?status=${t.key}${q ? `&q=${q}` : ""}`} className={`px-3 py-1.5 rounded-full text-sm ${status === t.key ? "bg-purple text-white" : "bg-white border border-line hover:bg-cream"}`}>{t.label}</Link>)}
         <form className="ml-auto"><input type="hidden" name="status" value={status} /><input name="q" defaultValue={q} placeholder="ค้นหาซัพพลายเออร์ / เลขบิล…" className="input w-64" /></form>
       </div>
-      <div className="card overflow-x-auto">
-        <table className="tbl">
-          <thead><tr><th>เลขที่</th><th>วันที่บิล</th><th>ซัพพลายเออร์</th><th>หมวด</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th>รอบจ่าย</th><th>วันที่จ่าย</th><th>สถานะ</th></tr></thead>
+      <div className="card overflow-x-auto lg:overflow-x-visible">
+        <table className="tbl text-[13px]">
+          <thead><tr><th>เลขที่ / วันที่บิล</th><th>ซัพพลายเออร์</th><th>หมวด</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ<br />ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th>รอบจ่าย</th><th>วันที่จ่าย</th><th>สถานะ</th></tr></thead>
           <tbody>
             {list.map((r) => (
               <tr key={r.id}>
-                <td><Link href={`/expenses/${r.id}`} className="font-mono text-xs text-purple hover:underline">{r.exp_no}</Link><div className="text-[10px] text-ink-soft">{r.companies?.code}{r.bill_no ? ` · บิล ${r.bill_no}` : ""}</div></td>
-                <td className="whitespace-nowrap">{fmtDate(r.bill_date)}</td>
-                <td><div className="font-medium">{r.supplier_name}</div>{r.description && <div className="text-xs text-ink-soft truncate max-w-[260px]">{r.description}</div>}</td>
-                <td className="text-xs">{r.expense_categories?.name ?? "—"}</td>
+                <td><Link href={`/expenses/${r.id}`} className="font-mono text-xs text-purple hover:underline">{r.exp_no}</Link><div className="text-[11px] whitespace-nowrap">{fmtDate(r.bill_date)}</div><div className="text-[10px] text-ink-soft">{r.companies?.code}{r.bill_no ? ` · บิล ${r.bill_no}` : ""}</div></td>
+                <td><div className="font-medium">{r.supplier_name}</div>{r.description && <div className="text-xs text-ink-soft truncate max-w-[220px]">{r.description}</div>}</td>
+                <td className="text-xs max-w-[130px]">{r.expense_categories?.name ?? "—"}</td>
                 <td className="text-right">{fmt(r.grand_total)}</td>
                 <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}</td>
                 <td className="text-right font-semibold">{fmt(r.net_pay)}</td>
@@ -61,7 +60,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <td><span className={STATUS_BADGE[r.status as ExpenseStatus]}>{STATUS_TH[r.status as ExpenseStatus]}</span></td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={10} className="text-center text-ink-soft py-10">ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย</td></tr>}
+            {!list.length && <tr><td colSpan={9} className="text-center text-ink-soft py-10">ยังไม่มีรายการ — กด “บันทึกบิลใหม่” แล้วถ่ายรูปบิลได้เลย</td></tr>}
           </tbody>
         </table>
       </div>

@@ -269,3 +269,13 @@ export async function whtFromExpense(id: string) {
   revalidatePath(`/expenses/${id}`); revalidatePath("/expenses/wht");
   redirect(`/expenses/${id}?wht=${(w as { id: string }).id}`);
 }
+
+// ---------------- แก้วันที่จ่าย (0047) ----------------
+export async function editPaidDate(id: string, formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_expense_paid_date", { p_id: id, p_date: nul(formData.get("paid_date")), p_method: nul(formData.get("paid_method")), p_ref: String(formData.get("paid_ref") ?? ""), p_sync_wht: formData.get("sync_wht") === "on" });
+  if (error) redirect(`/expenses/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/expenses/${id}`); revalidatePath("/expenses"); revalidatePath("/expenses/wht");
+  redirect(`/expenses/${id}?saved=1`);
+}
