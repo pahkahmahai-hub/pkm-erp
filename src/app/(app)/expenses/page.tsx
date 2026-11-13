@@ -55,7 +55,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <td><div className="font-medium">{r.supplier_name}</div>{r.description && <div className="text-xs text-ink-soft truncate max-w-[220px]">{r.description}</div>}</td>
                 <td className="text-xs max-w-[130px]">{r.expense_categories?.name ?? "—"}</td>
                 <td className="text-right">{fmt(r.grand_total)}</td>
-                <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}{missOf(r).length > 0 && <Link href={`/expenses/${r.id}/edit`} title={`ขาด: ${missOf(r).join(", ")}`} className="block mt-0.5 text-[10px] font-semibold text-[#b45309] bg-yellow/25 rounded px-1 whitespace-nowrap">⚠ ข้อมูลไม่ครบ</Link>}</td>
+                <td className="text-right text-red">{Number(r.wht_amount) ? (Number(r.wht_payer ?? 1) === 1 ? `−${fmt(r.wht_amount)}` : <span className="text-[#7a4a00]">{fmt(r.wht_amount)}<span className="block text-[10px]">บริษัทออกให้</span></span>) : "—"}{missOf(r).length > 0 && <Link href={`/expenses/${r.id}/edit`} title={`ขาด: ${missOf(r).join(", ")}`} className="block mt-0.5 text-[10px] font-semibold text-[#b45309] bg-yellow/25 rounded px-1 whitespace-nowrap">⚠ ข้อมูลไม่ครบ</Link>}</td>
                 <td className="text-right font-semibold">{fmt(r.net_pay)}</td>
                 <td className="text-xs whitespace-nowrap">{r.pay_round ? fmtDate(r.pay_round) : "—"}</td>
                 <td className="text-xs whitespace-nowrap">{r.paid_date ? <span className="text-green font-medium">{fmtDate(r.paid_date)}</span> : "—"}</td>

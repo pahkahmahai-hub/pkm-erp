@@ -4,7 +4,7 @@ import { Header } from "@/components/ui";
 import { WhtForm } from "@/components/expenses/WhtForm";
 import { expenseEditorData } from "@/lib/expenses/queries";
 import { createWhtCert } from "../../actions";
-import type { Expense } from "@/lib/expenses/types";
+import { whtCalc, type Expense } from "@/lib/expenses/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function NewWht({ searchParams }: { searchParams: Promise<{
   if (expense) {
     const { data } = await supabase.from("expenses").select("*, expense_categories(wht_income_type)").eq("id", expense).maybeSingle();
     const e = data as (Expense & { expense_categories: { wht_income_type: string | null } | null }) | null;
-    if (e) defaults = { expense_id: e.id, payee_name: e.supplier_name, payee_tax_id: e.supplier_tax_id ?? "", payee_address: e.supplier_address ?? "", payee_branch: e.supplier_branch ?? "", form: e.supplier_is_company ? "pnd53" : "pnd3", amount: Number(e.net_before_vat), pct: Number(e.wht_pct) || 3, income_type: e.expense_categories?.wht_income_type ?? "ค่าบริการ", pay_date: e.paid_date ?? e.bill_date };
+    if (e) defaults = { expense_id: e.id, payee_name: e.supplier_name, payee_tax_id: e.supplier_tax_id ?? "", payee_address: e.supplier_address ?? "", payee_branch: e.supplier_branch ?? "", form: e.supplier_is_company ? "pnd53" : "pnd3", amount: whtCalc(Number(e.net_before_vat), Number(e.wht_pct), Number(e.wht_payer ?? 1) || 1).income, payer: Number(e.wht_payer ?? 1) || 1, pct: Number(e.wht_pct) || 3, income_type: e.expense_categories?.wht_income_type ?? "ค่าบริการ", pay_date: e.paid_date ?? e.bill_date };
   }
   return (
     <div className="space-y-6">

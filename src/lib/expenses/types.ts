@@ -7,7 +7,7 @@ export interface ExpenseCategory { id: string; code: string; name: string; wht_p
 export interface Expense {
   id: string; company_id: string; exp_no: string; supplier_id: string | null; supplier_name: string; supplier_tax_id: string | null; supplier_address: string | null; supplier_branch: string | null;
   supplier_is_company: boolean; category_id: string | null; bill_no: string | null; bill_date: string; due_date: string | null; description: string | null;
-  vat_mode: VatMode; vat_rate: number; discount_amount: number; wht_pct: number;
+  vat_mode: VatMode; vat_rate: number; discount_amount: number; wht_pct: number; wht_payer?: number | null;
   subtotal: number; net_before_vat: number; vat_amount: number; grand_total: number; wht_amount: number; net_pay: number;
   status: ExpenseStatus; pay_round: string | null; paid_date: string | null; paid_method: string | null; paid_ref: string | null;
   approved_by: string | null; approved_at: string | null; review_note: string | null; ai_extracted: AiBill | null; note: string | null;
@@ -54,4 +54,13 @@ export function whtMissing(x: { tax_id?: string | null; address?: string | null;
   if (!t) m.push("เลขผู้เสียภาษี"); else if (t.length !== 13) m.push("เลขผู้เสียภาษีไม่ครบ 13 หลัก");
   if (!x.address?.trim()) m.push("ที่อยู่");
   return m;
+}
+
+/** ผู้รับภาระภาษีหัก ณ ที่จ่าย: 1 หักจากผู้รับเงิน · 2 บริษัทออกให้ตลอดไป · 3 บริษัทออกให้ครั้งเดียว */
+export const WHT_PAYER_TH: Record<number, string> = { 1: "หักจากผู้รับเงิน", 2: "บริษัทออกให้ตลอดไป", 3: "บริษัทออกให้ครั้งเดียว" };
+export function whtCalc(net: number, pct: number, payer: number) {
+  const r = (Number(pct) || 0) / 100; const rd = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const tax = payer === 2 ? rd(net * r / (1 - r)) : payer === 3 ? rd(net * r * (1 + r)) : rd(net * r);
+  const income = payer === 2 ? rd(net + tax) : payer === 3 ? rd(net * (1 + r)) : net;
+  return { tax, income, deducted: payer === 1 ? tax : 0 };
 }

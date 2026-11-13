@@ -8,7 +8,7 @@ import type { Company, VatMode } from "@/lib/sales/types";
 import type { Contact } from "@/lib/stock/types";
 import type { AiBill, Expense, ExpenseCategory, ExpenseItem } from "@/lib/expenses/types";
 import type { Product, Material } from "@/lib/stock/types";
-import { WHT_CHOICES, nextPayRound } from "@/lib/expenses/types";
+import { whtCalc, WHT_PAYER_TH, WHT_CHOICES, nextPayRound } from "@/lib/expenses/types";
 
 type SupplierLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "entity_type"> & { default_expense_category?: string | null; default_wht_pct?: number | null; default_vat_mode_purchase?: VatMode | null };
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit">;
@@ -44,6 +44,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const [restDue, setRestDue] = useState("");
   const [depositNote, setDepositNote] = useState((e as { deposit_note?: string | null } | null | undefined)?.deposit_note ?? "");
   const [wht, setWht] = useState(Number(e?.wht_pct ?? 0));
+  const [whtPayer, setWhtPayer] = useState(Number(e?.wht_payer ?? 1) || 1);
   const [payRound, setPayRound] = useState(e?.pay_round ?? nextPayRound(today()));
   const [note, setNote] = useState(e?.note ?? "");
   const [lines, setLines] = useState<Line[]>((items ?? []).map((i) => ({ key: i.id, description: i.description, qty: Number(i.qty), unit: i.unit ?? "", unit_price: Number(i.unit_price), disc: Number((i as { discount?: number }).discount ?? 0) ? String(Number((i as { discount?: number }).discount)) : "", product_id: i.product_id, material_id: i.material_id })));
@@ -135,7 +136,8 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const net = vatMode === "inclusive" ? r2(after * 100 / 107) : after;
   const vat = vatMode === "inclusive" ? r2(after - net) : vatMode === "exclusive" ? r2(after * 0.07) : 0;
   const grand = vatMode === "exclusive" ? r2(net + vat) : after;
-  const whtAmt = r2(net * wht / 100);
+  const wc = whtCalc(net, wht, whtPayer);
+  const whtAmt = wc.deducted;   // ส่วนที่หักจากยอดโอน (0 ถ้าบริษัทออกให้)
   const depRaw = depPct ? r2(grand * (parseFloat(deposit) || 0) / 100) : (parseFloat(deposit) || 0);
   const depAmt = depMode === "later" ? depRaw : 0;          // หักจากบิลนี้
   const firstDep = depMode === "first" ? depRaw : 0;         // มัดจำที่จะจ่ายรอบนี้
@@ -255,7 +257,9 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
               <div><label className="label flex items-center gap-1.5">ส่วนลดท้ายบิล <span className="inline-flex rounded-md border border-line text-[11px] overflow-hidden">{(["฿", "%"] as const).map((m) => <button key={m} type="button" onClick={() => setDiscPct(m === "%")} className={`px-1.5 ${(m === "%") === discPct ? "bg-purple text-white" : ""}`}>{m}</button>)}</span></label>
                 <input type="number" step="0.01" value={discInput} onChange={(ev) => setDiscInput(ev.target.value)} className="input" placeholder="0" />
                 <input type="hidden" name="discount_amount" value={discount} />{discPct && discount > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(discount)} บาท</div>}</div>
-              <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" value={wht} onChange={(ev) => setWht(Number(ev.target.value))} className="input">{WHT_CHOICES.map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div>
+              <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" value={wht} onChange={(ev) => setWht(Number(ev.target.value))} className="input">{WHT_CHOICES.map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select>
+                {wht > 0 && <select value={whtPayer} onChange={(ev) => setWhtPayer(Number(ev.target.value))} className="input mt-1.5 text-xs">{[1, 3, 2].map((k) => <option key={k} value={k}>{WHT_PAYER_TH[k]}</option>)}</select>}
+                <input type="hidden" name="wht_payer" value={wht > 0 ? whtPayer : 1} />{Number(e?.wht_payer ?? 1) !== 1 && <input type="hidden" name="wht_payer_had" value="1" />}</div>
             </div>
             <div className="rounded-xl border border-line p-3 space-y-3">
               <div className="flex flex-wrap items-center gap-2"><span className="label !mb-0">มัดจำ</span>
@@ -289,9 +293,14 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             {discount > 0 && <Row l="ส่วนลด" v={-discount} />}
             {vatMode !== "none" && <><Row l="มูลค่าก่อน VAT" v={net} /><Row l="VAT 7%" v={vat} /></>}
             <Row l="ยอดตามบิล" v={grand} bold />
-            {wht > 0 && <Row l={`หัก ณ ที่จ่าย ${wht}%`} v={-whtAmt} red />}
+            {wht > 0 && whtPayer === 1 && <Row l={`หัก ณ ที่จ่าย ${wht}%`} v={-whtAmt} red />}
             {depAmt > 0 && <Row l="หักมัดจำที่จ่ายแล้ว" v={-depAmt} red />}
             <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง{firstDep > 0 && !firstBad ? "ทั้งงาน" : ""}</span><span className="font-display text-xl font-bold text-purple">{fmt(pay)}</span></div>
+            {wht > 0 && whtPayer !== 1 && <div className="mt-2 rounded-lg bg-yellow/15 p-2 space-y-1 text-[12px]">
+              <Row l={`ภาษี ${wht}% ที่บริษัทออกให้ (${whtPayer === 2 ? "ตลอดไป" : "ครั้งเดียว"})`} v={wc.tax} />
+              <div className="text-[11px] text-ink-soft">ไม่หักจากยอดโอน · บริษัทนำส่งสรรพากรเอง · 50 ทวิ เงินได้ {fmt(wc.income)}</div>
+              <Row l="ต้นทุนรวมของบริษัท" v={r2(pay + wc.tax)} bold />
+            </div>}
             {firstDep > 0 && !firstBad && <div className="mt-2 rounded-lg bg-purple/5 p-2 space-y-1">
               <Row l="จ่ายมัดจำรอบนี้" v={r2(firstDep - firstWht)} bold />
               <Row l={`ส่วนที่เหลือ (ครบ ${thD(restDueEff)})`} v={r2(pay - (firstDep - firstWht))} />

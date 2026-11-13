@@ -34,7 +34,7 @@ export default async function Payables() {
           <div key={round} className="card overflow-hidden">
             <div className={`px-5 py-3 flex flex-wrap items-center justify-between gap-2 ${overdue ? "bg-red/10" : "bg-cream/70"}`}>
               <div className="font-display font-bold">รอบจ่าย {round === "ไม่ระบุรอบ" ? round : fmtDate(round)} {overdue && <span className="badge-rejected ml-2">เลยรอบแล้ว</span>}</div>
-              <div className="text-sm">{list.length} ใบ · จ่ายรวม <b>฿{fmt(sum)}</b>{wht > 0 && <span className="text-xs text-ink-soft"> · หัก ณ ที่จ่ายรวม {fmt(wht)}</span>}</div>
+              <div className="text-sm">{list.length} ใบ · จ่ายรวม <b>฿{fmt(sum)}</b>{wht > 0 && <span className="text-xs text-ink-soft"> · ภาษีหัก ณ ที่จ่ายต้องนำส่ง {fmt(wht)}</span>}</div>
             </div>
             <table className="tbl">
               <thead><tr><th className="w-8"></th><th>เลขที่</th><th>ซัพพลายเออร์</th><th>บิล</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th className="w-[330px]">บันทึกจ่าย</th></tr></thead>
@@ -45,7 +45,7 @@ export default async function Payables() {
                   <td className="font-medium">{r.supplier_name}{r.description && <div className="text-xs text-ink-soft truncate max-w-[220px]">{r.description}</div>}</td>
                   <td className="text-xs">{r.bill_no ?? "—"}<div className="text-ink-soft">{fmtDate(r.bill_date)}</div></td>
                   <td className="text-right">{fmt(r.grand_total)}</td>
-                  <td className="text-right text-red">{Number(r.wht_amount) ? `−${fmt(r.wht_amount)}` : "—"}</td>
+                  <td className="text-right text-red">{Number(r.wht_amount) ? (Number(r.wht_payer ?? 1) === 1 ? `−${fmt(r.wht_amount)}` : <span className="text-[#7a4a00]">{fmt(r.wht_amount)}<span className="block text-[10px]">บริษัทออกให้</span></span>) : "—"}</td>
                   <td className="text-right font-bold">{fmt(r.net_pay)}</td>
                   <td>
                     <form action={payExpense.bind(null, r.id)} className="flex flex-wrap gap-1.5 items-center">

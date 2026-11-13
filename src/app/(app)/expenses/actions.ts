@@ -46,6 +46,11 @@ async function applyLineDiscounts(supabase: Awaited<ReturnType<typeof createClie
       if (error) return `บันทึกมัดจำไม่ได้: ${error.message}`;
     }
   }
+  // ผู้รับภาระภาษี (0049)
+  if (formData.has("wht_payer") && (formData.get("wht_payer") !== "1" || formData.get("wht_payer_had") === "1")) {
+    const { error } = await supabase.rpc("set_expense_wht_payer", { p_id: id, p_payer: Number(formData.get("wht_payer")) || 1 });
+    if (error) return `บันทึกผู้ออกภาษีไม่ได้: ${error.message}`;
+  }
   // จ่ายมัดจำรอบแรก (0046) — แยกยอดคงเหลือไปบิลใหม่
   const split = Number(formData.get("split_deposit")) || 0;
   if (split > 0) {

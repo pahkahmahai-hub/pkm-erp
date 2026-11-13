@@ -11,7 +11,7 @@ type SupplierLite = Pick<Contact, "id" | "name" | "tax_id" | "address" | "addres
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const INCOME_PRESETS = ["ค่าจ้างทำของ", "ค่าบริการ", "ค่าโฆษณา", "ค่าเช่า", "ค่าขนส่ง", "ค่าจ้างทำบัญชี", "ค่าที่ปรึกษา / วิชาชีพอิสระ"];
 
-export function WhtForm({ companies, suppliers, defaults }: { companies: Company[]; suppliers: SupplierLite[]; defaults?: { expense_id?: string; payee_name?: string; payee_tax_id?: string; payee_address?: string; payee_branch?: string; form?: "pnd3" | "pnd53"; amount?: number; pct?: number; income_type?: string; pay_date?: string } }) {
+export function WhtForm({ companies, suppliers, defaults }: { companies: Company[]; suppliers: SupplierLite[]; defaults?: { expense_id?: string; payee_name?: string; payee_tax_id?: string; payee_address?: string; payee_branch?: string; form?: "pnd3" | "pnd53"; amount?: number; pct?: number; income_type?: string; pay_date?: string; payer?: number } }) {
   const d = defaults ?? {};
   const [today] = useState(() => todayBkk());
   const [companyId, setCompanyId] = useState(companies.find((c) => c.code === "PKM")?.id ?? companies[0]?.id);
@@ -61,7 +61,7 @@ export function WhtForm({ companies, suppliers, defaults }: { companies: Company
           <div><label className="label">ภาษีที่หัก (แก้ได้)</label><input type="number" step="0.01" name="wht_amount" defaultValue={wht} key={wht} className="input" /></div>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div><label className="label">ผู้จ่ายเงิน</label><select name="payer_condition" defaultValue={1} className="input">{PAYER_CONDITIONS.map((p, i) => <option key={p} value={i + 1}>{p}</option>)}</select></div>
+          <div><label className="label">ผู้จ่ายเงิน</label><select name="payer_condition" defaultValue={d.payer ?? 1} className="input">{PAYER_CONDITIONS.map((p, i) => <option key={p} value={i + 1}>{p}</option>)}</select></div>
           <div><label className="label">หมายเหตุภายใน</label><input name="note" className="input" /></div>
         </div>
       </div>
