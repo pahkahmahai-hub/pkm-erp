@@ -17,7 +17,7 @@ const dm = (d: string | null) => (d ? `${Number(d.slice(8, 10))} ${TH_M[Number(d
 const dmy = (d: string | null) => (d ? `${dm(d)} ${(Number(d.slice(0, 4)) + 543) % 100}` : "—");
 const addDays = (d: string, n: number) => new Date(Date.parse(d + "T00:00:00Z") + n * 86400_000).toISOString().slice(0, 10);
 
-export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; q?: string; st?: string; pay?: string; deleted?: string }> }) {
+export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; month?: string; q?: string; st?: string; pay?: string; deleted?: string }> }) {
   const { key } = await params;
   if (key !== "operation") notFound();
   const sp = await searchParams;
@@ -51,7 +51,8 @@ export default async function CorporatePage({ params, searchParams }: { params: 
   const top = Object.entries(yearOrders.reduce<Record<string, number>>((m, o) => ({ ...m, [o.customer_name]: (m[o.customer_name] ?? 0) + Number(o.amount) }), {})).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   // filters (table)
-  let list = all.filter((o) => (year === "all" || o.order_date.startsWith(year)));
+  const month = /^(0[1-9]|1[0-2])$/.test(sp.month ?? "") ? sp.month! : "";
+  let list = all.filter((o) => (year === "all" || o.order_date.startsWith(year)) && (!month || o.order_date.slice(5, 7) === month));
   if (q) list = list.filter((o) => [o.order_no, o.customer_name, o.customer_label, o.title, o.detail, o.doc_qt, o.doc_iv, o.doc_bill].some((v) => (v ?? "").toLowerCase().includes(q)));
   if (sp.st === "open") list = list.filter(corpOpen); else if (sp.st && CORP_STATUS.some((s) => s.key === sp.st)) list = list.filter((o) => o.status === sp.st);
   if (sp.pay && CORP_PAY.some((s) => s.key === sp.pay)) list = list.filter((o) => o.pay_status === sp.pay);
@@ -60,7 +61,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
   const boardCols = CORP_STATUS.filter((s) => s.key !== "cancelled");
   const boardList = all.filter((o) => corpOpen(o) || (o.status === "delivered" && (o.pay_status !== "paid" || (o.delivered_at ?? "") >= addDays(today, -30))));
   const base = `/work/rooms/${key}/corporate`;
-  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, q: sp.q, st: sp.st, pay: sp.pay, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
+  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, month: sp.month, q: sp.q, st: sp.st, pay: sp.pay, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
   const crumbs: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${key}`, label: acc.room.name }];
 
   return (
@@ -73,11 +74,11 @@ export default async function CorporatePage({ params, searchParams }: { params: 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <Kpi label={`ยอดออเดอร์ปี ${Number(thisYear) + 543}`} value={`฿${baht(sum(yearOrders))}`} sub={`${yearOrders.length} ออเดอร์`} />
-        <Kpi label="กำลังทำ" value={`${open.length}`} sub={`฿${baht(sum(open))}`} href={qs({ view: "table", st: "open", year: "all", pay: undefined })} />
+        <Kpi label="กำลังทำ" value={`${open.length}`} sub={`฿${baht(sum(open))}`} href={qs({ view: "table", st: "open", year: "all", month: undefined, pay: undefined })} />
         <Kpi label="ครบกำหนดส่งใน 7 วัน" value={`${dueSoon.length}`} sub={dueSoon.slice(0, 2).map((o) => corpName(o)).join(", ") || "—"} tone={dueSoon.length ? "yellow" : undefined} />
         <Kpi label="เลยกำหนดส่ง" value={`${overdue.length}`} sub={overdue.slice(0, 2).map((o) => corpName(o)).join(", ") || "—"} tone={overdue.length ? "red" : undefined} />
-        <Kpi label="ยังไม่มัดจำ (กำลังทำ)" value={`${noDeposit.length}`} sub={`฿${baht(sum(noDeposit))}`} href={qs({ view: "table", st: "open", pay: "none", year: "all" })} />
-        <Kpi label="ส่งแล้ว ยังไม่ได้เงินครบ" value={`฿${baht(sum(unpaid))}`} sub={`${unpaid.length} ออเดอร์`} tone={unpaid.length ? "coral" : undefined} href={qs({ view: "table", st: undefined, pay: "awaiting", year: "all" })} />
+        <Kpi label="ยังไม่มัดจำ (กำลังทำ)" value={`${noDeposit.length}`} sub={`฿${baht(sum(noDeposit))}`} href={qs({ view: "table", st: "open", pay: "none", year: "all", month: undefined })} />
+        <Kpi label="ส่งแล้ว ยังไม่ได้เงินครบ" value={`฿${baht(sum(unpaid))}`} sub={`${unpaid.length} ออเดอร์`} tone={unpaid.length ? "coral" : undefined} href={qs({ view: "table", st: undefined, pay: "awaiting", year: "all", month: undefined })} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -89,6 +90,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
           <form className="flex flex-wrap gap-2 items-center text-sm">
             <input type="hidden" name="view" value="table" />
             <select name="year" defaultValue={year} className="input py-1 w-auto"><option value="all">ทุกปี</option>{years.map((y) => <option key={y} value={y}>ปี {Number(y) + 543}</option>)}</select>
+            <select name="month" defaultValue={month} className="input py-1 w-auto"><option value="">ทุกเดือน</option>{TH_M.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>)}</select>
             <select name="st" defaultValue={sp.st ?? ""} className="input py-1 w-auto"><option value="">ทุกสถานะงาน</option><option value="open">กำลังทำ (ยังไม่ส่งครบ)</option>{CORP_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
             <select name="pay" defaultValue={sp.pay ?? ""} className="input py-1 w-auto"><option value="">ทุกสถานะเงิน</option>{CORP_PAY.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
             <input name="q" defaultValue={sp.q ?? ""} className="input py-1 w-48" placeholder="ค้นหา ลูกค้า/สินค้า/เลขเอกสาร" />
@@ -122,7 +124,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
                 const st = corpStatus(o.status); const late = corpOverdue(o, today);
                 return (
                   <tr key={o.id}>
-                    <td className="font-mono text-xs"><Link href={`${base}/${o.id}`} className="text-purple font-semibold hover:underline">{o.order_no}</Link></td>
+                    <td className="font-mono text-xs whitespace-nowrap"><Link href={`${base}/${o.id}`} className="text-purple font-semibold hover:underline">{o.order_no}</Link></td>
                     <td className="max-w-[180px]"><div className="font-medium truncate">{corpName(o)}</div></td>
                     <td className="max-w-[280px]"><Link href={`${base}/${o.id}`} className="hover:underline line-clamp-2">{o.title}</Link></td>
                     <td className="text-right whitespace-nowrap">{baht(o.amount)}</td>
@@ -136,7 +138,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
               })}
               {!list.length && <tr><td colSpan={9} className="text-center text-ink-soft py-6">ไม่มีออเดอร์ตามเงื่อนไข</td></tr>}
             </tbody>
-            {list.length > 0 && <tfoot><tr className="font-bold"><td colSpan={3} className="text-right">รวม {list.length} ออเดอร์</td><td className="text-right">{baht(sum(list))}</td><td colSpan={5} /></tr></tfoot>}
+            {list.length > 0 && <tfoot><tr className="font-bold"><td colSpan={3} className="text-right">รวม {list.length} ออเดอร์{month ? ` · เดือน ${TH_M[Number(month) - 1]}` : ""}{year !== "all" ? ` ${Number(year) + 543}` : ""}</td><td className="text-right">{baht(sum(list))}</td><td colSpan={5} /></tr></tfoot>}
           </table>
         </div>
       )}
