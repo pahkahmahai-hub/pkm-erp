@@ -224,9 +224,9 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             <tbody>{lines.map((l) => (
               <tr key={l.key}>
                 <td className="min-w-[340px]"><textarea value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} rows={Math.min(5, Math.max(1, Math.ceil(l.description.length / 45), l.description.split("\n").length))} className="input resize-y leading-snug" />{(l.product_id || l.material_id) && <div className="text-[10px] text-green mt-0.5">✓ ผูกกับ{l.product_id ? "สินค้า" : "วัสดุ"}ในคลัง</div>}</td>
-                <td><input type="number" step="0.01" value={l.qty} onChange={(ev) => upd(l.key, { qty: Number(ev.target.value) })} className="input text-right w-24" /></td>
-                <td><input value={l.unit} onChange={(ev) => upd(l.key, { unit: ev.target.value })} className="input w-20" placeholder="ชิ้น" /></td>
-                <td><input type="number" step="0.01" value={l.unit_price} onChange={(ev) => upd(l.key, { unit_price: Number(ev.target.value) })} className="input text-right w-28" /></td>
+                <td><input type="number" step="0.01" value={l.qty} onChange={(ev) => upd(l.key, { qty: Number(ev.target.value) })} className="input text-right w-20" /></td>
+                <td><input value={l.unit} onChange={(ev) => upd(l.key, { unit: ev.target.value })} className="input w-16" placeholder="ชิ้น" /></td>
+                <td><input type="number" step="0.01" value={l.unit_price} onChange={(ev) => upd(l.key, { unit_price: Number(ev.target.value) })} className="input text-right w-24" /></td>
                 <td><input value={l.disc ?? ""} onChange={(ev) => upd(l.key, { disc: ev.target.value })} className="input text-right w-20" placeholder="0 / 10%" title="ใส่เป็นบาท เช่น 15 หรือเป็น % เช่น 10%" />{(l.disc ?? "").trim().endsWith("%") && lineDisc(l) > 0 && <div className="text-[10px] text-ink-soft text-right">= {fmt(lineDisc(l))}</div>}</td>
                 <td className="text-right font-semibold whitespace-nowrap">{lineDisc(l) > 0 && <div className="text-[10px] text-ink-soft line-through font-normal">{fmt(r2(l.qty * l.unit_price))}</div>}{fmt(r2(l.qty * l.unit_price - lineDisc(l)))}</td>
                 <td><button type="button" onClick={() => setLines((x) => x.filter((y) => y.key !== l.key))} className="text-ink-soft hover:text-red"><Trash2 size={14} /></button></td>
