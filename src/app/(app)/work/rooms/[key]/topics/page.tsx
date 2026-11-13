@@ -4,7 +4,7 @@ import { CalendarDays, Trash2 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
-import { loadDirectory, fillEmployees } from "@/lib/work/queries";
+import { loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
 import type { Room, RoomMember, Topic } from "@/lib/work/types";
 import { saveTopic, deleteTopic } from "../../../actions";
 
@@ -26,8 +26,9 @@ export default async function TopicsPage({ params, searchParams }: { params: Pro
   ]);
   const mem = fillEmployees(members as RoomMember[], dir, "employee_id");
   const myId = session.employee?.id ?? null;
-  const isLead = mem.some((m) => m.employee_id === myId && m.is_lead);
-  if (!session.isAdmin && !mem.some((m) => m.employee_id === myId)) redirect("/work?denied=1");
+  const rights = await roomRights(supabase, r.id, session.isAdmin);
+  const isLead = rights.isLead;
+  if (!rights.isMember) redirect("/work?denied=1");
   const canEdit = (empId: string | null) => session.isAdmin || isLead || (!!empId && empId === myId);
   const list = (topics ?? []) as Topic[];
   const groups = [...mem.map((m) => ({ id: m.employee_id as string | null, name: m.employees?.nickname ?? m.employees?.first_name ?? "—" })), { id: null, name: "หัวข้อกลางของห้อง" }];

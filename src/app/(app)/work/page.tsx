@@ -35,6 +35,10 @@ export default async function WorkHome() {
         supabase.from("app_users").select("id, employee_id, role"),
       ])
     : [{ data: [] }, { data: [] }];
+  // ห้องย่อย → หัวหน้าห้องหลักตรวจได้ด้วย (0028)
+  const { data: roomParents } = session.isAdmin ? await supabase.from("work_rooms").select("*") : { data: [] };
+  const rp = (roomParents ?? []) as { id: string; key: string; parent_key?: string | null }[];
+  const parentIdOf = new Map(rp.filter((x) => x.parent_key).map((x) => [x.id, rp.find((p) => p.key === x.parent_key)?.id]));
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
   const mine = tasks.filter((t) => t.assignee_id === empId);
@@ -66,7 +70,8 @@ export default async function WorkHome() {
   const nameOfEmp = (id: string) => { const e = dir.find((x) => x.id === id); return e ? e.nickname ?? e.first_name : "หัวหน้า"; };
   const coReviewers = (t: Task): string[] => {
     const out = new Set<string>();
-    for (const l of (leadRows ?? []) as { room_id: string; employee_id: string }[]) if (l.room_id === t.room_id && l.employee_id !== t.assignee_id) out.add(nameOfEmp(l.employee_id));
+    const pid = parentIdOf.get(t.room_id);
+    for (const l of (leadRows ?? []) as { room_id: string; employee_id: string }[]) if ((l.room_id === t.room_id || (pid && l.room_id === pid)) && l.employee_id !== t.assignee_id) out.add(nameOfEmp(l.employee_id));
     if (t.created_by && !adminIds.has(t.created_by)) { const e = empOfUser.get(t.created_by); if (e && e !== t.assignee_id) out.add(nameOfEmp(e)); }
     return [...out];
   };

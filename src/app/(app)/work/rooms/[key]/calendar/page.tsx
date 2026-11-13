@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ListChecks, Tags } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
-import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
 import type { Room, RoomMember, Task, Topic } from "@/lib/work/types";
 import { WeekCalendar, MonthTaskCalendar } from "@/components/work/WeekCalendar";
 import { RoomTabs } from "@/components/work/RoomTabs";
@@ -41,7 +41,8 @@ export default async function RoomCalendarPage({ params, searchParams }: { param
       .or(`and(start_date.gte.${from},start_date.lte.${to}),and(start_date.is.null,due_date.gte.${from},due_date.lte.${to})`).order("due_time").order("created_at"),
   ]);
   const mem = fillEmployees(members as RoomMember[], dir, "employee_id");
-  if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id)) redirect("/work?denied=1");
+  const rights = await roomRights(supabase, r.id, session.isAdmin);
+  if (!rights.isMember) redirect("/work?denied=1");
   const tasks = fillEmployees((tasksRes.data ?? []) as unknown as Task[], dir, "assignee_id");
   const rows = mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "—", is_lead: m.is_lead }));
   const href = (w: string) => `/work/rooms/${key}/calendar?week=${w}`;
@@ -73,8 +74,8 @@ export default async function RoomCalendarPage({ params, searchParams }: { param
         </>)}
       </div>
       {isMonth
-        ? <MonthTaskCalendar key={month} roomId={r.id} roomKey={key} month={month} today={today} rows={rows} tasks={tasks} topics={(topics ?? []) as Topic[]} myEmployeeId={session.employee?.id ?? null} isAdmin={session.isAdmin} />
-        : <WeekCalendar key={week} roomId={r.id} roomKey={key} week={week} today={today} rows={rows} tasks={tasks} topics={(topics ?? []) as Topic[]} myEmployeeId={session.employee?.id ?? null} isAdmin={session.isAdmin} />}
+        ? <MonthTaskCalendar key={month} roomId={r.id} roomKey={key} month={month} today={today} rows={rows} tasks={tasks} topics={(topics ?? []) as Topic[]} myEmployeeId={session.employee?.id ?? null} isAdmin={session.isAdmin} amLead={rights.isLead} />
+        : <WeekCalendar key={week} roomId={r.id} roomKey={key} week={week} today={today} rows={rows} tasks={tasks} topics={(topics ?? []) as Topic[]} myEmployeeId={session.employee?.id ?? null} isAdmin={session.isAdmin} amLead={rights.isLead} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights } from "@/lib/work/queries";
 import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
@@ -39,7 +39,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     .filter((e): e is DirEmp => !!e)
     .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
     .map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name }));
-  if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id)) redirect("/work?denied=1");
+  if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id) && !(await roomRights(supabase, r.id, false)).isMember) redirect("/work?denied=1");
 
   if (tab === "chat") {
     const { data: msgs } = await supabase.from("work_room_messages").select("*, app_users(display_name, email)").eq("room_id", r.id).order("created_at", { ascending: false }).limit(100);

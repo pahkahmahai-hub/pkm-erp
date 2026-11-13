@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
-import { TASK_SELECT, loadDirectory, fillEmployees } from "@/lib/work/queries";
+import { TASK_SELECT, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic } from "@/lib/work/types";
 import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
 import { Storyboard } from "./Storyboard";
@@ -39,7 +39,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const me = session.appUser.id;
   const myEmp = session.employee?.id;
   // ผู้บริหาร / ผู้สั่งงาน / หัวหน้าห้อง (★) แก้ไข โอนงาน ตรวจรับ และลบได้
-  const isLead = !!session.employee && members.some((m) => m.employee_id === session.employee!.id && m.is_lead);
+  const isLead = (await roomRights(supabase, task.room_id, session.isAdmin)).isLead || (!!session.employee && members.some((m) => m.employee_id === session.employee!.id && m.is_lead));
   const isAssignee = task.assignee_id === myEmp;
   const isOwner = session.isAdmin || task.created_by === me || isLead;
   // ตรวจรับ/ตีกลับ: งานของตัวเองต้องให้ผู้บริหาร (งานของหัวหน้าห้อง = ผม/ภรรยาอนุมัติ)

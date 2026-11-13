@@ -9,16 +9,16 @@ import { createCalendarTask } from "@/app/(app)/work/actions";
 
 const DOW = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
 interface Row { id: string; name: string; is_lead: boolean }
-interface Props { roomId: string; roomKey: string; week: string; today: string; rows: Row[]; tasks: Task[]; topics: Topic[]; myEmployeeId: string | null; isAdmin: boolean }
+interface Props { roomId: string; roomKey: string; week: string; today: string; rows: Row[]; tasks: Task[]; topics: Topic[]; myEmployeeId: string | null; isAdmin: boolean; amLead?: boolean }
 
 const fridayOf = (d: string) => { const i = (new Date(d + "T00:00:00Z").getUTCDay() + 6) % 7; return i <= 4 ? addDays(d, 4 - i) : addDays(d, 11 - i); };
 
-export function WeekCalendar({ roomId, roomKey, week, today, rows, tasks, topics, myEmployeeId, isAdmin }: Props) {
+export function WeekCalendar({ roomId, roomKey, week, today, rows, tasks, topics, myEmployeeId, isAdmin, amLead }: Props) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(week, i)), [week]);
   const [draft, setDraft] = useState<{ assignee: string; date: string } | null>(null);
   const byCell = useMemo(() => { const m = new Map<string, Task[]>(); for (const t of tasks) { const d = t.start_date ?? t.due_date; if (!d) continue; const k = (t.assignee_id ?? "none") + "|" + d; m.set(k, [...(m.get(k) ?? []), t]); } return m; }, [tasks]);
   const allRows = useMemo(() => (tasks.some((t) => !t.assignee_id) ? [...rows, { id: "none", name: "ยังไม่ระบุผู้รับ", is_lead: false }] : rows), [rows, tasks]);
-  const canAddFor = (empId: string) => isAdmin || rows.some((r) => r.id === myEmployeeId && r.is_lead) || empId === myEmployeeId || empId === "none";
+  const canAddFor = (empId: string) => isAdmin || !!amLead || rows.some((r) => r.id === myEmployeeId && r.is_lead) || empId === myEmployeeId || empId === "none";
 
   return (
     <div className="space-y-3">
@@ -77,13 +77,13 @@ function DraftModal({ roomId, roomKey, qs, rows, topics, draft, onClose }: { roo
 }
 
 const DOW_SHORT = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
-interface MonthProps { roomId: string; roomKey: string; month: string; today: string; rows: Row[]; tasks: Task[]; topics: Topic[]; myEmployeeId: string | null; isAdmin: boolean }
+interface MonthProps { roomId: string; roomKey: string; month: string; today: string; rows: Row[]; tasks: Task[]; topics: Topic[]; myEmployeeId: string | null; isAdmin: boolean; amLead?: boolean }
 
 /** มุมมองรายเดือน — ตาราง 7 คอลัมน์ ช่องละวัน · กรองตามคนได้ */
-export function MonthTaskCalendar({ roomId, roomKey, month, today, rows, tasks, topics, myEmployeeId, isAdmin }: MonthProps) {
+export function MonthTaskCalendar({ roomId, roomKey, month, today, rows, tasks, topics, myEmployeeId, isAdmin, amLead }: MonthProps) {
   const [who, setWho] = useState<string>("all");
   const [draft, setDraft] = useState<{ assignee: string; date: string } | null>(null);
-  const isLead = isAdmin || rows.some((r) => r.id === myEmployeeId && r.is_lead);
+  const isLead = isAdmin || !!amLead || rows.some((r) => r.id === myEmployeeId && r.is_lead);
   const nameOf = useMemo(() => new Map(rows.map((r) => [r.id, r.name])), [rows]);
   const days = useMemo(() => {
     const first = month + "-01"; const i = (new Date(first + "T00:00:00Z").getUTCDay() + 6) % 7; const start = addDays(first, -i);
