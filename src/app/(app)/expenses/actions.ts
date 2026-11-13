@@ -82,6 +82,18 @@ export async function cancelExpense(id: string, formData: FormData) {
   redirect(`/expenses/${id}?cancelled=1`);
 }
 
+/** ลบค่าใช้จ่ายถาวร (0040) */
+export async function deleteExpense(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("delete_expense", { p_id: id });
+  if (error) redirect(`/expenses/${id}?error=${encodeURIComponent(error.message)}`);
+  const paths = ((data ?? []) as unknown[]).map((x) => (typeof x === "string" ? x : (x as { delete_expense?: string }).delete_expense)).filter(Boolean) as string[];
+  if (paths.length) await supabase.storage.from("expense-files").remove(paths);
+  revalidatePath("/expenses");
+  redirect("/expenses?deleted=1");
+}
+
 export async function saveCategory(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();

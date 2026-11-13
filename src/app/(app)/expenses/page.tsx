@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
 const TABS: { key: string; label: string }[] = [{ key: "", label: "ทั้งหมด" }, { key: "pending", label: "รออนุมัติ" }, { key: "approved", label: "รอจ่าย" }, { key: "paid", label: "จ่ายแล้ว" }, { key: "rejected", label: "ไม่อนุมัติ" }, { key: "draft", label: "ร่าง" }];
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; month?: string }> }) {
-  const { status = "", q = "", month } = await searchParams;
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; month?: string; deleted?: string }> }) {
+  const { status = "", q = "", month, deleted } = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
   const ym = month ?? monthBkk();
@@ -28,7 +28,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-6">
       <Header title="ค่าใช้จ่าย / เจ้าหนี้" sub={session.isAdmin ? "บิลซัพพลายเออร์ทั้งบริษัท · อนุมัติ · รอบจ่าย 1 และ 15" : "บิลที่คุณบันทึก — ผู้บริหารเป็นผู้อนุมัติและจ่าย"}
-        action={<Link href="/expenses/new" className="btn-primary"><Plus size={16} /> บันทึกบิลใหม่</Link>} />
+        action={<Link href="/expenses/new" className="btn-primary"><Plus size={16} />
+      {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการค่าใช้จ่ายแล้ว</div>} บันทึกบิลใหม่</Link>} />
       {sum && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Stat label={`รออนุมัติ ${sum.pending_count} ใบ`} value={`฿${fmt(sum.pending_amount)}`} tone="yellow" href="/expenses?status=pending" />

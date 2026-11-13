@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
-import { reviewExpense, payExpense, cancelExpense, signExpenseFiles } from "../actions";
+import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 
 import { todayBkk } from "@/lib/today";
@@ -29,13 +29,14 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
   const x = e as Row;
   const fl = (files ?? []) as ExpenseFile[];
   const urls = await signExpenseFiles(fl.map((f) => f.path));
-  const editable = ["draft", "pending", "rejected"].includes(x.status) && (session.isAdmin || x.created_by === session.appUser.id);
+  const editable = (["draft", "pending", "rejected"].includes(x.status) && (session.isAdmin || x.created_by === session.appUser.id)) || (session.isAdmin && x.status !== "cancelled");
+  const deletable = session.isAdmin || (x.created_by === session.appUser.id && ["draft", "pending", "rejected", "cancelled"].includes(x.status));
   const wc = cert as WhtCertificate | null;
 
   return (
     <div className="space-y-6">
       <Header title={`${x.exp_no}`} sub={`${x.companies.name_th} · บันทึกโดย ${x.creator?.email ?? "—"} · ${fmtDateTime(x.created_at)}`}
-        action={<div className="flex gap-2">{editable && <Link href={`/expenses/${id}/edit`} className="btn-outline"><Pencil size={16} /> แก้ไข</Link>}{wc && <a href={`/print/wht/${wc.id}`} target="_blank" className="btn-outline"><Printer size={16} /> พิมพ์ 50 ทวิ</a>}</div>} />
+        action={<div className="flex gap-2">{editable && <Link href={`/expenses/${id}/edit`} className="btn-outline"><Pencil size={16} /> แก้ไข</Link>}{wc && <a href={`/print/wht/${wc.id}`} target="_blank" className="btn-outline"><Printer size={16} /> พิมพ์ 50 ทวิ</a>}{deletable && <ConfirmDelete action={deleteExpense.bind(null, id)} label="ลบ" warning={`ลบ ${x.exp_no} ถาวร พร้อมรายการและรูปบิล — กู้คืนไม่ได้${x.status === "paid" ? " · รายการนี้จ่ายเงินแล้ว" : ""}${wc ? " · หนังสือรับรองหัก ณ ที่จ่ายที่ออกไปแล้วจะยังอยู่ (ลบแยกที่เมนูหัก ณ ที่จ่าย)" : ""}`} />}</div>} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว — {x.status === "pending" ? "รอผู้บริหารอนุมัติ" : "ยังเป็นฉบับร่าง"}</div>}
       {paid && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกการจ่ายแล้ว{wc ? ` · ออกหนังสือรับรองหัก ณ ที่จ่าย ${wc.cert_no}` : ""}</div>}

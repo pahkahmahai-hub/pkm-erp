@@ -25,6 +25,7 @@ export default async function EditExpense({ params, searchParams }: { params: Pr
     <div className="space-y-6">
       <Header title={`แก้ไข ${e.exp_no}`} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
+      {["approved", "paid"].includes(e.status as string) && <div className="rounded-xl bg-yellow/15 text-[#6b4f00] text-sm px-4 py-3">รายการนี้{e.status === "paid" ? "จ่ายเงินแล้ว" : "อนุมัติแล้ว"} — แก้ไขได้เฉพาะผู้บริหาร สถานะเดิมคงอยู่ · ถ้าแก้ยอด หนังสือรับรองหัก ณ ที่จ่ายที่ออกไปแล้วจะไม่เปลี่ยนตาม</div>}
       <form action={action} className="space-y-6">
         <ExpenseForm {...data} expense={e as Expense} items={(items ?? []) as ExpenseItem[]} existingFiles={fl.map((f, i) => ({ path: f.path, url: urls[i] ?? "", name: f.path }))} aiEnabled={aiEnabled()} />
         <div className="flex gap-3"><button className="btn-primary">บันทึก</button><a href={`/expenses/${id}`} className="btn-ghost">ยกเลิก</a></div>
