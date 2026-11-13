@@ -138,7 +138,7 @@ export async function createPayrollRun(formData: FormData) {
     const line = {
       run_id: run.id, employee_id: id, salary: p?.base_salary ?? 0, position_allowance: p?.position_allowance ?? 0, hourly_rate: p ? hourlyOf(p, s) : 0,
       commission_rate: p?.commission_rate ?? 0, ot_hours_weekday: a.wk, ot_hours_holiday1: a.h1, ot_hours_holiday3: a.h3, late_minutes: a.late, absent_days: p?.base_salary ? a.absent : 0,
-      sso_on: !!p?.sso_enabled && ssoActive(period, s), tax_method: p?.tax_method ?? "pnd1",
+      sso_on: !!p?.sso_enabled && ssoActive(period, s), tax_method: p?.tax_method ?? "pnd1", deduct_late: p?.deduct_late ?? true,
       bank_name: p?.bank_name ?? null, bank_account: p?.bank_account ?? null, account_name: p?.account_name ?? null,
     } as unknown as PayrollLine;
     const c = computeLine({ ...emptyLine(), ...line }, s, p);
@@ -184,6 +184,7 @@ export async function savePayrollLine(lineId: string, runId: string, formData: F
   const upd: Record<string, unknown> = {};
   for (const k of numKeys) upd[k] = num(formData.get(k));
   upd.sso_on = formData.get("sso_on") === "on";
+  upd.deduct_late = formData.get("deduct_late") === "on";
   upd.tax_method = String(formData.get("tax_method") ?? line.tax_method);
   upd.tax_manual = formData.get("tax_manual") === "on";
   if (upd.tax_manual) upd.tax_wht = num(formData.get("tax_wht"));
@@ -199,6 +200,20 @@ export async function setPayrollRunStatus(runId: string, status: "draft" | "clos
   const { sb, session } = await requirePayroll(`${BASE}/${runId}`);
   const { error } = await sb.from("payroll_runs").update(status === "closed" ? { status, closed_at: new Date().toISOString(), closed_by: session.appUser.id } : { status, closed_at: null, closed_by: null }).eq("id", runId);
   if (error) redirect(`${BASE}/${runId}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`${BASE}/${runId}`);
+  redirect(`${BASE}/${runId}`);
+}
+
+/** เปิด/ปิด การหักสาย ทั้งงวด */
+export async function setRunDeductLate(runId: string, on: boolean) {
+  const { sb } = await requirePayroll(`${BASE}/${runId}`);
+  const s = await loadPayrollSettings(sb);
+  const [{ data: run }, { data: lines }] = await Promise.all([sb.from("payroll_runs").select("status").eq("id", runId).single(), sb.from("payroll_lines").select("*").eq("run_id", runId)]);
+  if (run?.status !== "draft") redirect(`${BASE}/${runId}?error=${encodeURIComponent("งวดปิดแล้ว — เปิดแก้ไขก่อน")}`);
+  for (const l of (lines ?? []) as PayrollLine[]) {
+    const c = computeLine({ ...l, deduct_late: on }, s, null);
+    await sb.from("payroll_lines").update(stripId(c)).eq("id", l.id);
+  }
   revalidatePath(`${BASE}/${runId}`);
   redirect(`${BASE}/${runId}`);
 }
@@ -219,5 +234,5 @@ export async function deletePayrollRun(runId: string) {
 // ---------------- helpers ----------------
 function stripId(l: PayrollLine) { const { id: _a, run_id: _b, employee_id: _c, ...rest } = l; void _a; void _b; void _c; return rest; }
 function emptyLine(): PayrollLine {
-  return { id: "", run_id: "", employee_id: "", salary: 0, position_allowance: 0, ot_hours_weekday: 0, ot_hours_holiday1: 0, ot_hours_holiday3: 0, hourly_rate: 0, commission_sales: 0, commission_rate: 0, commission_amount: 0, diligence: 0, bonus: 0, other_income: 0, other_income_note: null, late_minutes: 0, absent_days: 0, unpaid_leave_days: 0, sso_on: false, tax_method: "pnd1", tax_manual: false, advance: 0, other_deduct: 0, other_deduct_note: null, ot_amount: 0, late_deduct: 0, absence_deduct: 0, earnings: 0, sso_base: 0, sso_employee: 0, sso_employer: 0, tax_wht: 0, total_deduct: 0, net_pay: 0, bank_name: null, bank_account: null, account_name: null, note: null };
+  return { id: "", run_id: "", employee_id: "", salary: 0, position_allowance: 0, ot_hours_weekday: 0, ot_hours_holiday1: 0, ot_hours_holiday3: 0, hourly_rate: 0, commission_sales: 0, commission_rate: 0, commission_amount: 0, diligence: 0, bonus: 0, other_income: 0, other_income_note: null, late_minutes: 0, deduct_late: true, absent_days: 0, unpaid_leave_days: 0, sso_on: false, tax_method: "pnd1", tax_manual: false, advance: 0, other_deduct: 0, other_deduct_note: null, ot_amount: 0, late_deduct: 0, absence_deduct: 0, earnings: 0, sso_base: 0, sso_employee: 0, sso_employer: 0, tax_wht: 0, total_deduct: 0, net_pay: 0, bank_name: null, bank_account: null, account_name: null, note: null };
 }

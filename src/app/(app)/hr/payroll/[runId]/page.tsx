@@ -5,7 +5,7 @@ import { Header } from "@/components/ui";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { requirePayroll } from "@/lib/payroll/server";
 import { money, periodLabel, type PayrollLine, type PayrollRun } from "@/lib/payroll/calc";
-import { refreshPayrollAuto, setPayrollRunStatus, deletePayrollRun, updatePayDate } from "../actions";
+import { refreshPayrollAuto, setPayrollRunStatus, deletePayrollRun, updatePayDate, setRunDeductLate } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,12 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
 
       <div className="flex flex-wrap gap-2 items-center">
         {draft && <form action={refreshPayrollAuto.bind(null, runId)}><button className="btn-outline text-sm"><RefreshCw size={14} /> ดึง OT / สาย / ขาด ใหม่</button></form>}
+        {draft && (() => { const allOn = L.length > 0 && L.every((l) => l.deduct_late !== false); return (
+          <form action={setRunDeductLate.bind(null, runId, !allOn)} className="flex items-center gap-2 rounded-xl border border-line px-3 py-1.5 text-sm">
+            <span>หักสาย</span>
+            <button className={`relative h-6 w-11 rounded-full transition ${allOn ? "bg-purple" : "bg-line"}`} aria-label="เปิด/ปิด หักสาย ทั้งงวด" title={allOn ? "กดเพื่อปิดการหักสายทั้งงวด" : "กดเพื่อเปิดการหักสายทั้งงวด"}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${allOn ? "left-[22px]" : "left-0.5"}`} /></button>
+            <span className="text-xs text-ink-soft">{allOn ? "เปิด" : L.some((l) => l.deduct_late !== false) ? "บางคน" : "ปิด"}</span>
+          </form>); })()}
         <a href={`/print/payslips/${runId}`} target="_blank" rel="noreferrer" className="btn-outline text-sm"><Printer size={14} /> พิมพ์สลิปทั้งหมด</a>
         <a href={`/hr/payroll/${runId}/export?type=summary`} className="btn-outline text-sm"><FileSpreadsheet size={14} /> Excel สำหรับสำนักงานบัญชี</a>
         <a href={`/hr/payroll/${runId}/export?type=bank`} className="btn-outline text-sm"><Landmark size={14} /> ไฟล์โอนเงิน</a>
@@ -54,7 +60,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
           <tbody>
             {L.map((l) => { const e = E.get(l.employee_id); return (
               <tr key={l.id} className={sp.saved === l.id ? "bg-green/5" : ""}>
-                <td><Link href={`/hr/payroll/${runId}/${l.id}`} className="text-purple font-semibold hover:underline">{e?.nickname ?? e?.first_name} {e?.last_name}</Link><div className="text-[11px] text-ink-soft">{e?.emp_code as string}{l.late_minutes ? ` · สาย ${l.late_minutes} น.` : ""}{l.absent_days ? ` · ขาด ${l.absent_days} วัน` : ""}{l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3 ? ` · OT ${l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3} ชม.` : ""}</div></td>
+                <td><Link href={`/hr/payroll/${runId}/${l.id}`} className="text-purple font-semibold hover:underline">{e?.nickname ?? e?.first_name} {e?.last_name}</Link><div className="text-[11px] text-ink-soft">{e?.emp_code as string}{l.late_minutes ? ` · สาย ${l.late_minutes} น.${l.deduct_late === false ? " (ไม่หัก)" : ""}` : ""}{l.absent_days ? ` · ขาด ${l.absent_days} วัน` : ""}{l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3 ? ` · OT ${l.ot_hours_weekday + l.ot_hours_holiday1 + l.ot_hours_holiday3} ชม.` : ""}</div></td>
                 <td className="text-right">{money(l.salary + l.position_allowance)}</td><td className="text-right">{money(l.ot_amount)}</td><td className="text-right">{money(l.commission_amount)}</td>
                 <td className="text-right">{money(l.diligence + l.bonus + l.other_income)}</td><td className="text-right font-semibold">{money(l.earnings)}</td>
                 <td className="text-right text-red">{money(l.late_deduct + l.absence_deduct)}</td><td className="text-right">{l.sso_on ? money(l.sso_employee) : <span className="text-ink-soft text-xs">ไม่หัก</span>}</td>
