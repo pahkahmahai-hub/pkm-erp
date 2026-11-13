@@ -54,20 +54,75 @@ export function WeekCalendar({ roomId, roomKey, week, today, rows, tasks, topics
         <span className="ml-2"><Repeat size={11} className="inline" /> = งานประจำที่ระบบสร้างให้ · ขีดฆ่า = เสร็จแล้ว · <Flame size={11} className="inline text-red" /> = ด่วน</span>
       </div>
 
-      {draft && (
-        <div className="fixed inset-0 z-40 bg-ink/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setDraft(null)}>
-          <form action={createCalendarTask} className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xl max-h-[92vh] overflow-auto shadow-xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <input type="hidden" name="room_id" value={roomId} /><input type="hidden" name="room_key" value={roomKey} /><input type="hidden" name="week" value={week} />
-            <div className="flex items-start justify-between"><h2 className="font-display font-bold text-lg">ลงงานในปฏิทิน</h2><button type="button" onClick={() => setDraft(null)} className="text-ink-soft"><X size={18} /></button></div>
-            <NewTaskFields rows={rows} topics={topics} draft={draft} />
-            <div className="flex flex-wrap gap-2 justify-end pt-1">
-              <button type="button" onClick={() => setDraft(null)} className="btn-outline">ยกเลิก</button>
-              <button name="open" value="1" className="btn-outline"><ImageIcon size={14} /> บันทึกแล้วเปิดงาน (แนบรูป)</button>
-              <button className="btn-primary">บันทึก</button>
-            </div>
-          </form>
+      {draft && <DraftModal roomId={roomId} roomKey={roomKey} qs={`week=${week}`} rows={rows} topics={topics} draft={draft} onClose={() => setDraft(null)} />}
+    </div>
+  );
+}
+
+function DraftModal({ roomId, roomKey, qs, rows, topics, draft, onClose }: { roomId: string; roomKey: string; qs: string; rows: Row[]; topics: Topic[]; draft: { assignee: string; date: string }; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-40 bg-ink/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <form action={createCalendarTask} className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-xl max-h-[92vh] overflow-auto shadow-xl p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <input type="hidden" name="room_id" value={roomId} /><input type="hidden" name="room_key" value={roomKey} /><input type="hidden" name="qs" value={qs} />
+        <div className="flex items-start justify-between"><h2 className="font-display font-bold text-lg">ลงงานในปฏิทิน</h2><button type="button" onClick={onClose} className="text-ink-soft"><X size={18} /></button></div>
+        <NewTaskFields rows={rows} topics={topics} draft={draft} />
+        <div className="flex flex-wrap gap-2 justify-end pt-1">
+          <button type="button" onClick={onClose} className="btn-outline">ยกเลิก</button>
+          <button name="open" value="1" className="btn-outline"><ImageIcon size={14} /> บันทึกแล้วเปิดงาน (แนบรูป)</button>
+          <button className="btn-primary">บันทึก</button>
         </div>
-      )}
+      </form>
+    </div>
+  );
+}
+
+const DOW_SHORT = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+interface MonthProps { roomId: string; roomKey: string; month: string; today: string; rows: Row[]; tasks: Task[]; topics: Topic[]; myEmployeeId: string | null; isAdmin: boolean }
+
+/** มุมมองรายเดือน — ตาราง 7 คอลัมน์ ช่องละวัน · กรองตามคนได้ */
+export function MonthTaskCalendar({ roomId, roomKey, month, today, rows, tasks, topics, myEmployeeId, isAdmin }: MonthProps) {
+  const [who, setWho] = useState<string>("all");
+  const [draft, setDraft] = useState<{ assignee: string; date: string } | null>(null);
+  const isLead = isAdmin || rows.some((r) => r.id === myEmployeeId && r.is_lead);
+  const nameOf = useMemo(() => new Map(rows.map((r) => [r.id, r.name])), [rows]);
+  const days = useMemo(() => {
+    const first = month + "-01"; const i = (new Date(first + "T00:00:00Z").getUTCDay() + 6) % 7; const start = addDays(first, -i);
+    const [y, m] = month.split("-").map(Number); const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    const out: string[] = []; for (let d = start; d <= last || out.length % 7; d = addDays(d, 1)) out.push(d);
+    return out;
+  }, [month]);
+  const byDay = useMemo(() => { const mp = new Map<string, Task[]>(); for (const t of tasks) { if (who !== "all" && (t.assignee_id ?? "none") !== who) continue; const d = t.start_date ?? t.due_date; if (!d) continue; mp.set(d, [...(mp.get(d) ?? []), t]); } return mp; }, [tasks, who]);
+  const addFor = who !== "all" ? (who === "none" ? "" : who) : (isLead ? "" : myEmployeeId ?? "");
+  const canAdd = isLead || !!myEmployeeId;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        {[{ id: "all", name: "ทุกคน", is_lead: false }, ...rows].map((r) => (
+          <button key={r.id} type="button" onClick={() => setWho(r.id)} className={`rounded-full px-3 py-1 border ${who === r.id ? "bg-purple text-white border-purple" : "border-line hover:bg-cream"}`}>{r.name}{r.is_lead && " ★"}</button>
+        ))}
+      </div>
+      <div className="card overflow-auto">
+        <div className="grid grid-cols-7 min-w-[760px] text-xs">
+          {DOW_SHORT.map((d, i) => <div key={d} className={`px-2 py-1.5 text-center font-semibold border-b border-line ${i >= 5 ? "bg-cream/60 text-ink-soft" : "bg-cream"}`}>{d}</div>)}
+          {days.map((d, i) => {
+            const inMonth = d.startsWith(month); const list = byDay.get(d) ?? [];
+            return (
+              <div key={d} className={`group min-h-[110px] border-b border-line p-1 flex flex-col gap-1 ${i % 7 ? "border-l" : ""} ${d === today ? "bg-yellow/15" : i % 7 >= 5 ? "bg-cream/30" : ""} ${inMonth ? "" : "opacity-40"}`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-[11px] font-semibold ${d === today ? "rounded-full bg-purple text-white px-1.5" : "text-ink-soft"}`}>{Number(d.slice(8))}</span>
+                  {canAdd && inMonth && <button type="button" onClick={() => setDraft({ assignee: addFor, date: d })} className="opacity-0 group-hover:opacity-100 text-ink-soft hover:text-purple" aria-label="ลงงาน"><Plus size={13} /></button>}
+                </div>
+                {list.map((t) => <Chip key={t.id} t={t} who={who === "all" ? (t.assignee_id ? nameOf.get(t.assignee_id) ?? "" : "—") : undefined} />)}
+              </div>);
+          })}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5 text-[11px] text-ink-soft items-center">
+        <span>หัวข้อ:</span>{topics.map((t) => <span key={t.id} className="rounded-md px-2 py-0.5 border" style={{ borderColor: t.color, color: t.color }}>{t.name}</span>)}
+        <span className="ml-2"><Repeat size={11} className="inline" /> = งานประจำ · ขีดฆ่า = เสร็จแล้ว · <Flame size={11} className="inline text-red" /> = ด่วน</span>
+      </div>
+      {draft && <DraftModal roomId={roomId} roomKey={roomKey} qs={`view=month&month=${month}`} rows={rows} topics={topics} draft={draft} onClose={() => setDraft(null)} />}
     </div>
   );
 }
@@ -91,13 +146,13 @@ function NewTaskFields({ rows, topics, draft }: { rows: Row[]; topics: Topic[]; 
   );
 }
 
-function Chip({ t }: { t: Task }) {
+function Chip({ t, who }: { t: Task; who?: string }) {
   const done = t.status === "done" || t.status === "accepted";
   const color = t.work_topics?.color ?? "#9ca3af";
   return (
     <Link href={`/work/tasks/${t.id}`} className={`block rounded-md border-l-4 bg-white px-1.5 py-1 shadow-sm hover:shadow ring-1 ring-line ${done ? "opacity-60" : ""}`} style={{ borderLeftColor: color }} title={`#${t.task_no} ${t.title}${t.work_topics ? " · " + t.work_topics.name : ""}`}>
       <div className={`font-semibold leading-tight line-clamp-2 ${done ? "line-through" : ""}`}>{t.priority === "urgent" && <Flame size={11} className="inline text-red mr-0.5" />}{t.routine_id && <Repeat size={10} className="inline text-ink-soft mr-0.5" />}{t.title}</div>
-      <div className="text-[10px] text-ink-soft flex justify-between gap-1"><span className="truncate">{t.work_topics?.name ?? ""}</span><span>{t.due_date && t.start_date !== t.due_date ? "→ " + fmtDM(t.due_date) : ""}{t.due_time ? " " + t.due_time.slice(0, 5) : ""}</span></div>
+      <div className="text-[10px] text-ink-soft flex justify-between gap-1"><span className="truncate">{who ? <b className="text-ink">{who} </b> : null}{t.work_topics?.name ?? ""}</span><span>{t.due_date && t.start_date !== t.due_date ? "→ " + fmtDM(t.due_date) : ""}{t.due_time ? " " + t.due_time.slice(0, 5) : ""}</span></div>
     </Link>
   );
 }

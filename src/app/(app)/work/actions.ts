@@ -288,11 +288,12 @@ export async function createCalendarTask(formData: FormData) {
     p_start: nul(formData.get("start_date")), p_due: nul(formData.get("due_date")), p_due_time: nul(formData.get("due_time")), p_priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
     p_topic: nul(formData.get("topic_id")), p_checklist: checklist,
   });
-  const back = `/work/rooms/${roomKey}/calendar${week ? `?week=${week}` : ""}`;
-  if (error) redirect(`${back}${week ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
+  const qs = nul(formData.get("qs")) ?? (week ? `week=${week}` : "");
+  const back = `/work/rooms/${roomKey}/calendar${qs ? `?${qs}` : ""}`;
+  if (error) redirect(`${back}${qs ? "&" : "?"}error=${encodeURIComponent(error.message)}`);
   revalidatePath("/work");
   if (formData.get("open") === "1") redirect(`/work/tasks/${data.id}?created=1`);
-  redirect(`${back}${week ? "&" : "?"}created=${data.task_no}`);
+  redirect(`${back}${qs ? "&" : "?"}created=${data.task_no}`);
 }
 
 export async function saveTopic(roomKey: string, formData: FormData) {
