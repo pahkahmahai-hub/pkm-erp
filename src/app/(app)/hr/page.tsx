@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, CalendarDays, BadgeCheck, Users, AlertTriangle } from "lucide-react";
+import { MapPin, CalendarDays, BadgeCheck, Users, AlertTriangle, Lock, Wallet } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { fmtTime, todayBkk, fmtDate, fullName, STATUS_TH, statusBadgeClass } from "@/lib/format";
@@ -37,6 +37,10 @@ export default async function Dashboard() {
           <Stat label="ใบลารออนุมัติ" value={leaves?.length ?? 0} tone="yellow" href="/hr/leave" />
           <Stat label="OT รออนุมัติ" value={ots?.length ?? 0} tone="purple" href="/hr/ot" />
         </div>
+        <Link href="/hr/payroll" className="card p-4 flex items-center justify-between hover:border-purple">
+          <span className="flex items-center gap-2 font-semibold"><Wallet size={18} className="text-purple" /> PAYROLL — เงินเดือน · OT · ประกันสังคม · สลิป</span>
+          <span className="flex items-center gap-1 text-xs text-ink-soft"><Lock size={13} /> ต้องใส่รหัสผ่าน</span>
+        </Link>
         {(timeReqCount ?? 0) > 0 && (
           <Link href="/hr/time-requests" className="card p-4 flex items-center justify-between text-sm hover:border-purple">
             <span>มีคำขอแก้เวลาเข้า-ออกรออนุมัติ <b>{timeReqCount}</b> รายการ</span><span className="text-purple font-semibold">ดู →</span>
@@ -140,6 +144,7 @@ export default async function Dashboard() {
           <div className="mt-3 text-sm text-ink-soft">ยื่นขอ OT ล่วงหน้าหรือย้อนหลัง</div>
         </Link>
       </div>
+      <Link href="/hr/payslips" className="card p-4 flex items-center justify-between hover:border-purple text-sm"><span className="flex items-center gap-2 font-semibold text-purple"><Wallet size={16} /> สลิปเงินเดือนของฉัน</span><span className="text-ink-soft">ดู →</span></Link>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <section className="card p-5">
