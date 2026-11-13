@@ -16,7 +16,7 @@ export const STEPS: { n: number; label: string; short: string; bg: string; fg: s
   { n: 4, label: "จัดสินค้าเสร็จ",      short: "จัดเสร็จ",    bg: "#74c0fc", fg: "#062a4d" },
   { n: 5, label: "ส่งสินค้าแล้ว",       short: "ส่งแล้ว",     bg: "#e5dbff", fg: "#3b2470" },
   { n: 6, label: "สินค้าถึงห้างแล้ว",   short: "ถึงแล้ว",     bg: "#b197fc", fg: "#2a1757" },
-  { n: 7, label: "เข้าระบบห้างเรียบร้อย", short: "เข้าระบบ",   bg: "#b2f2bb", fg: "#1b5e2a" },
+  { n: 7, label: "อัพเข้าระบบห้างเรียบร้อย", short: "เข้าระบบ",   bg: "#b2f2bb", fg: "#1b5e2a" },
 ];
 export const stepMeta = (n: number) => STEPS[Math.min(Math.max(n, 1), 7) - 1];
 
