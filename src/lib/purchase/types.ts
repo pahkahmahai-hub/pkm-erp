@@ -19,7 +19,7 @@ export interface PurchaseReceipt { id: string; doc_id: string; received_at: stri
 
 export const PSTATUS_TH: Record<PurchaseStatus, string> = {
   draft: "ฉบับร่าง", pending: "รออนุมัติ", approved: "อนุมัติแล้ว · รอเปิด PO", rejected: "ไม่อนุมัติ", ordered: "เปิด PO แล้ว",
-  sent: "ส่งซัพพลายเออร์แล้ว · รอของ", partial: "รับของบางส่วน", received: "รับของครบ", closed: "ปิดงาน", cancelled: "ยกเลิก",
+  sent: "ยืนยัน PO แล้ว · รอของ", partial: "รับของบางส่วน", received: "รับของครบ", closed: "ปิดงาน", cancelled: "ยกเลิก",
 };
 export const PSTATUS_BADGE: Record<PurchaseStatus, string> = {
   draft: "badge-off", pending: "badge-pending", approved: "badge-ok", rejected: "badge-rejected", ordered: "badge-approved",

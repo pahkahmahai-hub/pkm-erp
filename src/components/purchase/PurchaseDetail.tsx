@@ -96,7 +96,7 @@ export function PurchaseDetail({ d, items, receipts, derived: children, session,
           {!isPo && children.length > 0 && <div className="card p-5 text-sm"><div className="font-display font-bold mb-1">ใบสั่งซื้อที่เปิดจากใบนี้</div>{children.map((c) => <div key={c.id}><Link href={`/purchase/orders/${c.id}`} className="text-purple underline font-mono text-xs">{c.doc_no}</Link> <span className="text-xs text-ink-soft">{PSTATUS_TH[c.status as keyof typeof PSTATUS_TH]}</span></div>)}</div>}
 
           {/* PO workflow */}
-          {isPo && d.status === "draft" && (session.isAdmin || mine) && <form action={issuePo.bind(null, d.id)}><button className="btn-primary w-full"><Send size={16} /> ยืนยันส่งซัพพลายเออร์</button><p className="text-[11px] text-ink-soft mt-1 text-center">ล็อกการแก้ไข · จากนั้นพิมพ์/ส่ง PDF</p></form>}
+          {isPo && d.status === "draft" && (session.isAdmin || mine) && <form action={issuePo.bind(null, d.id)}><button className="btn-primary w-full"><Send size={16} /> ยืนยัน PO</button><p className="text-[11px] text-ink-soft mt-1 text-center">ล็อกการแก้ไข · จากนั้นกดพิมพ์ แล้วส่ง PDF ให้ซัพพลายเออร์เอง</p></form>}
           {canReceive && remaining > 0 && (
             <form action={receivePo.bind(null, d.id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><PackageCheck size={18} className="text-green" /> รับของ</h3>
               <div className="grid grid-cols-2 gap-2"><div><label className="label">วันที่รับ</label><input type="date" name="received_at" defaultValue={today} className="input" /></div><div><label className="label">เลขที่ใบส่งของ</label><input name="supplier_doc_no" className="input" placeholder="ของซัพพลายเออร์" /></div></div>
