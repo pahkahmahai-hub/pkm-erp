@@ -15,4 +15,4 @@ export interface Requirement { material_id: string; code: string | null; name: s
 
 export const MO_STATUS_TH: Record<MoStatus, string> = { draft: "ฉบับร่าง", issued: "เบิกวัสดุแล้ว · รอผลิต", in_progress: "กำลังผลิต", partial: "รับบางส่วน", completed: "เสร็จสิ้น", cancelled: "ยกเลิก" };
 export const MO_STATUS_BADGE: Record<MoStatus, string> = { draft: "badge-off", issued: "badge-pending", in_progress: "badge-pending", partial: "badge-ok", completed: "badge-approved", cancelled: "badge-rejected" };
-export const KIND_TH: Record<MaterialKind, string> = { fabric: "ลายผ้า", packaging: "แพคเกจจิ้ง", accessory: "อุปกรณ์" };
+export const KIND_TH: Record<MaterialKind, string> = { fabric: "ลายผ้า", packaging: "แพคเกจจิ้ง", accessory: "อุปกรณ์", display: "อุปกรณ์ Display" };

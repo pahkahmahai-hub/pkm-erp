@@ -116,7 +116,7 @@ NAV.production = [
       { href: "/production", label: "ใบสั่งผลิต", icon: Factory },
       { href: "/production/orders/new", label: "เปิดใบสั่งผลิต", icon: Plus },
       { href: "/production/bom", label: "สูตรการผลิต (BOM)", icon: Layers },
-      { href: "/stock/materials?kind=fabric", label: "คลังผ้า / แพคเกจจิ้ง / อุปกรณ์", icon: Boxes },
+      { href: "/stock/materials?kind=fabric", label: "คลังผ้า / แพคเกจจิ้ง / อุปกรณ์ / Display", icon: Boxes },
     ],
   },
 ];

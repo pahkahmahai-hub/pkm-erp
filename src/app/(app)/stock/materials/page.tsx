@@ -8,20 +8,21 @@ export const dynamic = "force-dynamic";
 
 export default async function MaterialsPage({ searchParams }: { searchParams: Promise<{ kind?: string; error?: string; deleted?: string }> }) {
   const { kind = "fabric", error, deleted } = await searchParams;
-  const k = (kind === "packaging" ? "packaging" : kind === "accessory" ? "accessory" : "fabric") as MaterialKind;
+  const k = (["packaging", "accessory", "display"].includes(kind) ? kind : "fabric") as MaterialKind;
   const supabase = await createClient();
   const { data } = await supabase.from("materials").select("*").eq("kind", k).eq("is_active", true).order("name");
   const rows = (data ?? []) as Material[];
 
   return (
     <div className="space-y-6">
-      <Header title="ลายผ้า · แพคเกจจิ้ง · อุปกรณ์" sub={`${MATERIAL_TH[k].name} ${rows.length} รายการ · รวม ${rows.reduce((a, r) => a + Number(r.qty), 0).toLocaleString()} ${MATERIAL_TH[k].unit}`} />
+      <Header title="ลายผ้า · แพคเกจจิ้ง · อุปกรณ์ · Display" sub={`${MATERIAL_TH[k].name} ${rows.length} รายการ · รวม ${rows.reduce((a, r) => a + Number(r.qty), 0).toLocaleString()} ${MATERIAL_TH[k].unit}`} />
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการแล้ว</div>}
       <div className="flex gap-2">
         <Link href="/stock/materials?kind=fabric" className={k === "fabric" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>ลายผ้า (ผืน)</Link>
         <Link href="/stock/materials?kind=packaging" className={k === "packaging" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>แพคเกจจิ้ง (ชิ้น)</Link>
         <Link href="/stock/materials?kind=accessory" className={k === "accessory" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>อุปกรณ์ (ซิป กระดุม ป้าย ด้าย)</Link>
+        <Link href="/stock/materials?kind=display" className={k === "display" ? "btn-primary py-1.5 px-3" : "btn-outline py-1.5 px-3"}>อุปกรณ์ Display (ตกแต่งบูธ)</Link>
       </div>
 
       <form action={saveMaterial.bind(null, null)} className="card p-4 grid sm:grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-2 items-end">

@@ -198,3 +198,15 @@ export async function attachExpenseFiles(id: string, files: { path: string; kind
   revalidatePath(`/expenses/${id}`);
   return {};
 }
+
+// ---------------- บันทึกเข้าสต็อก (0043) ----------------
+export interface StockLineIn { item_id: string; target: "product" | "material"; product_id?: string | null; material_id?: string | null; kind?: string; new_name?: string; unit?: string; qty: number }
+export async function expenseToStock(id: string, lines: StockLineIn[]): Promise<{ error?: string; materials?: number; products?: number }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("expense_to_stock", { p_expense: id, p_lines: lines });
+  if (error) return { error: error.message };
+  revalidatePath(`/expenses/${id}`); revalidatePath("/stock/materials");
+  const r = data as { materials: number; products: number };
+  return { materials: r.materials, products: r.products };
+}
