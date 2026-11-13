@@ -14,7 +14,7 @@ interface Rpc { jsonrpc: "2.0"; id?: string | number | null; method: string; par
 
 const INSTRUCTIONS = `ระบบ PKM ERP ของบริษัท ปากาม้า (ไทยแลนด์) จำกัด — ข้อมูลงานภายใน (อ่านอย่างเดียว)
 ทีม: GC = Graphic & Content (หัวหน้า อารดา), SW = Sale & Warehouse (หัวหน้า จันทกาญจน์); ผู้บริหาร 2 คน
-ห้องงาน: teamwork, gc-room, sw-room และห้องย่อย (office, operation, online, graphic, visual, content) — ใช้ list_rooms ดู key
+ห้องงาน: teamwork, gc-room, sw-room และห้องย่อย (office, operation, online, graphic, visual, content) — ใช้ list_rooms ดู key\nออเดอร์ลูกค้า Corporate ใช้ corporate_orders
 เวลาทั้งหมดเป็นเวลาไทย (Asia/Bangkok) · สถานะงาน: open=ใหม่, in_progress=กำลังทำ, done=รอตรวจรับ, returned=ตีกลับ, prep/shipped/arrived=ขั้นส่งห้าง (SW), accepted=เสร็จ, cancelled=ยกเลิก
 ตอบผู้ใช้เป็นภาษาไทย`;
 
@@ -56,6 +56,11 @@ const TOOLS = [
     description: "ตารางส่งสินค้าห้าง (ทีม SW): ห้าง สัปดาห์ ขั้น 1–7 (1 สั่งจัด, 2 ส่งลิสต์, 3 ออกใบส่งของ, 4 จัดเสร็จ, 5 ส่งแล้ว, 6 สินค้าถึงแล้ว, 7 เข้าระบบห้างเรียบร้อย) เลขใบส่งของ ผู้รับผิดชอบ. ค่าเริ่มต้น = 2 สัปดาห์ก่อนถึง 4 สัปดาห์หน้า",
     inputSchema: { type: "object", properties: { from: { type: "string", description: "YYYY-MM-DD" }, to: { type: "string", description: "YYYY-MM-DD" } } },
   },
+  {
+    name: "corporate_orders",
+    description: "ออเดอร์ลูกค้า Corporate (ของขวัญองค์กร) ห้อง OPERATION: เลขออเดอร์ ลูกค้า รายการ มูลค่า (รวม VAT) กำหนดรับของซัพ กำหนดส่ง สถานะงาน (confirm=รอคอนเฟิร์ม, producing=สั่งผลิต, ready=ผลิตเสร็จรอส่ง, partial=ส่งบางส่วน, delivered=ส่งครบ, cancelled=ยกเลิก) สถานะเงิน (none=ยังไม่มัดจำ, deposit=มัดจำแล้ว, awaiting=ส่งแล้วรอชำระ, paid=จ่ายครบ) เอกสาร และการส่งแบ่งรอบ. ค่าเริ่มต้น = ออเดอร์ที่ยังไม่จบ (ยังไม่ส่งครบ หรือยังไม่ได้เงินครบ)",
+    inputSchema: { type: "object", properties: { all: { type: "boolean", description: "true = รวมออเดอร์ที่จบแล้วด้วย" }, customer: { type: "string", description: "ค้นชื่อลูกค้า" }, limit: { type: "number" } } },
+  },
   { name: "room_notes", description: "โน้ตของห้อง (ข้อมูลอ้างอิง ขั้นตอน เทมเพลต ที่ทีมบันทึกไว้)", inputSchema: { type: "object", properties: { room: { type: "string" } }, required: ["room"] } },
 ];
 
@@ -91,6 +96,7 @@ async function callTool(token: string, name: string, a: Json): Promise<unknown> 
     }
     case "company_calendar": return run("claude_calendar", { p_from: isDate(a.from) ? a.from : today, p_to: isDate(a.to) ? a.to : addDays(today, 30) });
     case "store_deliveries": return run("claude_deliveries", { p_from: isDate(a.from) ? a.from : addDays(today, -14), p_to: isDate(a.to) ? a.to : addDays(today, 28) });
+    case "corporate_orders": return run("claude_corp_orders", { p_open_only: a.all !== true, p_customer: str(a.customer), p_limit: num(a.limit) ?? 200 });
     case "room_notes": return run("claude_notes", { p_room: str(a.room) });
     default: throw new Error(`ไม่มีเครื่องมือ ${name}`);
   }

@@ -542,3 +542,97 @@ export async function sendTestPush(): Promise<{ error?: string }> {
   const { error } = await supabase.rpc("push_test");
   return error ? { error: error.message } : {};
 }
+
+// ---------- ออเดอร์ลูกค้า Corporate (0034) ----------
+const CORP_BASE = "/work/rooms/operation/corporate";
+const corpFields = (formData: FormData) => ({
+  customer_name: String(formData.get("customer_name") ?? "").trim(),
+  customer_label: nul(formData.get("customer_label")),
+  contact_person: nul(formData.get("contact_person")),
+  contact_phone: nul(formData.get("contact_phone")),
+  title: String(formData.get("title") ?? "").trim(),
+  detail: nul(formData.get("detail")),
+  amount: Number(String(formData.get("amount") ?? "0").replace(/,/g, "")) || 0,
+  order_date: nul(formData.get("order_date")) ?? new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10),
+  supplier_due: nul(formData.get("supplier_due")),
+  due_date: nul(formData.get("due_date")),
+  status: String(formData.get("status") ?? "confirm"),
+  pay_status: String(formData.get("pay_status") ?? "none"),
+  doc_qt: nul(formData.get("doc_qt")), doc_bill: nul(formData.get("doc_bill")), doc_iv: nul(formData.get("doc_iv")), doc_dr: nul(formData.get("doc_dr")), doc_cn: nul(formData.get("doc_cn")),
+  docs_original_sent: formData.get("docs_original_sent") === "on",
+  owner_id: nul(formData.get("owner_id")),
+  note: nul(formData.get("note")),
+});
+
+export async function saveCorpOrder(id: string | null, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const f = corpFields(formData);
+  if (!f.customer_name || !f.title) redirect(`${CORP_BASE}/${id ?? "new"}${id ? "?edit=1&" : "?"}error=${encodeURIComponent("กรอกชื่อลูกค้าและรายการสินค้า")}`);
+  if (id) {
+    const { error } = await supabase.from("corp_orders").update(f).eq("id", id);
+    if (error) redirect(`${CORP_BASE}/${id}?edit=1&error=${encodeURIComponent(error.message)}`);
+    revalidatePath(CORP_BASE);
+    redirect(`${CORP_BASE}/${id}?saved=1`);
+  }
+  const { data: no } = await supabase.rpc("next_corp_order_no");
+  const { data, error } = await supabase.from("corp_orders").insert({ ...f, order_no: (no as string) ?? `ORD-${Date.now()}` }).select("id").single();
+  if (error) redirect(`${CORP_BASE}/new?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(CORP_BASE);
+  redirect(`${CORP_BASE}/${data.id}?created=1`);
+}
+
+export async function deleteCorpOrder(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("corp_orders").delete().eq("id", id).select("id");
+  if (error || !data?.length) redirect(`${CORP_BASE}/${id}?error=${encodeURIComponent(error?.message ?? "ลบไม่ได้ — เฉพาะหัวหน้าห้องหรือผู้บริหาร")}`);
+  revalidatePath(CORP_BASE);
+  redirect(`${CORP_BASE}?deleted=1`);
+}
+
+export async function setCorpField(id: string, field: "status" | "pay_status", value: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("corp_orders").update({ [field]: value }).eq("id", id);
+  if (error) redirect(`${CORP_BASE}/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(CORP_BASE); revalidatePath(`${CORP_BASE}/${id}`);
+}
+
+export async function addCorpShipment(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const ship_date = nul(formData.get("ship_date")); const qty_note = nul(formData.get("qty_note"));
+  if (!ship_date || !qty_note) redirect(`${CORP_BASE}/${id}?error=${encodeURIComponent("กรอกวันที่และจำนวนที่ส่ง")}`);
+  const { error } = await supabase.from("corp_order_shipments").insert({ order_id: id, ship_date, qty_note, note: nul(formData.get("note")) });
+  if (error) redirect(`${CORP_BASE}/${id}?error=${encodeURIComponent(error.message)}`);
+  await supabase.from("corp_order_log").insert({ order_id: id, message: `บันทึกการส่ง ${qty_note} วันที่ ${ship_date.split("-").reverse().join("/")}` });
+  if (formData.get("mark") === "partial" || formData.get("mark") === "delivered") await supabase.from("corp_orders").update({ status: formData.get("mark") }).eq("id", id);
+  revalidatePath(`${CORP_BASE}/${id}`); revalidatePath(CORP_BASE);
+}
+
+export async function deleteCorpShipment(id: string, shipmentId: string) {
+  await getSession();
+  const supabase = await createClient();
+  await supabase.from("corp_order_shipments").delete().eq("id", shipmentId);
+  revalidatePath(`${CORP_BASE}/${id}`);
+}
+
+export async function addCorpFiles(orderId: string, files: { url: string; name: string; is_image: boolean }[]): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("corp_order_files").insert(files.map((f) => ({ order_id: orderId, url: f.url, name: f.name, is_image: f.is_image })));
+  if (error) return { error: error.message };
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return {};
+}
+
+export async function deleteCorpFile(orderId: string, fileId: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("corp_order_files").delete().eq("id", fileId).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "ลบไม่ได้ — เฉพาะคนที่แนบหรือหัวหน้า/ผู้บริหาร" };
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return {};
+}

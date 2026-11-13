@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange, StickyNote, Images } from "lucide-react";
+import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange, StickyNote, Images, Gift } from "lucide-react";
 
-export type RoomTab = "tasks" | "chat" | "calendar" | "notes" | "gallery";
+export type RoomTab = "tasks" | "chat" | "calendar" | "notes" | "gallery" | "corporate";
 
 /** แท็บของทุกห้องในเมนูงาน */
 export function RoomTabs({ roomKey, tab }: { roomKey: string; tab: RoomTab | string }) {
@@ -14,6 +14,7 @@ export function RoomTabs({ roomKey, tab }: { roomKey: string; tab: RoomTab | str
       <Link href={`/work/rooms/${roomKey}/gallery`} className={cls(tab === "gallery")}><Images size={16} /> แกลเลอรี</Link>
       <Link href={`/work/rooms/${roomKey}/calendar`} className={cls(tab === "calendar")}><CalendarDays size={16} /> ปฏิทิน{roomKey === "teamwork" ? "ทีม" : ""}</Link>
       {roomKey === "teamwork" && <Link href="/work/company-calendar" className={cls(false)}><CalendarRange size={16} /> ปฏิทินบริษัท</Link>}
+      {roomKey === "operation" && <Link href="/work/rooms/operation/corporate" className={cls(tab === "corporate")}><Gift size={16} /> Corporate</Link>}
       {roomKey === "sw-room" && <Link href="/work/deliveries" className={cls(false)}><Truck size={16} /> ตารางส่งห้าง</Link>}
     </div>
   );
