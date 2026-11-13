@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Room, Task } from "./types";
+import { effectiveDue, type Room, type Task } from "./types";
 import { todayBkk } from "@/lib/format";
 
 export const TASK_SELECT = "*, work_rooms(key, name, color), employees!work_tasks_assignee_id_fkey(first_name, nickname), app_users!work_tasks_created_by_fkey(display_name)";
@@ -32,7 +32,8 @@ export async function roomRights(supabase: SupabaseClient, roomId: string, isAdm
 }
 
 export function isOverdue(t: Task) {
-  return !!t.due_date && t.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(t.status);
+  const due = effectiveDue(t);
+  return !!due && due < todayBkk() && !["accepted", "cancelled", "done"].includes(t.status);
 }
 
 export async function ensureRoutines(supabase: SupabaseClient) {

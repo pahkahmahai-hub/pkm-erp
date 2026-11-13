@@ -8,6 +8,7 @@ export interface Task {
   id: string; task_no: number; room_id: string; title: string; description: string | null; assignee_id: string | null; created_by: string | null;
   due_date: string | null; priority: TaskPriority; status: TaskStatus; routine_id: string | null; routine_date: string | null;
   start_date?: string | null; due_time?: string | null; topic_id?: string | null;
+  arrive_due?: string | null; arrived_at?: string | null;   // SW ROOM (0029)
   work_topics?: Pick<Topic, "id" | "name" | "color"> | null;
   started_at: string | null; done_at: string | null; done_note: string | null; reviewed_at: string | null; review_note: string | null;
   created_at: string; updated_at: string;
@@ -33,6 +34,35 @@ export const STATUS_TH: Record<TaskStatus, string> = { open: "ใหม่", in_
 export const SW_STAGES: TaskStatus[] = ["prep", "shipped", "arrived"];
 export const statusLabel = (s: TaskStatus, roomKey?: string | null) => (roomKey === "sw-room" && s === "accepted" ? "อัพเข้าระบบเรียบร้อย" : STATUS_TH[s]);
 export const STATUS_BADGE: Record<TaskStatus, string> = { open: "badge-off", in_progress: "badge-pending", done: "badge-ok", prep: "badge-pending", shipped: "badge-ok", arrived: "badge-ok", accepted: "badge-approved", returned: "badge-rejected", cancelled: "badge-off" };
+// ---------- SW ROOM: กำหนด 3 ระยะ (0029) ----------
+export type SwPhase = "pack" | "arrive" | "system";
+export interface SwDeadline { phase: SwPhase; label: string; short: string; date: string | null; estimated?: boolean }
+const addD = (d: string, n: number) => new Date(Date.parse(d.slice(0, 10) + "T00:00:00Z") + n * 86400_000).toISOString().slice(0, 10);
+const bkkDate = (ts: string) => new Date(Date.parse(ts) + 7 * 3600_000).toISOString().slice(0, 10);
+/** ① จัดเสร็จ ② ถึงห้าง ③ อัพเข้าระบบ (ของถึงจริง + 7 วัน; ก่อนถึง = ② + 7 แบบคาดการณ์) */
+export function swDeadlines(t: Pick<Task, "due_date" | "arrive_due" | "arrived_at">): SwDeadline[] {
+  const arrive = t.arrive_due ?? (t.due_date ? addD(t.due_date, 2) : null);
+  const system = t.arrived_at ? addD(bkkDate(t.arrived_at), 7) : arrive ? addD(arrive, 7) : null;
+  return [
+    { phase: "pack", label: "จัดของเสร็จ", short: "จัด", date: t.due_date },
+    { phase: "arrive", label: "ส่งถึงห้าง", short: "ถึงห้าง", date: arrive },
+    { phase: "system", label: "อัพเข้าระบบ (PC)", short: "เข้าระบบ", date: system, estimated: !t.arrived_at },
+  ];
+}
+/** ระยะที่กำลังต้องตามตอนนี้ ตามสถานะงาน (null = ปิดแล้ว) */
+export function swCurrentPhase(status: TaskStatus): SwPhase | null {
+  if (["open", "in_progress", "returned"].includes(status)) return "pack";
+  if (["done", "prep", "shipped"].includes(status)) return "arrive";
+  if (status === "arrived") return "system";
+  return null;
+}
+/** กำหนดที่ใช้ตัดสิน "เลยกำหนด" — SW ROOM ใช้ระยะปัจจุบัน ห้องอื่นใช้ due_date */
+export function effectiveDue(t: Task): string | null {
+  if (t.work_rooms?.key !== "sw-room") return t.due_date;
+  const ph = swCurrentPhase(t.status);
+  return ph ? swDeadlines(t).find((d) => d.phase === ph)?.date ?? null : null;
+}
+
 export const DOW_TH = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 
 // ปฏิทินบริษัท (0020)

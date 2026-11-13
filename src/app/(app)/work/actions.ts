@@ -24,6 +24,8 @@ export async function createTask(formData: FormData) {
   if (error) redirect(`/work/tasks/new?room=${roomId}&error=${encodeURIComponent(error.message)}`);
   const fromMessage = nul(formData.get("from_message"));
   if (fromMessage) await supabase.from("work_room_messages").update({ task_id: data.id }).eq("id", fromMessage);
+  const arriveDue = nul(formData.get("arrive_due"));
+  if (arriveDue) await supabase.from("work_tasks").update({ arrive_due: arriveDue }).eq("id", data.id);
   revalidatePath("/work");
   redirect(`/work/tasks/${data.id}?created=1`);
 }
@@ -47,6 +49,7 @@ export async function updateTask(id: string, formData: FormData) {
     assignee_id: nul(formData.get("assignee_id")),
     due_date: nul(formData.get("due_date")),
     priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
+    ...(formData.has("arrive_due") ? { arrive_due: nul(formData.get("arrive_due")) } : {}),
     ...(formData.has("start_date") ? { start_date: nul(formData.get("start_date")), due_time: nul(formData.get("due_time")), topic_id: nul(formData.get("topic_id")) } : {}),
   }).eq("id", id);
   if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
@@ -223,7 +226,7 @@ export async function fetchNewer(table: "work_comments" | "work_room_messages", 
 }
 
 // ---------- ตารางส่งสินค้าห้าง ----------
-export interface DeliveryPayload { id?: string | null; store_id: string; week: string; target_date?: string | null; step?: number | null; doc_no?: string | null; sales_doc_id?: string | null; po_no?: string | null; assignee_id?: string | null; note?: string | null }
+export interface DeliveryPayload { id?: string | null; store_id: string; week: string; target_date?: string | null; step?: number | null; doc_no?: string | null; sales_doc_id?: string | null; po_no?: string | null; assignee_id?: string | null; note?: string | null; arrive_due?: string | null }
 export async function saveStoreDelivery(p: DeliveryPayload): Promise<{ error?: string; row?: Record<string, unknown> }> {
   await getSession();
   const supabase = await createClient();
@@ -232,8 +235,14 @@ export async function saveStoreDelivery(p: DeliveryPayload): Promise<{ error?: s
     p_sales_doc: p.sales_doc_id || null, p_po: p.po_no?.trim() || null, p_assignee: p.assignee_id || null, p_note: p.note?.trim() || null,
   });
   if (error) return { error: error.message };
+  const row = data as Record<string, unknown>;
+  if (p.arrive_due !== undefined) {   // กำหนดถึงห้าง (0029) — ซิงก์ไปงานที่ผูกไว้ด้วย
+    const r2 = await supabase.rpc("set_delivery_arrive_due", { p_id: row.id, p_date: p.arrive_due || null });
+    if (r2.error) return { error: r2.error.message };
+    row.arrive_due = p.arrive_due || null;
+  }
   revalidatePath("/work/deliveries");
-  return { row: data as Record<string, unknown> };
+  return { row };
 }
 
 export async function deleteStoreDelivery(id: string): Promise<{ error?: string }> {

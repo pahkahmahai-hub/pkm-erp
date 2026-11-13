@@ -1,3 +1,4 @@
+import { SwDeadlineStrip } from "@/components/work/TaskCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Flame, Repeat, Trash2, CalendarDays } from "lucide-react";
@@ -6,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
-import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic } from "@/lib/work/types";
+import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
 import { setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
@@ -47,7 +48,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   // SW ROOM: ขั้นส่งห้างต่อจากตรวจรับ — เฉพาะหัวหน้าห้อง SW (★) และผู้บริหาร
   const isSw = task.work_rooms?.key === "sw-room";
   const canStage = session.isAdmin || isLead;
-  const overdue = !!task.due_date && task.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status);
+  const overdue = (() => { const d = effectiveDue(task); return !!d && d < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status); })();
   const items = (checklist ?? []) as Checklist[];
   const doneCount = items.filter((c) => c.is_done).length;
 
@@ -67,7 +68,8 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" defaultValue={task.description ?? ""} className="input" rows={3} /></div>
               <div><label className="label">มอบหมายให้</label>
                 <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
-              <div><label className="label">กำหนดเสร็จ</label><div className="flex gap-2"><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
+              {isSw && <div><label className="label">② กำหนดส่งถึงห้าง</label><input name="arrive_due" type="date" defaultValue={task.arrive_due ?? ""} className="input" /></div>}
+              <div><label className="label">{isSw ? "① กำหนดจัดของเสร็จ" : "กำหนดเสร็จ"}</label><div className="flex gap-2"><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
               {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input name="start_date" type="date" defaultValue={task.start_date ?? ""} className="input" /></div>
                 <div><label className="label">หัวข้อ Routine</label><select name="topic_id" defaultValue={task.topic_id ?? ""} className="input"><option value="">—</option>{topics.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}{tp.employee_id ? "" : " (ห้อง)"}</option>)}</select></div></>}
               <div className="md:col-span-2 flex gap-4 text-sm"><label className="flex items-center gap-2"><input type="radio" name="priority" value="normal" defaultChecked={task.priority === "normal"} className="accent-purple" /> ปกติ</label><label className="flex items-center gap-2"><input type="radio" name="priority" value="urgent" defaultChecked={task.priority === "urgent"} className="accent-purple" /> 🔥 ด่วน</label></div>
@@ -77,12 +79,15 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             <div className="card p-5 space-y-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <div><span className="text-ink-soft">ผู้รับ:</span> <b>{task.employees ? (task.employees.nickname ?? task.employees.first_name) : "ยังไม่มอบหมาย"}</b></div>
-                <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{task.due_time ? " " + task.due_time.slice(0, 5) + " น." : ""}{overdue && " (เลยกำหนด)"}</b></div>
+                {!isSw && <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{task.due_time ? " " + task.due_time.slice(0, 5) + " น." : ""}{overdue && " (เลยกำหนด)"}</b></div>}
                 {task.start_date && <div className="flex items-center gap-1"><CalendarDays size={14} className="text-ink-soft" /><span className="text-ink-soft">ลงปฏิทิน:</span> <b>{fmtDate(task.start_date, { weekday: "short" })}</b></div>}
                 {task.work_topics && <div><span className="rounded-md px-2 py-0.5 text-xs font-semibold border" style={{ borderColor: task.work_topics.color, color: task.work_topics.color }}>{task.work_topics.name}</span></div>}
                 {task.priority === "urgent" && <div className="text-red font-semibold flex items-center gap-1"><Flame size={14} /> ด่วน</div>}
                 {task.routine_id && <div className="text-ink-soft flex items-center gap-1"><Repeat size={14} /> งานประจำ</div>}
               </div>
+              {isSw && !["accepted", "cancelled"].includes(task.status) && (
+                <div><div className="text-xs text-ink-soft mb-1">กำหนด 3 ระยะ — ช่องสีเข้ม = ระยะที่ต้องตามตอนนี้ (แดง = เลยกำหนด · ~ = คาดการณ์ นับ 7 วันจริงเมื่อกด “สินค้าถึงแล้ว”)</div><SwDeadlineStrip t={task} size="md" /></div>
+              )}
               {task.description && <p className="text-sm whitespace-pre-wrap">{task.description}</p>}
               {task.done_note && <div className="text-sm rounded-xl bg-teal/10 px-3 py-2"><b>บันทึกตอนส่งงาน:</b> {task.done_note}</div>}
               {task.review_note && <div className="text-sm rounded-xl bg-red/10 px-3 py-2"><b>หมายเหตุจากผู้ตรวจ:</b> {task.review_note}</div>}

@@ -10,7 +10,7 @@ export interface EmpLite { id: string; first_name: string; nickname: string | nu
 export interface SalesDocLite { id: string; doc_no: string; doc_type: string; customer_name: string; doc_date: string; status: string }
 interface Props { stores: DeliveryStore[]; deliveries: StoreDelivery[]; weeks: WeekCol[]; employees: EmpLite[]; salesDocs: SalesDocLite[]; canEdit: boolean; today: string; userNames: Record<string, string> }
 
-type Draft = { id: string | null; store: DeliveryStore; week: string; target_date: string; step: number; doc_no: string; sales_doc_id: string | null; po_no: string; assignee_id: string; note: string; task_id: string | null; log: StoreDelivery["step_log"] };
+type Draft = { id: string | null; store: DeliveryStore; week: string; target_date: string; arrive_due: string; step: number; doc_no: string; sales_doc_id: string | null; po_no: string; assignee_id: string; note: string; task_id: string | null; log: StoreDelivery["step_log"] };
 
 export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs, canEdit, today, userNames }: Props) {
   const [rows, setRows] = useState<StoreDelivery[]>(deliveries);
@@ -23,11 +23,11 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
   const months = useMemo(() => { const out: { ym: string; label: string; count: number }[] = []; for (const w of weeks) { const last = out[out.length - 1]; if (last && last.ym === w.month) last.count++; else { const [y, mo] = w.month.split("-").map(Number); out.push({ ym: w.month, label: `${TH_MONTHS[mo - 1]} ${y + 543}`, count: 1 }); } } return out; }, [weeks]);
   const groups = useMemo(() => { const out: { name: string; list: DeliveryStore[] }[] = []; for (const s of stores) { const g = s.group_name ?? "อื่น ๆ"; const last = out[out.length - 1]; if (last && last.name === g) last.list.push(s); else out.push({ name: g, list: [s] }); } return out; }, [stores]);
 
-  const openNew = (store: DeliveryStore, week: string) => { if (!canEdit) return; setErr(null); setDraft({ id: null, store, week, target_date: "", step: 1, doc_no: "", sales_doc_id: null, po_no: "", assignee_id: "", note: "", task_id: null, log: [] }); };
-  const openEdit = (d: StoreDelivery) => { const store = stores.find((s) => s.id === d.store_id); if (!store) return; setErr(null); setDraft({ id: d.id, store, week: d.week_start, target_date: d.target_date ?? "", step: d.step, doc_no: d.doc_no ?? "", sales_doc_id: d.sales_doc_id, po_no: d.po_no ?? "", assignee_id: d.assignee_id ?? "", note: d.note ?? "", task_id: d.task_id ?? null, log: d.step_log ?? [] }); };
+  const openNew = (store: DeliveryStore, week: string) => { if (!canEdit) return; setErr(null); setDraft({ id: null, store, week, target_date: "", arrive_due: "", step: 1, doc_no: "", sales_doc_id: null, po_no: "", assignee_id: "", note: "", task_id: null, log: [] }); };
+  const openEdit = (d: StoreDelivery) => { const store = stores.find((s) => s.id === d.store_id); if (!store) return; setErr(null); setDraft({ id: d.id, store, week: d.week_start, target_date: d.target_date ?? "", arrive_due: d.arrive_due ?? "", step: d.step, doc_no: d.doc_no ?? "", sales_doc_id: d.sales_doc_id, po_no: d.po_no ?? "", assignee_id: d.assignee_id ?? "", note: d.note ?? "", task_id: d.task_id ?? null, log: d.step_log ?? [] }); };
 
   const persist = async (d: Draft): Promise<StoreDelivery | null> => {
-    const p: DeliveryPayload = { id: d.id, store_id: d.store.id, week: d.week, target_date: d.target_date || null, step: d.step, doc_no: d.doc_no || null, sales_doc_id: d.sales_doc_id, po_no: d.po_no || null, assignee_id: d.assignee_id || null, note: d.note || null };
+    const p: DeliveryPayload = { id: d.id, store_id: d.store.id, week: d.week, target_date: d.target_date || null, step: d.step, doc_no: d.doc_no || null, sales_doc_id: d.sales_doc_id, po_no: d.po_no || null, assignee_id: d.assignee_id || null, note: d.note || null, arrive_due: d.arrive_due || null };
     const r = await saveStoreDelivery(p);
     if (r.error || !r.row) { setErr(r.error ?? "บันทึกไม่สำเร็จ"); return null; }
     const row = r.row as unknown as StoreDelivery;
@@ -45,7 +45,7 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
       const saved = await persist(d);
       if (!saved) return;
       const title = `ส่งสินค้า ${d.store.name} — สัปดาห์ ${fmtDM(d.week)}–${fmtDM(addDays(d.week, 6))}`;
-      const desc = [d.doc_no && `ใบส่งของ: ${d.doc_no}`, d.po_no && `PO ห้าง: ${d.po_no}`, d.target_date && `ตั้งใจส่ง: ${fmtDM(d.target_date)}`, d.note].filter(Boolean).join("\n") || null;
+      const desc = [d.doc_no && `ใบส่งของ: ${d.doc_no}`, d.po_no && `PO ห้าง: ${d.po_no}`, d.target_date && `กำหนดจัดเสร็จ: ${fmtDM(d.target_date)}`, d.arrive_due && `กำหนดถึงห้าง: ${fmtDM(d.arrive_due)}`, d.note].filter(Boolean).join("\n") || null;
       const checklist = STEPS.filter((s) => s.n > d.step).map((s) => `${s.n}. ${s.label}`);
       const r = await createDeliveryTask(saved.id, title, desc, checklist);
       if (r.error || !r.taskId) { setErr(r.error ?? "สร้าง job ไม่สำเร็จ"); return; }
@@ -113,7 +113,9 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
                 <DocPicker docs={salesDocs} value={draft.sales_doc_id} onPick={(doc) => setDraft({ ...draft, sales_doc_id: doc?.id ?? null, doc_no: doc ? doc.doc_no : draft.doc_no, step: doc && doc.status !== "draft" && draft.step < 3 ? 3 : draft.step })} />
                 <div><label className="label">ผู้รับผิดชอบ</label><select value={draft.assignee_id} onChange={(e) => setDraft({ ...draft, assignee_id: e.target.value })} className="input"><option value="">— ไม่ระบุ —</option>{employees.map((e) => <option key={e.id} value={e.id}>{e.nickname ?? e.first_name}</option>)}</select></div>
                 <div><label className="label">สัปดาห์ (เลือกวันใดก็ได้ในสัปดาห์)</label><input type="date" value={draft.week} onChange={(e) => e.target.value && setDraft({ ...draft, week: mondayOf(e.target.value) })} className="input" /></div>
-                <div><label className="label">วันที่ตั้งใจส่ง</label><input type="date" value={draft.target_date} onChange={(e) => setDraft({ ...draft, target_date: e.target.value })} className="input" /></div>
+                <div><label className="label">① กำหนดจัดของเสร็จ</label><input type="date" value={draft.target_date} onChange={(e) => setDraft({ ...draft, target_date: e.target.value })} className="input" /></div>
+                <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><input type="date" value={draft.arrive_due} onChange={(e) => setDraft({ ...draft, arrive_due: e.target.value })} className="input" /></div>
+                <p className="sm:col-span-2 text-[11px] text-ink-soft -mt-1">③ กำหนดอัพเข้าระบบ = วันที่กด “สินค้าถึงแล้ว” + 7 วัน (รอ PC อัพ) — ระบบนับให้อัตโนมัติ</p>
               </div>
               <div><label className="label">หมายเหตุ</label><input value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} className="input" placeholder="เช่น รอผ้าลายใหม่ / ส่งทาง Kerry" /></div>
               {draft.log.length > 0 && (

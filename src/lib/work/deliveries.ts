@@ -4,7 +4,7 @@ export interface DeliveryStore { id: string; name: string; short_name: string | 
 export interface StepLogEntry { step: number; at: string; by: string | null; auto?: boolean }
 export interface StoreDelivery {
   id: string; store_id: string; week_start: string; target_date: string | null; step: number; doc_no: string | null; sales_doc_id: string | null; po_no: string | null;
-  assignee_id: string | null; note: string | null; task_id: string | null; step_log: StepLogEntry[]; created_by: string | null; created_at: string; updated_at: string;
+  assignee_id: string | null; note: string | null; task_id: string | null; arrive_due?: string | null; step_log: StepLogEntry[]; created_by: string | null; created_at: string; updated_at: string;
   employees?: { id: string; first_name: string; nickname: string | null } | null;
 }
 
