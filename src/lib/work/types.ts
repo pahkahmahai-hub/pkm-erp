@@ -31,7 +31,7 @@ export interface Notification { id: string; task_id: string | null; message: str
 export const STATUS_TH: Record<TaskStatus, string> = { open: "ใหม่", in_progress: "กำลังทำ", done: "รอตรวจรับ", prep: "เตรียมส่ง", shipped: "ส่งสินค้าแล้ว", arrived: "สินค้าถึงแล้ว", accepted: "เสร็จสิ้น", returned: "ตีกลับ", cancelled: "ยกเลิก" };
 /** SW ROOM: ขั้นส่งห้างต่อจากรอตรวจรับ — accepted = เข้าระบบเรียบร้อย */
 export const SW_STAGES: TaskStatus[] = ["prep", "shipped", "arrived"];
-export const statusLabel = (s: TaskStatus, roomKey?: string | null) => (roomKey === "sw-room" && s === "accepted" ? "เข้าระบบเรียบร้อย" : STATUS_TH[s]);
+export const statusLabel = (s: TaskStatus, roomKey?: string | null) => (roomKey === "sw-room" && s === "accepted" ? "อัพเข้าระบบเรียบร้อย" : STATUS_TH[s]);
 export const STATUS_BADGE: Record<TaskStatus, string> = { open: "badge-off", in_progress: "badge-pending", done: "badge-ok", prep: "badge-pending", shipped: "badge-ok", arrived: "badge-ok", accepted: "badge-approved", returned: "badge-rejected", cancelled: "badge-off" };
 export const DOW_TH = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 

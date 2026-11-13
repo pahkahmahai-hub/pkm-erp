@@ -134,7 +134,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                     : <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary">ตรวจรับ</button>}
                   <button formAction={setTaskStatus.bind(null, id, "returned")} className="btn-danger">ตีกลับ</button>
                 </div>
-                {isSw && !canStage && <p className="text-[11px] text-ink-soft">ขั้นส่งห้าง (เตรียมส่ง → ส่งแล้ว → ถึงแล้ว → เข้าระบบ) กดได้โดยหัวหน้าห้อง SW และผู้บริหาร</p>}
+                {isSw && !canStage && <p className="text-[11px] text-ink-soft">ขั้นส่งห้าง (เตรียมส่ง → ส่งแล้ว → ถึงแล้ว → อัพเข้าระบบ) กดได้โดยหัวหน้าห้อง SW และผู้บริหาร</p>}
               </form>
             )}
             {isSw && canStage && ["prep", "shipped", "arrived"].includes(task.status) && (
@@ -143,7 +143,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 <input name="note" className="input" placeholder="หมายเหตุ (ถ้ามี) เช่น เลขพัสดุ / ผู้รับ" />
                 {task.status === "prep" && <button formAction={setTaskStatus.bind(null, id, "shipped")} className="btn-primary w-full">🚚 ส่งสินค้าแล้ว</button>}
                 {task.status === "shipped" && <button formAction={setTaskStatus.bind(null, id, "arrived")} className="btn-primary w-full">📦 สินค้าถึงห้างแล้ว</button>}
-                {task.status === "arrived" && <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary w-full">✔ เข้าระบบเรียบร้อย — ปิดงาน</button>}
+                {task.status === "arrived" && <button formAction={setTaskStatus.bind(null, id, "accepted")} className="btn-primary w-full">✔ อัพเข้าระบบเรียบร้อย — ปิดงาน</button>}
               </form>
             )}
             {isOwner && !["accepted", "cancelled"].includes(task.status) && (

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
 import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights } from "@/lib/work/queries";
-import { STATUS_TH, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
+import { STATUS_TH, statusLabel, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
 import { RoomTabs } from "@/components/work/RoomTabs";
@@ -15,7 +15,7 @@ import type { ChatMessage } from "@/components/work/ChatBox";
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 const COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done"];
-const SW_COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done", "prep", "shipped", "arrived"];
+const SW_COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done", "prep", "shipped", "arrived", "accepted"];
 
 export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string; tab?: string }> }) {
   const { key } = await params;
@@ -59,7 +59,14 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
               : q.not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500);
   if (who) q = q.eq("assignee_id", who);
   const { data } = await q;
-  const tasks = fillEmployees(data as Task[], dir, "assignee_id");
+  // SW ROOM: คอลัมน์สุดท้าย "เข้าระบบเรียบร้อย" แสดงงานที่ปิดใน 7 วันล่าสุด
+  let doneRecent: Task[] = [];
+  if (key === "sw-room" && !history) {
+    let dq = supabase.from("work_tasks").select(TASK_SELECT).eq("room_id", r.id).eq("status", "accepted").gte("reviewed_at", new Date(Date.now() - 7 * 86400_000).toISOString()).order("reviewed_at", { ascending: false }).limit(100);
+    if (who) dq = dq.eq("assignee_id", who);
+    doneRecent = ((await dq).data ?? []) as Task[];
+  }
+  const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id");
 
   return (
     <div className="space-y-6">
@@ -86,12 +93,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       {history ? (
         <div className="space-y-2">{tasks.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}{!tasks.length && <div className="card p-6 text-center text-ink-soft text-sm">ยังไม่มีงานที่เสร็จ</div>}</div>
       ) : (
-        <div className={`grid md:grid-cols-2 gap-4 ${key === "sw-room" ? "xl:grid-cols-7" : "xl:grid-cols-4"}`}>
+        <div className={key === "sw-room" ? "flex gap-3 overflow-x-auto pb-2 items-start" : "grid md:grid-cols-2 xl:grid-cols-4 gap-4"}>
           {(key === "sw-room" ? SW_COLUMNS : COLUMNS).map((col) => {
             const list = tasks.filter((t) => t.status === col);
             return (
-              <div key={col} className="rounded-2xl bg-white/60 border border-line p-3 min-h-40">
-                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{STATUS_TH[col]}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
+              <div key={col} className={`rounded-2xl border p-3 min-h-40 ${key === "sw-room" ? "w-[240px] shrink-0" : ""} ${col === "accepted" ? "bg-green/5 border-green/40" : "bg-white/60 border-line"}`}>
+                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{statusLabel(col, key)}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}{col === "accepted" && <span className="ml-1 text-[10px] text-ink-soft">(7 วันล่าสุด)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
                 <div className="space-y-2">{list.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}</div>
               </div>
             );
