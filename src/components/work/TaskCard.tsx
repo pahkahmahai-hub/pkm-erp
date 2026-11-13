@@ -3,7 +3,7 @@ import { CalendarDays, Flame, Repeat } from "lucide-react";
 import { fmtDateShort, todayBkk } from "@/lib/format";
 import { STATUS_BADGE, statusLabel, type Task } from "@/lib/work/types";
 
-export function TaskCard({ t, showRoom = true }: { t: Task; showRoom?: boolean }) {
+export function TaskCard({ t, showRoom = true, note }: { t: Task; showRoom?: boolean; note?: string }) {
   const overdue = !!t.due_date && t.due_date < todayBkk() && !["accepted", "cancelled", "done"].includes(t.status);
   const dueToday = t.due_date === todayBkk();
   return (
@@ -16,7 +16,7 @@ export function TaskCard({ t, showRoom = true }: { t: Task; showRoom?: boolean }
         <span className={`${STATUS_BADGE[t.status]} shrink-0`}>{statusLabel(t.status, t.work_rooms?.key)}</span>
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
-        <span>{t.employees ? (t.employees.nickname ?? t.employees.first_name) : "ยังไม่มอบหมาย"}</span>
+        <span>{t.employees ? (t.employees.nickname ?? t.employees.first_name) : "ยังไม่มอบหมาย"}{note && <span className="ml-2 text-green font-semibold">· {note}</span>}</span>
         {t.due_date && (
           <span className={`flex items-center gap-1 ${overdue ? "text-red font-semibold" : dueToday ? "text-[#8a6a00] font-semibold" : ""}`}>
             <CalendarDays size={12} /> {overdue ? "เลยกำหนด " : dueToday ? "วันนี้ " : ""}{fmtDateShort(t.due_date)}

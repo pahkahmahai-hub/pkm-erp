@@ -28,6 +28,13 @@ export default async function WorkHome() {
     loadDirectory(supabase),
     supabase.from("app_users").select("id, display_name, email").eq("role", "admin"),
   ]);
+  // ข้อมูลสำหรับแยก "รอตรวจรับ" (ผู้บริหาร): หัวหน้าห้อง และ user ↔ พนักงาน
+  const [{ data: leadRows }, { data: userRows }] = session.isAdmin
+    ? await Promise.all([
+        supabase.from("work_room_members").select("room_id, employee_id").eq("is_lead", true),
+        supabase.from("app_users").select("id, employee_id, role"),
+      ])
+    : [{ data: [] }, { data: [] }];
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
   const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
   const mine = tasks.filter((t) => t.assignee_id === empId);
@@ -51,6 +58,20 @@ export default async function WorkHome() {
     return groups.filter((g) => g.list.length);
   };
   const review = tasks.filter((t) => t.status === "done" && t.assignee_id !== empId && (session.isAdmin || t.created_by === session.appUser.id || leadRoomIds.has(t.room_id)));
+  // ผู้บริหาร: แยกงานที่หัวหน้าตรวจรับได้ด้วย ออกจากงานที่ผู้บริหารต้องตรวจเอง
+  //   หัวหน้าตรวจได้ = มีหัวหน้า ★ ในห้องที่ไม่ใช่ผู้รับงาน หรือผู้สั่งเป็นพนักงาน (ไม่ใช่ผู้บริหาร/ไม่ใช่ผู้รับงานเอง)
+  const users = (userRows ?? []) as { id: string; employee_id: string | null; role: string }[];
+  const empOfUser = new Map(users.map((u) => [u.id, u.employee_id]));
+  const adminIds = new Set(users.filter((u) => u.role === "admin").map((u) => u.id));
+  const nameOfEmp = (id: string) => { const e = dir.find((x) => x.id === id); return e ? e.nickname ?? e.first_name : "หัวหน้า"; };
+  const coReviewers = (t: Task): string[] => {
+    const out = new Set<string>();
+    for (const l of (leadRows ?? []) as { room_id: string; employee_id: string }[]) if (l.room_id === t.room_id && l.employee_id !== t.assignee_id) out.add(nameOfEmp(l.employee_id));
+    if (t.created_by && !adminIds.has(t.created_by)) { const e = empOfUser.get(t.created_by); if (e && e !== t.assignee_id) out.add(nameOfEmp(e)); }
+    return [...out];
+  };
+  const reviewShared = session.isAdmin ? review.filter((t) => coReviewers(t).length) : [];
+  const reviewAdminOnly = session.isAdmin ? review.filter((t) => !coReviewers(t).length) : review;
   const overdue = tasks.filter(isOverdue);
   const countByRoom = Object.fromEntries(rooms.map((r) => [r.id, tasks.filter((t) => t.room_id === r.id).length]));
 
@@ -97,10 +118,18 @@ export default async function WorkHome() {
           </div>
         </section>
         <section className="space-y-6">
-          {review.length > 0 && (
+          {reviewAdminOnly.length > 0 && (
             <div>
-              <h2 className="font-display font-bold mb-3">รอตรวจรับ ({review.length})</h2>
-              <div className="space-y-2">{review.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}</div>
+              <h2 className="font-display font-bold mb-1">{session.isAdmin ? "รอผู้บริหารตรวจรับ" : "รอตรวจรับ"} ({reviewAdminOnly.length})</h2>
+              {session.isAdmin && <p className="text-xs text-ink-soft mb-3">ผมหรือภรรยาต้องตรวจเอง — หัวหน้าตรวจแทนไม่ได้ (เช่น งานของหัวหน้าเอง)</p>}
+              <div className="space-y-2">{reviewAdminOnly.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} />)}</div>
+            </div>
+          )}
+          {reviewShared.length > 0 && (
+            <div>
+              <h2 className="font-display font-bold mb-1">รอตรวจรับ — หัวหน้าตรวจได้ด้วย ({reviewShared.length})</h2>
+              <p className="text-xs text-ink-soft mb-3">ผู้บริหารหรือหัวหน้าในวงเล็บ ใครตรวจก่อนก็ได้</p>
+              <div className="space-y-2">{reviewShared.slice(0, 10).map((t) => <TaskCard key={t.id} t={t} note={`หัวหน้าตรวจได้: ${coReviewers(t).join(", ")}`} />)}</div>
             </div>
           )}
           {overdue.length > 0 && (
