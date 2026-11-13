@@ -95,8 +95,11 @@ export async function postComment(taskId: string, formData: FormData): Promise<{
   let file_url: string | null = null;
   let file_name: string | null = null;
   const file = formData.get("file") as File | null;
-  if (file && file.size > 0) {
-    if (file.size > 20 * 1024 * 1024) return { error: "ไฟล์ใหญ่เกิน 20 MB" };
+  const uploaded = nul(formData.get("uploaded_url"));
+  if (uploaded) {   // อัปโหลดจากเบราว์เซอร์แล้ว (≤ 5 MB)
+    if (formData.get("uploaded_is_image") === "1") image_url = uploaded; else { file_url = uploaded; file_name = nul(formData.get("uploaded_name")); }
+  } else if (file && file.size > 0) {
+    if (file.size > 5 * 1024 * 1024) return { error: "ไฟล์ใหญ่เกิน 5 MB" };
     const ext = (file.name.split(".").pop() ?? "bin").toLowerCase();
     const path = `tasks/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await supabase.storage.from("work-files").upload(path, file, { contentType: file.type });
@@ -175,9 +178,13 @@ export async function postRoomMessage(roomId: string, formData: FormData): Promi
   const body = nul(formData.get("body"));
   const file = formData.get("file") as File | null;
   let image_url: string | null = null, file_url: string | null = null, file_name: string | null = null;
+  const uploaded = nul(formData.get("uploaded_url"));
+  if (uploaded) {   // อัปโหลดจากเบราว์เซอร์แล้ว (≤ 5 MB)
+    if (formData.get("uploaded_is_image") === "1") image_url = uploaded; else { file_url = uploaded; file_name = nul(formData.get("uploaded_name")); }
+  }
   try {
-    if (file && file.size > 0) {
-      if (file.size > 20 * 1024 * 1024) return { error: "ไฟล์ใหญ่เกิน 20 MB" };
+    if (!uploaded && file && file.size > 0) {
+      if (file.size > 5 * 1024 * 1024) return { error: "ไฟล์ใหญ่เกิน 5 MB" };
       const url = await uploadWorkFile(roomId, file);
       if (file.type.startsWith("image/")) image_url = url; else { file_url = url; file_name = file.name; }
     }

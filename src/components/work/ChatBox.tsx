@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus, Reply, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { compressImage } from "@/lib/image";
+import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 
@@ -114,6 +114,9 @@ export function ChatBox({
 
   function pick(f: File | undefined) {
     if (!f) return;
+    // รูปจะถูกย่อก่อนส่ง จึงตรวจขนาดตอนส่ง · ไฟล์อื่นตรวจทันที
+    if (!f.type.startsWith("image/") && f.size > CHAT_MAX_BYTES) { setErr(`ไฟล์ "${f.name}" ใหญ่ ${(f.size / 1024 / 1024).toFixed(1)} MB — ส่งได้ไม่เกิน 5 MB ต่อไฟล์`); return; }
+    setErr(null);
     setFile(f);
     setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
   }
@@ -124,7 +127,13 @@ export function ChatBox({
       const fd = new FormData();
       fd.set("body", body);
       fd.set("mentions", JSON.stringify(mentionedIds(body)));
-      if (file) fd.set("file", file.type.startsWith("image/") ? await compressImage(file) : file);
+      if (file) {
+        // อัปโหลดจากเบราว์เซอร์ตรงไป storage (ไม่ผ่าน server action ซึ่งรับได้ ~1 MB) แล้วส่งแค่ลิงก์
+        try {
+          const up = await uploadChatFile(`chat/${filterValue}`, file);
+          fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", up.is_image ? "1" : "0");
+        } catch (e) { setErr((e as Error).message); return; }
+      }
       if (replyTo) fd.set("reply_to", replyTo.id);
       const res = await onPost(fd);
       if (res.error) { setErr(res.error); return; }
@@ -182,8 +191,8 @@ export function ChatBox({
         <div className="flex gap-2 items-end">
           <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <input ref={fileRef} type="file" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป"><ImageIcon size={18} /></button>
-          <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์"><Paperclip size={18} /></button>
+          <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป (ไม่เกิน 5 MB)"><ImageIcon size={18} /></button>
+          <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์ (ไม่เกิน 5 MB)"><Paperclip size={18} /></button>
           <div className="relative flex-1">
             {mentionQ !== null && mentionResults.length > 0 && (
               <div className="absolute bottom-full mb-1 left-0 w-64 card p-1 z-20">
