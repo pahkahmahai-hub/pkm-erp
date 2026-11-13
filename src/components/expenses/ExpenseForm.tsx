@@ -220,10 +220,10 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             </div>
           </div>
           <div className="overflow-x-auto"><table className="tbl">
-            <thead><tr><th className="w-[45%]">รายละเอียด</th><th className="text-right">จำนวน</th><th>หน่วย</th><th className="text-right">ราคา/หน่วย</th><th className="text-right">ส่วนลด</th><th className="text-right">จำนวนเงิน</th><th></th></tr></thead>
+            <thead><tr><th className="w-[50%] min-w-[340px]">รายละเอียด</th><th className="text-right">จำนวน</th><th>หน่วย</th><th className="text-right">ราคา/หน่วย</th><th className="text-right">ส่วนลด</th><th className="text-right">จำนวนเงิน</th><th></th></tr></thead>
             <tbody>{lines.map((l) => (
               <tr key={l.key}>
-                <td><input value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} className="input" />{(l.product_id || l.material_id) && <div className="text-[10px] text-green mt-0.5">✓ ผูกกับ{l.product_id ? "สินค้า" : "วัสดุ"}ในคลัง</div>}</td>
+                <td className="min-w-[340px]"><textarea value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} rows={Math.min(5, Math.max(1, Math.ceil(l.description.length / 45), l.description.split("\n").length))} className="input resize-y leading-snug" />{(l.product_id || l.material_id) && <div className="text-[10px] text-green mt-0.5">✓ ผูกกับ{l.product_id ? "สินค้า" : "วัสดุ"}ในคลัง</div>}</td>
                 <td><input type="number" step="0.01" value={l.qty} onChange={(ev) => upd(l.key, { qty: Number(ev.target.value) })} className="input text-right w-24" /></td>
                 <td><input value={l.unit} onChange={(ev) => upd(l.key, { unit: ev.target.value })} className="input w-20" placeholder="ชิ้น" /></td>
                 <td><input type="number" step="0.01" value={l.unit_price} onChange={(ev) => upd(l.key, { unit_price: Number(ev.target.value) })} className="input text-right w-28" /></td>
