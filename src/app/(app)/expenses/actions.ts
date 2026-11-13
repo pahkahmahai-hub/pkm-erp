@@ -30,6 +30,15 @@ function commonArgs(formData: FormData) {
   };
 }
 
+/** ส่วนลดรายบรรทัด (0044) — ส่งต่อหลังสร้าง/แก้บิล */
+async function applyLineDiscounts(supabase: Awaited<ReturnType<typeof createClient>>, id: string, formData: FormData): Promise<string | null> {
+  const items = JSON.parse(String(formData.get("items") ?? "[]")) as { discount?: number }[];
+  const d = items.map((i) => Number(i.discount) || 0);
+  if (!d.some((x) => x > 0)) return null;
+  const { error } = await supabase.rpc("set_expense_item_discounts", { p_id: id, p_discounts: d });
+  return error ? `บันทึกส่วนลดรายบรรทัดไม่ได้: ${error.message}` : null;
+}
+
 export async function createExpense(formData: FormData) {
   await getSession();
   const supabase = await createClient();
@@ -41,8 +50,9 @@ export async function createExpense(formData: FormData) {
     p_submit: formData.get("submit_mode") !== "draft",
   });
   if (error) redirect(`/expenses/new?error=${encodeURIComponent(error.message)}`);
+  const dErr = await applyLineDiscounts(supabase, data.id, formData);
   revalidatePath("/expenses");
-  redirect(`/expenses/${data.id}?created=1`);
+  redirect(`/expenses/${data.id}?created=1${dErr ? `&error=${encodeURIComponent(dErr)}` : ""}`);
 }
 
 export async function updateExpense(id: string, formData: FormData) {
@@ -50,6 +60,8 @@ export async function updateExpense(id: string, formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_expense", { p_id: id, ...commonArgs(formData) });
   if (error) redirect(`/expenses/${id}/edit?error=${encodeURIComponent(error.message)}`);
+  const dErr = await applyLineDiscounts(supabase, id, formData);
+  if (dErr) redirect(`/expenses/${id}/edit?error=${encodeURIComponent(dErr)}`);
   revalidatePath(`/expenses/${id}`);
   redirect(`/expenses/${id}?saved=1`);
 }

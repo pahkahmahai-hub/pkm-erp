@@ -13,7 +13,9 @@ import { WHT_CHOICES, nextPayRound } from "@/lib/expenses/types";
 type SupplierLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "entity_type"> & { default_expense_category?: string | null; default_wht_pct?: number | null; default_vat_mode_purchase?: VatMode | null };
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit">;
 type MaterialLite = Pick<Material, "id" | "code" | "name" | "unit" | "kind">;
-interface Line { key: string; description: string; qty: number; unit: string; unit_price: number; product_id?: string | null; material_id?: string | null }
+interface Line { key: string; description: string; qty: number; unit: string; unit_price: number; disc?: string; product_id?: string | null; material_id?: string | null }
+/** ส่วนลดรายบรรทัด: "15" = 15 บาท · "10%" = 10% ของ จำนวน × ราคา */
+const lineDisc = (l: Line) => { const s = (l.disc ?? "").trim(); if (!s) return 0; const gross = l.qty * l.unit_price; const v = parseFloat(s.replace(/[%,]/g, "")) || 0; return Math.round((s.endsWith("%") ? gross * v / 100 : v) * 100) / 100; };
 interface Up { path: string; url: string; name: string }
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -32,11 +34,12 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const [dueDate, setDueDate] = useState(e?.due_date ?? "");
   const [desc, setDesc] = useState(e?.description ?? "");
   const [vatMode, setVatMode] = useState<VatMode>(e?.vat_mode ?? "none");
-  const [discount, setDiscount] = useState(Number(e?.discount_amount ?? 0));
+  const [discInput, setDiscInput] = useState(String(Number(e?.discount_amount ?? 0) || ""));
+  const [discPct, setDiscPct] = useState(false);
   const [wht, setWht] = useState(Number(e?.wht_pct ?? 0));
   const [payRound, setPayRound] = useState(e?.pay_round ?? nextPayRound(today()));
   const [note, setNote] = useState(e?.note ?? "");
-  const [lines, setLines] = useState<Line[]>((items ?? []).map((i) => ({ key: i.id, description: i.description, qty: Number(i.qty), unit: i.unit ?? "", unit_price: Number(i.unit_price), product_id: i.product_id, material_id: i.material_id })));
+  const [lines, setLines] = useState<Line[]>((items ?? []).map((i) => ({ key: i.id, description: i.description, qty: Number(i.qty), unit: i.unit ?? "", unit_price: Number(i.unit_price), disc: Number((i as { discount?: number }).discount ?? 0) ? String(Number((i as { discount?: number }).discount)) : "", product_id: i.product_id, material_id: i.material_id })));
   const [pq, setPq] = useState("");
   const prodResults = useMemo(() => {
     const q = pq.trim().toLowerCase(); if (!q) return [] as { kind: "product" | "material"; id: string; label: string; sub: string; unit: string }[];
@@ -109,7 +112,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
     if (b.bill_date) { setBillDate(b.bill_date); setPayRound(nextPayRound(b.bill_date)); }
     if (b.due_date) setDueDate(b.due_date);
     if (b.vat_mode) setVatMode(b.vat_mode);
-    if (b.discount_amount) setDiscount(Number(b.discount_amount));
+    if (b.discount_amount) { setDiscPct(false); setDiscInput(String(Number(b.discount_amount))); }
     if (b.wht_pct) setWht(Number(b.wht_pct));
     if (b.notes) setDesc(b.notes.slice(0, 120));
     if (b.items?.length) setLines(b.items.map((it) => ({ key: crypto.randomUUID(), description: it.description ?? "", qty: Number(it.qty ?? 1) || 1, unit: it.unit ?? "", unit_price: Number(it.unit_price ?? (it.amount && it.qty ? it.amount / it.qty : it.amount ?? 0)) })));
@@ -119,7 +122,8 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const addLine = () => setLines((l) => [...l, { key: crypto.randomUUID(), description: "", qty: 1, unit: "", unit_price: 0 }]);
 
   // same math as recalc_expense
-  const sub = lines.reduce((a, l) => a + r2(l.qty * l.unit_price), 0);
+  const sub = lines.reduce((a, l) => a + r2(l.qty * l.unit_price - lineDisc(l)), 0);
+  const discount = discPct ? r2(sub * (parseFloat(discInput) || 0) / 100) : (parseFloat(discInput) || 0);
   const after = sub - discount;
   const net = vatMode === "inclusive" ? r2(after * 100 / 107) : after;
   const vat = vatMode === "inclusive" ? r2(after - net) : vatMode === "exclusive" ? r2(after * 0.07) : 0;
@@ -168,7 +172,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
       <div className="space-y-5">
         <input type="hidden" name="company_id" value={companyId} />
         <input type="hidden" name="supplier_id" value={sup.id ?? ""} />
-        <input type="hidden" name="items" value={JSON.stringify(lines.filter((l) => l.description.trim()).map(({ description, qty, unit, unit_price, product_id, material_id }) => ({ description, qty, unit: unit || null, unit_price, product_id: product_id ?? null, material_id: material_id ?? null })))} />
+        <input type="hidden" name="items" value={JSON.stringify(lines.filter((l) => l.description.trim()).map((l) => ({ description: l.description, qty: l.qty, unit: l.unit || null, unit_price: l.unit_price, discount: lineDisc(l), product_id: l.product_id ?? null, material_id: l.material_id ?? null })))} />
         <input type="hidden" name="files" value={JSON.stringify(files.map((f) => ({ path: f.path, kind: "bill" })))} />
         <input type="hidden" name="ai_json" value={ai.bill ? JSON.stringify(ai.bill) : ""} />
 
@@ -216,17 +220,18 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             </div>
           </div>
           <div className="overflow-x-auto"><table className="tbl">
-            <thead><tr><th className="w-[45%]">รายละเอียด</th><th className="text-right">จำนวน</th><th>หน่วย</th><th className="text-right">ราคา/หน่วย</th><th className="text-right">จำนวนเงิน</th><th></th></tr></thead>
+            <thead><tr><th className="w-[45%]">รายละเอียด</th><th className="text-right">จำนวน</th><th>หน่วย</th><th className="text-right">ราคา/หน่วย</th><th className="text-right">ส่วนลด</th><th className="text-right">จำนวนเงิน</th><th></th></tr></thead>
             <tbody>{lines.map((l) => (
               <tr key={l.key}>
                 <td><input value={l.description} onChange={(ev) => upd(l.key, { description: ev.target.value })} className="input" />{(l.product_id || l.material_id) && <div className="text-[10px] text-green mt-0.5">✓ ผูกกับ{l.product_id ? "สินค้า" : "วัสดุ"}ในคลัง</div>}</td>
                 <td><input type="number" step="0.01" value={l.qty} onChange={(ev) => upd(l.key, { qty: Number(ev.target.value) })} className="input text-right w-24" /></td>
                 <td><input value={l.unit} onChange={(ev) => upd(l.key, { unit: ev.target.value })} className="input w-20" placeholder="ชิ้น" /></td>
                 <td><input type="number" step="0.01" value={l.unit_price} onChange={(ev) => upd(l.key, { unit_price: Number(ev.target.value) })} className="input text-right w-28" /></td>
-                <td className="text-right font-semibold whitespace-nowrap">{fmt(r2(l.qty * l.unit_price))}</td>
+                <td><input value={l.disc ?? ""} onChange={(ev) => upd(l.key, { disc: ev.target.value })} className="input text-right w-20" placeholder="0 / 10%" title="ใส่เป็นบาท เช่น 15 หรือเป็น % เช่น 10%" />{(l.disc ?? "").trim().endsWith("%") && lineDisc(l) > 0 && <div className="text-[10px] text-ink-soft text-right">= {fmt(lineDisc(l))}</div>}</td>
+                <td className="text-right font-semibold whitespace-nowrap">{lineDisc(l) > 0 && <div className="text-[10px] text-ink-soft line-through font-normal">{fmt(r2(l.qty * l.unit_price))}</div>}{fmt(r2(l.qty * l.unit_price - lineDisc(l)))}</td>
                 <td><button type="button" onClick={() => setLines((x) => x.filter((y) => y.key !== l.key))} className="text-ink-soft hover:text-red"><Trash2 size={14} /></button></td>
               </tr>))}
-              {!lines.length && <tr><td colSpan={6} className="text-center text-ink-soft py-6">ยังไม่มีรายการ — ค้นหาสินค้าด้านบน หรือกด “บรรทัดว่าง”</td></tr>}
+              {!lines.length && <tr><td colSpan={7} className="text-center text-ink-soft py-6">ยังไม่มีรายการ — ค้นหาสินค้าด้านบน หรือกด “บรรทัดว่าง”</td></tr>}
             </tbody></table></div>
         </div>
 
@@ -234,7 +239,9 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
           <div className="card p-5 space-y-4">
             <div className="grid sm:grid-cols-3 gap-4">
               <div><label className="label">VAT</label><select name="vat_mode" value={vatMode} onChange={(ev) => setVatMode(ev.target.value as VatMode)} className="input"><option value="none">ไม่มี VAT (บิลเงินสด)</option><option value="exclusive">ใบกำกับภาษี — ราคาก่อน VAT (+7%)</option><option value="inclusive">ใบกำกับภาษี — ราคารวม VAT</option></select></div>
-              <div><label className="label">ส่วนลดท้ายบิล (บาท)</label><input type="number" step="0.01" name="discount_amount" value={discount} onChange={(ev) => setDiscount(Number(ev.target.value))} className="input" /></div>
+              <div><label className="label flex items-center gap-1.5">ส่วนลดท้ายบิล <span className="inline-flex rounded-md border border-line text-[11px] overflow-hidden">{(["฿", "%"] as const).map((m) => <button key={m} type="button" onClick={() => setDiscPct(m === "%")} className={`px-1.5 ${(m === "%") === discPct ? "bg-purple text-white" : ""}`}>{m}</button>)}</span></label>
+                <input type="number" step="0.01" value={discInput} onChange={(ev) => setDiscInput(ev.target.value)} className="input" placeholder="0" />
+                <input type="hidden" name="discount_amount" value={discount} />{discPct && discount > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(discount)} บาท</div>}</div>
               <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" value={wht} onChange={(ev) => setWht(Number(ev.target.value))} className="input">{WHT_CHOICES.map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div>
             </div>
             <div><label className="label">หมายเหตุภายใน</label><textarea name="note" value={note} onChange={(ev) => setNote(ev.target.value)} className="input" rows={2} /></div>
