@@ -67,6 +67,13 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     doneRecent = ((await dq).data ?? []) as Task[];
   }
   const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id");
+  // ห้องที่มีงานประจำ: แยก "ใหม่" เป็น งานประจำ · รอเริ่ม / งานสั่ง · รอเริ่ม
+  const splitNew = tasks.some((t) => t.routine_id);
+  type BoardCol = { id: string; status: TaskStatus; label?: string; filter?: (t: Task) => boolean };
+  const boardCols: BoardCol[] = (key === "sw-room" ? SW_COLUMNS : COLUMNS).flatMap((c): BoardCol[] =>
+    c === "open" && splitNew
+      ? [{ id: "open-routine", status: "open", label: "งานประจำ · รอเริ่ม", filter: (t) => !!t.routine_id }, { id: "open-assigned", status: "open", label: "งานสั่ง · รอเริ่ม", filter: (t) => !t.routine_id }]
+      : [{ id: c, status: c }]);
 
   return (
     <div className="space-y-6">
@@ -93,12 +100,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       {history ? (
         <div className="space-y-2">{tasks.map((t) => <TaskCard key={t.id} t={t} showRoom={false} />)}{!tasks.length && <div className="card p-6 text-center text-ink-soft text-sm">ยังไม่มีงานที่เสร็จ</div>}</div>
       ) : (
-        <div className={key === "sw-room" ? "flex gap-3 overflow-x-auto pb-2 items-start" : "grid md:grid-cols-2 xl:grid-cols-4 gap-4"}>
-          {(key === "sw-room" ? SW_COLUMNS : COLUMNS).map((col) => {
-            const list = tasks.filter((t) => t.status === col);
+        <div className={key === "sw-room" ? "flex gap-3 overflow-x-auto pb-2 items-start" : `grid md:grid-cols-2 ${splitNew ? "xl:grid-cols-5" : "xl:grid-cols-4"} gap-4`}>
+          {boardCols.map(({ id: colId, status: col, label, filter }) => {
+            const list = tasks.filter((t) => t.status === col && (!filter || filter(t)));
             return (
-              <div key={col} className={`rounded-2xl border p-3 min-h-40 ${key === "sw-room" ? "w-[190px] shrink-0" : ""} ${col === "accepted" ? "bg-green/5 border-green/40" : "bg-white/60 border-line"}`}>
-                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{statusLabel(col, key)}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}{col === "accepted" && <span className="ml-1 text-[10px] text-ink-soft">(7 วันล่าสุด)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
+              <div key={colId} className={`rounded-2xl border p-3 min-h-40 ${key === "sw-room" ? "w-[190px] shrink-0" : ""} ${col === "accepted" ? "bg-green/5 border-green/40" : "bg-white/60 border-line"}`}>
+                <div className="flex items-center justify-between mb-2 px-1"><span className="font-semibold text-sm">{label ?? statusLabel(col, key)}{key === "sw-room" && ["prep", "shipped", "arrived"].includes(col) && <span className="ml-1 text-[10px] text-ink-soft">(ส่งห้าง)</span>}{col === "accepted" && <span className="ml-1 text-[10px] text-ink-soft">(7 วันล่าสุด)</span>}</span><span className="text-xs text-ink-soft">{list.length}</span></div>
                 <div className="space-y-1.5">{list.map((t) => <TaskCard key={t.id} t={t} showRoom={false} compact />)}</div>
               </div>
             );
