@@ -502,3 +502,23 @@ export async function setPhotoCaption(roomKey: string, albumId: string, photoId:
   revalidatePath(`/work/rooms/${roomKey}/gallery/${albumId}`);
   return {};
 }
+
+// ---------- แจ้งเตือนเด้ง (Web Push, 0026) ----------
+export async function savePushSubscription(sub: { endpoint: string; p256dh: string; auth: string; userAgent: string }): Promise<{ error?: string }> {
+  const s = await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("push_subscriptions").upsert({ user_id: s.appUser.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, user_agent: sub.userAgent.slice(0, 300) }, { onConflict: "endpoint" });
+  return error ? { error: error.message } : {};
+}
+export async function removePushSubscription(endpoint: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  return error ? { error: error.message } : {};
+}
+export async function sendTestPush(): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("push_test");
+  return error ? { error: error.message } : {};
+}

@@ -1,0 +1,9 @@
+{
+  "name": "PKM ERP — ปากาม้า",
+  "short_name": "PKM ERP",
+  "start_url": "/work",
+  "display": "standalone",
+  "background_color": "#fff6ea",
+  "theme_color": "#452a79",
+  "icons": [{ "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

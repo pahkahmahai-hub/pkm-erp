@@ -1,3 +1,4 @@
+import { PushToggle } from "@/components/work/PushToggle";
 import Link from "next/link";
 import { Plus, Bell } from "lucide-react";
 import { getSession } from "@/lib/session";
@@ -61,6 +62,7 @@ export default async function WorkHome() {
           <Link href="/work/tasks/new" className="btn-primary"><Plus size={16} /> สั่งงาน</Link>
         </div>
       } />
+      <PushToggle compact />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="งานของฉัน" value={mine.length} tone="purple" />

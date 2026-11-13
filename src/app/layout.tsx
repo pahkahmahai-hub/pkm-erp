@@ -5,6 +5,8 @@ export const metadata: Metadata = {
   title: "PKM ERP",
   description: "ระบบบริหารจัดการภายใน บริษัท ปากาม้า (ไทยแลนด์) จำกัด",
   icons: { icon: "/icon.png", apple: "/icon.png" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "PKM ERP", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
