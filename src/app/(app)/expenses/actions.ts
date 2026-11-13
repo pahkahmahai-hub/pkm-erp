@@ -46,6 +46,13 @@ async function applyLineDiscounts(supabase: Awaited<ReturnType<typeof createClie
       if (error) return `บันทึกมัดจำไม่ได้: ${error.message}`;
     }
   }
+  // จ่ายมัดจำรอบแรก (0046) — แยกยอดคงเหลือไปบิลใหม่
+  const split = Number(formData.get("split_deposit")) || 0;
+  if (split > 0) {
+    const { error } = await supabase.rpc("split_expense_deposit", { p_id: id, p_deposit: split, p_due: nul(formData.get("split_due")), p_round: nul(formData.get("split_round")) });
+    if (error) return `แยกมัดจำไม่ได้: ${error.message}`;
+    revalidatePath("/expenses/payables");
+  }
   return null;
 }
 

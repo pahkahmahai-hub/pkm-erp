@@ -21,8 +21,8 @@ const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2,
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const today = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 
-export function ExpenseForm({ companies, suppliers, categories, products = [], materials = [], expense, items, existingFiles, aiEnabled }: {
-  companies: Company[]; suppliers: SupplierLite[]; categories: ExpenseCategory[]; products?: ProductLite[]; materials?: MaterialLite[]; expense?: Expense | null; items?: ExpenseItem[]; existingFiles?: Up[]; aiEnabled: boolean;
+export function ExpenseForm({ companies, suppliers, categories, products = [], materials = [], expense, items, existingFiles, aiEnabled, splitLocked }: {
+  companies: Company[]; suppliers: SupplierLite[]; categories: ExpenseCategory[]; products?: ProductLite[]; materials?: MaterialLite[]; expense?: Expense | null; items?: ExpenseItem[]; existingFiles?: Up[]; aiEnabled: boolean; splitLocked?: boolean;
 }) {
   const e = expense;
   const [companyId, setCompanyId] = useState(e?.company_id ?? companies.find((c) => c.code === "PKM")?.id ?? companies[0]?.id);
@@ -38,6 +38,10 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const [discPct, setDiscPct] = useState(false);
   const [deposit, setDeposit] = useState(String(Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) || ""));
   const [depPct, setDepPct] = useState(false);
+  const hadDeposit = Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) > 0;
+  // โหมดมัดจำ: none = ไม่มี · first = จ่ายมัดจำรอบนี้ (แยกยอดคงเหลือไปบิลใหม่) · later = หักมัดจำที่จ่ายไปแล้ว
+  const [depMode, setDepMode] = useState<"none" | "first" | "later">(hadDeposit ? "later" : "none");
+  const [restDue, setRestDue] = useState("");
   const [depositNote, setDepositNote] = useState((e as { deposit_note?: string | null } | null | undefined)?.deposit_note ?? "");
   const [wht, setWht] = useState(Number(e?.wht_pct ?? 0));
   const [payRound, setPayRound] = useState(e?.pay_round ?? nextPayRound(today()));
@@ -132,8 +136,13 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
   const vat = vatMode === "inclusive" ? r2(after - net) : vatMode === "exclusive" ? r2(after * 0.07) : 0;
   const grand = vatMode === "exclusive" ? r2(net + vat) : after;
   const whtAmt = r2(net * wht / 100);
-  const depAmt = depPct ? r2(grand * (parseFloat(deposit) || 0) / 100) : (parseFloat(deposit) || 0);
+  const depRaw = depPct ? r2(grand * (parseFloat(deposit) || 0) / 100) : (parseFloat(deposit) || 0);
+  const depAmt = depMode === "later" ? depRaw : 0;          // หักจากบิลนี้
+  const firstDep = depMode === "first" ? depRaw : 0;         // มัดจำที่จะจ่ายรอบนี้
+  const firstBad = depMode === "first" && firstDep > 0 && firstDep >= grand;
   const pay = r2(grand - whtAmt - depAmt);
+  const firstWht = grand > 0 ? r2(whtAmt * firstDep / grand) : 0;
+  const restDueEff = restDue || addDays(billDate, 30);
   const aiGrand = ai.bill?.grand_total != null ? Number(ai.bill.grand_total) : null;
   const mismatch = aiGrand != null && Math.abs(aiGrand - grand) > 0.5;
 
@@ -248,9 +257,30 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
                 <input type="hidden" name="discount_amount" value={discount} />{discPct && discount > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(discount)} บาท</div>}</div>
               <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" value={wht} onChange={(ev) => setWht(Number(ev.target.value))} className="input">{WHT_CHOICES.map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div>
             </div>
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div><label className="label flex items-center gap-1.5">มัดจำที่จ่ายไปแล้ว <span className="inline-flex rounded-md border border-line text-[11px] overflow-hidden">{(["฿", "%"] as const).map((m) => <button key={m} type="button" onClick={() => setDepPct(m === "%")} className={`px-1.5 ${(m === "%") === depPct ? "bg-purple text-white" : ""}`}>{m}</button>)}</span></label>{Number((e as { deposit_amount?: number } | null | undefined)?.deposit_amount ?? 0) > 0 && <input type="hidden" name="deposit_had" value="1" />}<input type="number" step="0.01" min="0" value={deposit} onChange={(ev) => setDeposit(ev.target.value)} className="input" placeholder="0" /><input type="hidden" name="deposit_amount" value={depAmt} />{depPct && depAmt > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(depAmt)} บาท ({deposit}% ของยอดตามบิล)</div>}</div>
-              <div className="sm:col-span-2"><label className="label">รายละเอียดมัดจำ</label><input name="deposit_note" value={depositNote} onChange={(ev) => setDepositNote(ev.target.value)} className="input" placeholder="เช่น โอนมัดจำ 50% วันที่ 1/11 · อ้างอิง EXP…" /></div>
+            <div className="rounded-xl border border-line p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2"><span className="label !mb-0">มัดจำ</span>
+                {([["none", "ไม่มีมัดจำ"], ...(splitLocked ? [] : [["first", "จ่ายมัดจำรอบนี้ (รอบแรก)"]]), ["later", "หักมัดจำที่จ่ายไปแล้ว (รอบหลัง)"]] as [typeof depMode, string][]).map(([k, t]) => (
+                  <button key={k} type="button" onClick={() => setDepMode(k)} className={`text-xs rounded-full border px-3 py-1 ${depMode === k ? "bg-purple text-white border-purple" : "border-line"}`}>{t}</button>
+                ))}
+              </div>
+              {hadDeposit && <input type="hidden" name="deposit_had" value="1" />}
+              <input type="hidden" name="deposit_amount" value={depAmt} />
+              {depMode !== "none" && (
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div><label className="label flex items-center gap-1.5">{depMode === "first" ? "มัดจำที่จะจ่ายรอบนี้" : "มัดจำที่จ่ายไปแล้ว"} <span className="inline-flex rounded-md border border-line text-[11px] overflow-hidden">{(["฿", "%"] as const).map((m) => <button key={m} type="button" onClick={() => setDepPct(m === "%")} className={`px-1.5 ${(m === "%") === depPct ? "bg-purple text-white" : ""}`}>{m}</button>)}</span></label>
+                    <input type="number" step="0.01" min="0" value={deposit} onChange={(ev) => setDeposit(ev.target.value)} className="input" placeholder={depPct ? "เช่น 50" : "0"} />
+                    {depPct && depRaw > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(depRaw)} บาท ({deposit}% ของยอดตามบิล)</div>}</div>
+                  {depMode === "first" ? (<>
+                    <div><label className="label">ส่วนที่เหลือครบกำหนดจ่าย</label><input type="date" value={restDueEff} onChange={(ev) => setRestDue(ev.target.value)} className="input" /><div className="text-[11px] text-ink-soft mt-0.5">ตามระยะเวลาผลิตของงานนี้</div></div>
+                    <div className="text-[12px] text-ink-soft self-end">บันทึกแล้วระบบจะแยกเป็น 2 บิล: บิลนี้ = มัดจำ (จ่ายรอบนี้) · บิลใหม่ = ส่วนที่เหลือ รอจ่ายรอบ {thD(nextPayRound(restDueEff))}</div>
+                    {firstDep > 0 && !firstBad && <><input type="hidden" name="split_deposit" value={firstDep} /><input type="hidden" name="split_due" value={restDueEff} /><input type="hidden" name="split_round" value={nextPayRound(restDueEff)} /></>}
+                  </>) : (
+                    <div className="sm:col-span-2"><label className="label">รายละเอียดมัดจำ</label><input name="deposit_note" value={depositNote} onChange={(ev) => setDepositNote(ev.target.value)} className="input" placeholder="เช่น มัดจำ 50% จ่ายแล้ววันที่ 1/11 · อ้างอิง EXP…" /></div>
+                  )}
+                </div>
+              )}
+              {depMode !== "later" && hadDeposit && <input type="hidden" name="deposit_note" value="" />}
+              {firstBad && <div className="text-xs text-red">ยอดมัดจำต้องน้อยกว่ายอดตามบิล</div>}
             </div>
             <div><label className="label">หมายเหตุภายใน</label><textarea name="note" value={note} onChange={(ev) => setNote(ev.target.value)} className="input" rows={2} /></div>
           </div>
@@ -261,7 +291,11 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
             <Row l="ยอดตามบิล" v={grand} bold />
             {wht > 0 && <Row l={`หัก ณ ที่จ่าย ${wht}%`} v={-whtAmt} red />}
             {depAmt > 0 && <Row l="หักมัดจำที่จ่ายแล้ว" v={-depAmt} red />}
-            <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง</span><span className="font-display text-xl font-bold text-purple">{fmt(pay)}</span></div>
+            <div className="border-t border-line pt-2 mt-2 flex justify-between items-baseline"><span className="font-semibold">ยอดจ่ายจริง{firstDep > 0 && !firstBad ? "ทั้งงาน" : ""}</span><span className="font-display text-xl font-bold text-purple">{fmt(pay)}</span></div>
+            {firstDep > 0 && !firstBad && <div className="mt-2 rounded-lg bg-purple/5 p-2 space-y-1">
+              <Row l="จ่ายมัดจำรอบนี้" v={r2(firstDep - firstWht)} bold />
+              <Row l={`ส่วนที่เหลือ (ครบ ${thD(restDueEff)})`} v={r2(pay - (firstDep - firstWht))} />
+            </div>}
           </div>
         </div>
       </div>
@@ -271,3 +305,6 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
 function Row({ l, v, bold, red }: { l: string; v: number; bold?: boolean; red?: boolean }) {
   return <div className={`flex justify-between ${bold ? "font-semibold" : ""} ${red ? "text-red" : ""}`}><span className="text-ink-soft">{l}</span><span>{v < 0 ? `−${fmt(-v)}` : fmt(v)}</span></div>;
 }
+
+function addDays(d: string, n: number) { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); }
+function thD(d: string) { return `${Number(d.slice(8, 10))}/${Number(d.slice(5, 7))}/${Number(d.slice(0, 4)) + 543}`; }
