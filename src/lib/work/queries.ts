@@ -31,6 +31,16 @@ export async function roomRights(supabase: SupabaseClient, roomId: string, isAdm
   return { isMember: !!m, isLead: !!l };
 }
 
+/** งานประจำ (routine) ที่ยังไม่ถึงสัปดาห์นี้ — ซ่อนจากบอร์ด/รายการ (ยังเห็นในปฏิทิน) · สัปดาห์ = จันทร์–อาทิตย์ */
+export function isFutureRoutine(t: Task, today = todayBkk()) {
+  if (!t.routine_id) return false;
+  const d = t.start_date ?? t.due_date;
+  if (!d) return false;
+  const dow = (new Date(today + "T00:00:00Z").getUTCDay() + 6) % 7;
+  const sunday = new Date(Date.parse(today + "T00:00:00Z") + (6 - dow) * 86400_000).toISOString().slice(0, 10);
+  return d > sunday;
+}
+
 export function isOverdue(t: Task) {
   const due = effectiveDue(t);
   return !!due && due < todayBkk() && !["accepted", "cancelled", "done"].includes(t.status);

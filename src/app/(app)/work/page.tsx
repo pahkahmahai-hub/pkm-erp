@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, Stat } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { myRooms, ensureRoutines, TASK_SELECT, isOverdue, loadDirectory, fillEmployees } from "@/lib/work/queries";
+import { myRooms, ensureRoutines, TASK_SELECT, isOverdue, loadDirectory, fillEmployees, isFutureRoutine } from "@/lib/work/queries";
 import type { Task } from "@/lib/work/types";
 import { fmtDate, todayBkk } from "@/lib/format";
 
@@ -40,7 +40,7 @@ export default async function WorkHome() {
   const rp = (roomParents ?? []) as { id: string; key: string; parent_key?: string | null }[];
   const parentIdOf = new Map(rp.filter((x) => x.parent_key).map((x) => [x.id, rp.find((p) => p.key === x.parent_key)?.id]));
   const unreadByRoom = Object.fromEntries(((chatUnread ?? []) as { room_id: string; unread: number }[]).map((x) => [x.room_id, x.unread]));
-  const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id");
+  const tasks = fillEmployees(tasksRaw as Task[], dir, "assignee_id").filter((t) => !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้
   const mine = tasks.filter((t) => t.assignee_id === empId);
   // ห้องที่ฉันเป็นหัวหน้า ★ — เห็นงานค้าง/ตรวจรับของลูกทีมในห้องนั้น (ยกเว้นงานของตัวเอง ซึ่งผู้บริหารตรวจ)
   const leadRoomIds = new Set(rooms.filter((r) => r.is_lead).map((r) => r.id));

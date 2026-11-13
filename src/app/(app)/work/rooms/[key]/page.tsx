@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights, isFutureRoutine } from "@/lib/work/queries";
 import { STATUS_TH, statusLabel, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
@@ -66,7 +66,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
     if (who) dq = dq.eq("assignee_id", who);
     doneRecent = ((await dq).data ?? []) as Task[];
   }
-  const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id");
+  const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id").filter((t) => history || !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้
   // ห้องที่มีงานประจำ: แยก "ใหม่" เป็น งานประจำ · รอเริ่ม / งานสั่ง · รอเริ่ม
   const splitNew = tasks.some((t) => t.routine_id);
   type BoardCol = { id: string; status: TaskStatus; label?: string; filter?: (t: Task) => boolean };
