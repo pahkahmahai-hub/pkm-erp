@@ -16,7 +16,7 @@ export interface Expense {
 export interface ExpenseItem { id: string; expense_id: string; line_no: number; description: string; qty: number; unit: string | null; unit_price: number; amount: number; material_id: string | null; product_id: string | null }
 export interface ExpenseFile { id: string; expense_id: string; path: string; kind: string; created_at: string }
 export interface WhtCertificate {
-  id: string; company_id: string; cert_no: string; expense_id: string | null; form: "pnd3" | "pnd53"; payee_name: string; payee_tax_id: string | null; payee_address: string | null;
+  id: string; company_id: string; cert_no: string; expense_id: string | null; form: "pnd3" | "pnd53" | "pnd1" | "pnd1a"; payroll_line_id?: string | null; payroll_year?: number | null; sso_amount?: number | null; payee_name: string; payee_tax_id: string | null; payee_address: string | null;
   pay_date: string; income_type: string | null; income_amount: number; wht_pct: number; wht_amount: number; created_at: string;
   income_row: number; payer_condition: number; note: string | null; payee_branch: string | null;
 }

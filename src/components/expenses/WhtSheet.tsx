@@ -72,7 +72,7 @@ export function WhtSheet({ c, co }: { c: WhtCertificate; co: Company }) {
               <div className="ln"><span>ที่อยู่</span><span className="fill">{c.payee_address ?? ""}</span></div>
               <div className="hint ind">(ให้ระบุ ชื่ออาคาร/หมู่บ้าน ห้องเลขที่ ชั้นที่ เลขที่ ตรอก/ซอย หมู่ที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด)</div>
               <div className="ln" style={{ marginTop: 3 }}><b>ลำดับที่</b><span style={{ borderBottom: "1px dotted #555", width: 60, display: "inline-block" }} /><span>ในแบบ</span>
-                <span>{chk(false)}(1) ภ.ง.ด.1ก {chk(false)}(2) ภ.ง.ด.1ก พิเศษ {chk(false)}(3) ภ.ง.ด.2 {chk(c.form === "pnd3")}(4) ภ.ง.ด.3</span></div>
+                <span>{chk(c.form === "pnd1" || c.form === "pnd1a")}(1) ภ.ง.ด.1ก {chk(false)}(2) ภ.ง.ด.1ก พิเศษ {chk(false)}(3) ภ.ง.ด.2 {chk(c.form === "pnd3")}(4) ภ.ง.ด.3</span></div>
               <div className="ln hint ind"><span style={{ visibility: "hidden" }}>ลำดับที่</span><span style={{ fontSize: 10.5, color: "#000" }}>{chk(false)}(5) ภ.ง.ด.2ก {chk(false)}(6) ภ.ง.ด.3ก {chk(c.form === "pnd53")}(7) ภ.ง.ด.53</span></div>
             </div>
 
@@ -95,7 +95,7 @@ export function WhtSheet({ c, co }: { c: WhtCertificate; co: Company }) {
               </tbody>
             </table>
 
-            <div className="sec" style={{ fontSize: 10 }}><b>เงินที่จ่ายเข้า</b> กบข./กสจ./กองทุนสงเคราะห์ครูโรงเรียนเอกชน ........... บาท &nbsp; กองทุนประกันสังคม ........... บาท &nbsp; กองทุนสำรองเลี้ยงชีพ ........... บาท</div>
+            <div className="sec" style={{ fontSize: 10 }}><b>เงินที่จ่ายเข้า</b> กบข./กสจ./กองทุนสงเคราะห์ครูโรงเรียนเอกชน ........... บาท &nbsp; กองทุนประกันสังคม {c.sso_amount ? <b>{fmt(Number(c.sso_amount))}</b> : "..........."} บาท &nbsp; กองทุนสำรองเลี้ยงชีพ ........... บาท</div>
             <div className="sec" style={{ fontSize: 10 }}><b>ผู้จ่ายเงิน</b> {PAYER_CONDITIONS.map((p, i) => <span key={p}>{chk(c.payer_condition === i + 1)}{p}</span>)}</div>
 
             <div className="foot">

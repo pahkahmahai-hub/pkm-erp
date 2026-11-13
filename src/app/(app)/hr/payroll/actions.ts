@@ -219,6 +219,23 @@ export async function setRunDeductLate(runId: string, on: boolean, field: "deduc
   redirect(`${BASE}/${runId}`);
 }
 
+/** ออก 50 ทวิ รายเดือนของงวด */
+export async function createPayrollWht(runId: string) {
+  const { sb } = await requirePayroll(`${BASE}/${runId}`);
+  const { data, error } = await sb.rpc("create_payroll_wht", { p_run: runId });
+  if (error) redirect(`${BASE}/${runId}?error=${encodeURIComponent(error.message)}`);
+  redirect(`${BASE}/${runId}?wht=${data ?? 0}`);
+}
+
+/** ออก/อัปเดต 50 ทวิ สรุปทั้งปี (ภ.ง.ด.1ก) */
+export async function createPayrollWhtAnnual(formData: FormData) {
+  const { sb } = await requirePayroll(BASE);
+  const year = Number(formData.get("year"));
+  const { data, error } = await sb.rpc("create_payroll_wht_annual", { p_year: year });
+  if (error) redirect(`${BASE}?error=${encodeURIComponent(error.message)}`);
+  redirect(`${BASE}?whtyear=${year}&whtn=${data ?? 0}`);
+}
+
 export async function updatePayDate(runId: string, formData: FormData) {
   const { sb } = await requirePayroll(`${BASE}/${runId}`);
   await sb.from("payroll_runs").update({ pay_date: nul(formData.get("pay_date")), note: nul(formData.get("note")) }).eq("id", runId);

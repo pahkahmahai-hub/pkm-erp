@@ -5,18 +5,20 @@ import { Header } from "@/components/ui";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { requirePayroll } from "@/lib/payroll/server";
 import { money, periodLabel, type PayrollLine, type PayrollRun } from "@/lib/payroll/calc";
-import { refreshPayrollAuto, setPayrollRunStatus, deletePayrollRun, updatePayDate, setRunDeductLate } from "../actions";
+import { refreshPayrollAuto, setPayrollRunStatus, deletePayrollRun, updatePayDate, setRunDeductLate, createPayrollWht } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function PayrollRunPage({ params, searchParams }: { params: Promise<{ runId: string }>; searchParams: Promise<{ error?: string; created?: string; refreshed?: string; saved?: string }> }) {
+export default async function PayrollRunPage({ params, searchParams }: { params: Promise<{ runId: string }>; searchParams: Promise<{ error?: string; created?: string; refreshed?: string; saved?: string; wht?: string }> }) {
   const { runId } = await params; const sp = await searchParams;
   const { sb } = await requirePayroll(`/hr/payroll/${runId}`);
-  const [{ data: run }, { data: lines }, { data: emps }] = await Promise.all([
+  const [{ data: run }, { data: lines }, { data: emps }, { data: whts }] = await Promise.all([
     sb.from("payroll_runs").select("*").eq("id", runId).maybeSingle(),
     sb.from("payroll_lines").select("*").eq("run_id", runId),
     sb.from("employees").select("id, emp_code, first_name, last_name, nickname"),
+    sb.from("wht_certificates").select("id, cert_no, payroll_line_id, wht_amount, form"),
   ]);
+  const whtByLine = new Map((whts ?? []).filter((w) => w.payroll_line_id).map((w) => [w.payroll_line_id as string, w]));
   if (!run) notFound();
   const r = run as PayrollRun; const draft = r.status === "draft";
   const E = new Map((emps ?? []).map((e) => [e.id as string, e]));
@@ -30,6 +32,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
         action={<span className={draft ? "badge-pending" : "badge-approved"}>{draft ? "ร่าง" : "ปิดงวดแล้ว"}</span>} />
       {sp.error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{sp.error}</div>}
       {sp.created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สร้างงวดแล้ว — ดึง OT/สาย/ขาดงานจาก HR ให้แล้ว ตรวจและแก้รายคนได้ (กดชื่อ)</div>}
+      {sp.wht && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ออกหนังสือรับรองหัก ณ ที่จ่ายใหม่ {sp.wht} ใบ — กดเลข WT ในตารางเพื่อพิมพ์</div>}
       {sp.refreshed && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ดึงข้อมูล OT/สาย/ขาดงานใหม่แล้ว</div>}
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -42,6 +45,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
           </form>); })}
         <a href={`/print/payslips/${runId}`} target="_blank" rel="noreferrer" className="btn-outline text-sm"><Printer size={14} /> พิมพ์สลิปทั้งหมด</a>
         <a href={`/hr/payroll/${runId}/export?type=summary`} className="btn-outline text-sm"><FileSpreadsheet size={14} /> Excel สำหรับสำนักงานบัญชี</a>
+        {L.some((l) => l.tax_wht > 0) && <form action={createPayrollWht.bind(null, runId)}><button className="btn-outline text-sm" title="ออกหนังสือรับรองหัก ณ ที่จ่าย ให้ทุกคนที่ถูกหักภาษีงวดนี้ (คนที่มีใบแล้วจะข้าม)">🧾 ออก 50 ทวิ งวดนี้</button></form>}
         <a href={`/hr/payroll/${runId}/export?type=bank`} className="btn-outline text-sm"><Landmark size={14} /> ไฟล์โอนเงิน</a>
         <span className="flex-1" />
         {draft
@@ -64,7 +68,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
                 <td className="text-right">{money(l.salary + l.position_allowance)}</td><td className="text-right">{money(l.ot_amount)}</td><td className="text-right">{money(l.commission_amount)}</td>
                 <td className="text-right">{money(l.diligence + l.bonus + l.other_income)}</td><td className="text-right font-semibold">{money(l.earnings)}</td>
                 <td className="text-right text-red">{money(l.late_deduct)}</td><td className="text-right text-red">{money(l.absence_deduct)}</td><td className="text-right">{l.sso_on ? money(l.sso_employee) : <span className="text-ink-soft text-xs">ไม่หัก</span>}</td>
-                <td className="text-right">{money(l.tax_wht)}</td><td className="text-right">{money(l.advance + l.other_deduct)}</td><td className="text-right font-bold">{money(l.net_pay)}</td>
+                <td className="text-right">{money(l.tax_wht)}{whtByLine.get(l.id) && <a href={`/print/wht/${whtByLine.get(l.id)!.id}`} target="_blank" rel="noreferrer" className="block text-[10px] text-purple underline">{whtByLine.get(l.id)!.cert_no as string}</a>}</td><td className="text-right">{money(l.advance + l.other_deduct)}</td><td className="text-right font-bold">{money(l.net_pay)}</td>
               </tr>); })}
             {!L.length && <tr><td colSpan={12} className="text-center text-ink-soft py-6">ไม่มีพนักงานในงวดนี้</td></tr>}
           </tbody>
