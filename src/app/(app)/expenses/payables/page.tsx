@@ -5,6 +5,7 @@ import { Header } from "@/components/ui";
 import { fmtDate } from "@/lib/format";
 import { PAY_METHODS, type Expense } from "@/lib/expenses/types";
 import { payExpense } from "../actions";
+import { PaySlipProvider, PaySelect, PaySlipButton } from "@/components/expenses/PaySlip";
 
 import { todayBkk } from "@/lib/today";
 
@@ -22,7 +23,8 @@ export default async function Payables() {
   const today = todayBkk();
 
   return (
-    <div className="space-y-6">
+    <PaySlipProvider>
+    <div className="space-y-6 pb-20">
       <Header title="เตรียมจ่าย (เจ้าหนี้ที่อนุมัติแล้ว)" sub={`${rows.length} ใบ · รวม ฿${fmt(total)} · จัดกลุ่มตามรอบจ่าย 1 / 15`} />
       {groups.map(([round, list]) => {
         const sum = list.reduce((a, r) => a + Number(r.net_pay), 0);
@@ -35,9 +37,10 @@ export default async function Payables() {
               <div className="text-sm">{list.length} ใบ · จ่ายรวม <b>฿{fmt(sum)}</b>{wht > 0 && <span className="text-xs text-ink-soft"> · หัก ณ ที่จ่ายรวม {fmt(wht)}</span>}</div>
             </div>
             <table className="tbl">
-              <thead><tr><th>เลขที่</th><th>ซัพพลายเออร์</th><th>บิล</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th className="w-[330px]">บันทึกจ่าย</th></tr></thead>
+              <thead><tr><th className="w-8"></th><th>เลขที่</th><th>ซัพพลายเออร์</th><th>บิล</th><th className="text-right">ยอดบิล</th><th className="text-right">หัก ณ ที่จ่าย</th><th className="text-right">จ่ายจริง</th><th className="w-[330px]">บันทึกจ่าย</th></tr></thead>
               <tbody>{list.map((r) => (
                 <tr key={r.id}>
+                  <td><PaySelect s={{ id: r.id, no: r.exp_no, supplier: r.supplier_name, net: Number(r.net_pay) }} /></td>
                   <td><Link href={`/expenses/${r.id}`} className="font-mono text-xs text-purple hover:underline">{r.exp_no}</Link><div className="text-[10px] text-ink-soft">{r.companies.code} · {r.expense_categories?.name ?? ""}</div></td>
                   <td className="font-medium">{r.supplier_name}{r.description && <div className="text-xs text-ink-soft truncate max-w-[220px]">{r.description}</div>}</td>
                   <td className="text-xs">{r.bill_no ?? "—"}<div className="text-ink-soft">{fmtDate(r.bill_date)}</div></td>
@@ -50,8 +53,9 @@ export default async function Payables() {
                       <input type="date" name="paid_date" defaultValue={today} className="input !py-1 !text-xs w-[130px]" />
                       <select name="paid_method" className="input !py-1 !text-xs w-[84px]">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select>
                       <input name="paid_ref" placeholder="อ้างอิง" className="input !py-1 !text-xs w-[90px]" />
-                      <button className="btn-primary !py-1 !px-2.5 !text-xs">จ่ายแล้ว</button>
+                      <button className="btn-outline !py-1 !px-2.5 !text-xs">จ่ายแล้ว</button>
                     </form>
+                    <div className="mt-1"><PaySlipButton s={{ id: r.id, no: r.exp_no, supplier: r.supplier_name, net: Number(r.net_pay) }} /></div>
                   </td>
                 </tr>))}</tbody>
             </table>
@@ -60,5 +64,6 @@ export default async function Payables() {
       })}
       {!rows.length && <div className="card p-10 text-center text-ink-soft">ไม่มีรายการรอจ่าย 🎉</div>}
     </div>
+    </PaySlipProvider>
   );
 }

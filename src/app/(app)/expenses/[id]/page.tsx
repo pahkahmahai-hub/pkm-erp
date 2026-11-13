@@ -8,6 +8,7 @@ import { fmtDate, fmtDateTime } from "@/lib/format";
 import { STATUS_TH, STATUS_BADGE, PAY_METHODS, nextPayRound, type Expense, type ExpenseItem, type ExpenseFile, type WhtCertificate } from "@/lib/expenses/types";
 import { reviewExpense, payExpense, cancelExpense, signExpenseFiles, deleteExpense } from "../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
+import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
 
 import { todayBkk } from "@/lib/today";
 
@@ -45,8 +46,9 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
         <div className="space-y-4">
           {fl.map((f, i) => f.path.endsWith(".pdf")
             ? <a key={f.id} href={urls[i]} target="_blank" className="card block p-4 text-sm text-purple">📄 เปิดไฟล์ PDF</a>
-            : /* eslint-disable-next-line @next/next/no-img-element */ <a key={f.id} href={urls[i]} target="_blank"><img src={urls[i]} alt="" className="w-full rounded-2xl border border-line" /></a>)}
+            : /* eslint-disable-next-line @next/next/no-img-element */ <a key={f.id} href={urls[i]} target="_blank" className="relative block"><img src={urls[i]} alt="" className="w-full rounded-2xl border border-line" />{f.kind === "slip" && <span className="absolute top-2 left-2 rounded bg-green text-white text-[11px] font-semibold px-2 py-0.5">สลิปโอนเงิน</span>}</a>)}
           {!fl.length && <div className="card p-6 text-center text-sm text-ink-soft">ไม่มีรูปบิล</div>}
+          {x.status !== "cancelled" && (session.isAdmin || x.created_by === session.appUser.id) && <div className="card p-4"><AttachExpenseFiles id={id} /></div>}
         </div>
 
         <div className="space-y-5">

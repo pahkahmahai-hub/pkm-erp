@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, Suspense } from "react";
 import { NavFeedback } from "@/components/NavFeedback";
+import { RegisterSW } from "@/components/RegisterSW";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
@@ -211,7 +212,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <form action="/auth/signout" method="post"><button className="btn-outline py-1.5 px-3"><LogOut size={14} /> ออก</button></form>
           </div>
         </header>
-        <Suspense fallback={null}><NavFeedback /></Suspense>
+        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW />
         <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
         <footer className="px-6 py-4 text-[11px] text-ink-soft">PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful</footer>
       </div>
@@ -250,7 +251,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
           <button onClick={() => setOpen(true)} aria-label="เปิดเมนู" className="text-purple"><Menu size={22} /></button>
           <BrandLogo />
         </header>
-        <Suspense fallback={null}><NavFeedback /></Suspense>
+        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto">{children}</main>
         <footer className="px-6 py-4 text-[11px] text-ink-soft">
           PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful

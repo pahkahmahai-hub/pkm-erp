@@ -28,8 +28,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-6">
       <Header title="ค่าใช้จ่าย / เจ้าหนี้" sub={session.isAdmin ? "บิลซัพพลายเออร์ทั้งบริษัท · อนุมัติ · รอบจ่าย 1 และ 15" : "บิลที่คุณบันทึก — ผู้บริหารเป็นผู้อนุมัติและจ่าย"}
-        action={<Link href="/expenses/new" className="btn-primary"><Plus size={16} />
-      {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการค่าใช้จ่ายแล้ว</div>} บันทึกบิลใหม่</Link>} />
+        action={<div className="flex gap-2"><Link href="/expenses/quick" className="btn-outline">📷 บันทึกด่วน</Link><Link href="/expenses/new" className="btn-primary"><Plus size={16} /> บันทึกบิลใหม่</Link></div>} />
+      {deleted && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ลบรายการค่าใช้จ่ายแล้ว</div>}
       {sum && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <Stat label={`รออนุมัติ ${sum.pending_count} ใบ`} value={`฿${fmt(sum.pending_amount)}`} tone="yellow" href="/expenses?status=pending" />
