@@ -148,8 +148,10 @@ export async function postComment(taskId: string, formData: FormData): Promise<{
   let mentions: string[] = [];
   try { mentions = JSON.parse(String(formData.get("mentions") ?? "[]")); } catch { mentions = []; }
   if (mentions.length) await supabase.rpc("notify_comment_mentions", { p_comment: (data as { id: string }).id, p_ids: mentions });   // 0054
+  const reply_to = nul(formData.get("reply_to"));
+  const { error: rErr } = reply_to ? await supabase.rpc("set_comment_reply", { p_comment: (data as { id: string }).id, p_reply: reply_to }) : { error: null };   // 0060
   const { data: me } = await supabase.from("app_users").select("display_name, email").eq("id", (await getSession()).appUser.id).maybeSingle();
-  return { row: { ...(data as Record<string, unknown>), mentions, app_users: me } };
+  return { row: { ...(data as Record<string, unknown>), mentions, ...(reply_to && !rErr ? { reply_to } : {}), app_users: me } };
 }
 
 export async function deleteComment(id: string, taskId: string) {
