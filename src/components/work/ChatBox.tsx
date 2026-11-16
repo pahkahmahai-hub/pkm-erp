@@ -185,11 +185,11 @@ export function ChatBox({
       <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight }}>
         {messages.map((m) => {
           const mine = m.author_id === meId;
-          if (m.kind === "status") return <div key={m.id} className="text-center text-[11px] text-ink-soft"><span className="bg-cream px-2 py-0.5 rounded-full">{authorName(m)} · {m.body} · {fmtDateTime(m.created_at)}</span></div>;
+          if (m.kind === "status") return <div key={m.id} className="text-center text-[13px] text-ink-soft"><span className="bg-cream px-2 py-0.5 rounded-full">{authorName(m)} · {m.body} · {fmtDateTime(m.created_at)}</span></div>;
           return (
             <div key={m.id} id={"msg-" + m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${mine ? "bg-purple text-white rounded-br-sm" : "bg-cream rounded-bl-sm"}`}>
-                {!mine && <div className="text-[11px] font-semibold opacity-70 mb-0.5">{authorName(m)}</div>}
+              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[17px] leading-relaxed ${mine ? "bg-purple text-white rounded-br-sm" : "bg-cream rounded-bl-sm"}`}>
+                {!mine && <div className="text-[13px] font-semibold opacity-70 mb-0.5">{authorName(m)}</div>}
                 {m.reply_to && (() => { const q = messages.find((x) => x.id === m.reply_to); return (
                   <button type="button" onClick={() => document.getElementById("msg-" + m.reply_to)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block w-full text-left mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[11px] ${mine ? "bg-white/15 border-white/70 text-white/90" : "bg-white/70 border-purple text-ink-soft"}`}>
                     <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span><span className="block truncate">{snippet(q)}</span>
@@ -197,7 +197,7 @@ export function ChatBox({
                 {m.body && <div className="whitespace-pre-wrap break-words">{renderBody(m.body)}</div>}
                 {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
                 {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" download className={`mt-1 flex items-center gap-2 underline ${mine ? "text-white" : "text-purple"}`}><Download size={14} /> {m.file_name ?? "ไฟล์แนบ"}</a>}
-                <div className={`text-[10px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>
+                <div className={`text-[12px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
@@ -208,7 +208,7 @@ export function ChatBox({
                   {loadReads && (() => { const sb = seenBy(m); return <button type="button" onClick={() => setSeenOpen(seenOpen === m.id ? null : m.id)} className="flex items-center gap-1 underline" title="ใครอ่านแล้วบ้าง"><Eye size={11} /> {sb.length ? `อ่านแล้ว ${sb.length}` : "ยังไม่มีคนอ่าน"}</button>; })()}
                   {mine && <button onClick={() => start(() => onDelete(m.id))} className="hover:text-red" title="ลบ"><Trash2 size={11} /></button>}
                 </div>
-                {seenOpen === m.id && <div className={`mt-1.5 rounded-lg px-2 py-1.5 text-[11px] ${mine ? "bg-white/15 text-white" : "bg-cream text-ink"}`}>
+                {seenOpen === m.id && <div className={`mt-1.5 rounded-lg px-2 py-1.5 text-[13px] ${mine ? "bg-white/15 text-white" : "bg-cream text-ink"}`}>
                   {seenBy(m).length ? seenBy(m).map((x) => <div key={x.user_id} className="flex justify-between gap-3"><span>✓ {x.name}</span><span className="opacity-70">{fmtDateTime(x.last_read_at)}</span></div>) : <div className="opacity-80">ยังไม่มีใครเปิดอ่าน</div>}
                 </div>}
               </div>
@@ -246,7 +246,7 @@ export function ChatBox({
               const touch = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
               if (e.key === "Enter" && !e.shiftKey && !touch && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
             }} onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 240)}px`; }}
-              className="input resize-none w-full min-h-[88px] sm:min-h-[52px] leading-relaxed" rows={3} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… @ เอ่ยถึงคน · ลากไฟล์/วางรูปลงได้" : "พิมพ์ข้อความ…")} />
+              className="input !text-[17px] resize-none w-full min-h-[96px] sm:min-h-[56px] leading-relaxed" rows={3} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… @ เอ่ยถึงคน · ลากไฟล์/วางรูปลงได้" : "พิมพ์ข้อความ…")} />
             <div className="hidden sm:block text-[10px] text-ink-soft mt-0.5">Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่</div>
           </div>
           <button type="button" onClick={send} disabled={pending || (!body.trim() && !file)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
