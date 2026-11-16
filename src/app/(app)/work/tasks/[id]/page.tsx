@@ -57,6 +57,15 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   // ผู้รับผิดชอบรายข้อ: ทุกคนในบริษัท (คนในห้องขึ้นก่อน) — งานบางขั้นเกี่ยวกับแผนกอื่น
   const memIds = new Set(mem.map((m) => m.employee_id));
   const people = [...mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" })), ...dir.filter((e) => !memIds.has(e.id)).map((e) => ({ id: e.id, name: `${e.nickname ?? e.first_name} (แผนกอื่น)` }))];
+  // @ ในคอมเมนต์: คนในห้อง + ผู้รับงาน/ผู้ร่วมงาน + ผู้รับผิดชอบรายข้อ + ผู้บริหาร
+  const involved = new Set<string>([...mem.map((m) => m.employee_id), ...(task.assignee_id ? [task.assignee_id] : []), ...(task.co_assignee_ids ?? []), ...items.map((c) => c.assignee_id).filter((x): x is string => !!x)]);
+  const { data: adminRows } = await supabase.rpc("mentionable_admins");
+  const admins = (adminRows ?? []) as { user_id: string; employee_id: string | null; label: string }[];
+  admins.forEach((a) => { if (a.employee_id) involved.add(a.employee_id); });
+  const mentionMembers = [
+    ...[...involved].map((eid) => dir.find((e) => e.id === eid)).filter((e): e is NonNullable<typeof e> => !!e).map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name })),
+    ...admins.filter((a) => !a.employee_id).map((a) => ({ employee_id: a.user_id, label: a.label.split(/\s+/)[0], first_name: "ผู้บริหาร", isUser: true })),
+  ];
   const nameOf = (empId: string) => { const e = dir.find((d) => d.id === empId); return e ? e.nickname ?? e.first_name : ""; };
   const todayTH = todayBkk();
   const doneCount = items.filter((c) => c.is_done).length;
@@ -138,7 +147,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           </div>
 
           {/* thread */}
-          <Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} />
+          <Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} members={mentionMembers} />
         </div>
 
         {/* actions */}

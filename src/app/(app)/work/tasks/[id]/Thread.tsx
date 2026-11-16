@@ -1,9 +1,9 @@
 "use client";
 
-import { ChatBox, type ChatMessage } from "@/components/work/ChatBox";
+import { ChatBox, type ChatMessage, type ChatMember } from "@/components/work/ChatBox";
 import { postComment, deleteComment } from "../../actions";
 
-export function Thread({ taskId, initial, meId }: { taskId: string; initial: ChatMessage[]; meId: string }) {
+export function Thread({ taskId, initial, meId, members = [] }: { taskId: string; initial: ChatMessage[]; meId: string; members?: ChatMember[] }) {
   return (
     <ChatBox
       table="work_comments"
@@ -14,7 +14,8 @@ export function Thread({ taskId, initial, meId }: { taskId: string; initial: Cha
       onPost={postComment.bind(null, taskId)}
       onDelete={(id) => deleteComment(id, taskId)}
       title="คอมเมนต์"
-      placeholder="คุยเรื่องงานนี้… แนบรูปผลงานได้ (Enter ส่ง)"
+      placeholder="คุยเรื่องงานนี้… @ เอ่ยถึงคน · แนบรูปผลงานได้"
+      members={members}
     />
   );
 }

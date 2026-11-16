@@ -199,7 +199,7 @@ export function ChatBox({
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
-                    (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
+                    table === "work_room_messages" && (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
                       ? m.mentions!.filter((emp) => !members.find((x) => x.employee_id === emp)?.isUser).map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
                       : <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>
                   )}

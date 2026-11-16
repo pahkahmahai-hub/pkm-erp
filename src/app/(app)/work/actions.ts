@@ -138,8 +138,11 @@ export async function postComment(taskId: string, formData: FormData): Promise<{
   }
   const { data, error } = await supabase.rpc("add_comment", { p_task: taskId, p_body: nul(formData.get("body")) ?? "", p_image_url: image_url, p_file_url: file_url, p_file_name: file_name });
   if (error) return { error: error.message };
+  let mentions: string[] = [];
+  try { mentions = JSON.parse(String(formData.get("mentions") ?? "[]")); } catch { mentions = []; }
+  if (mentions.length) await supabase.rpc("notify_comment_mentions", { p_comment: (data as { id: string }).id, p_ids: mentions });   // 0054
   const { data: me } = await supabase.from("app_users").select("display_name, email").eq("id", (await getSession()).appUser.id).maybeSingle();
-  return { row: { ...(data as Record<string, unknown>), app_users: me } };
+  return { row: { ...(data as Record<string, unknown>), mentions, app_users: me } };
 }
 
 export async function deleteComment(id: string, taskId: string) {
