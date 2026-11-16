@@ -11,6 +11,7 @@ export interface Task {
   arrive_due?: string | null; arrived_at?: string | null;   // SW ROOM (0029)
   co_assignee_ids?: string[] | null;   // ผู้ร่วมงาน (0035)
   next_step_label?: string | null; next_step_due?: string | null;   // ขั้นถัดไปจากเช็คลิสต์ (0052)
+  forward_count?: number; pending_forward_to?: string | null; pending_forward_by?: string | null; pending_forward_note?: string | null;   // ส่งต่องาน (0059)
   work_topics?: Pick<Topic, "id" | "name" | "color"> | null;
   started_at: string | null; done_at: string | null; done_note: string | null; reviewed_at: string | null; review_note: string | null;
   created_at: string; updated_at: string;

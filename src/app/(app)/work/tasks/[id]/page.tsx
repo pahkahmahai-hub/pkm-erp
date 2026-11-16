@@ -9,7 +9,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds, userNames } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask, forwardTask, decideForward } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -17,9 +17,9 @@ import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
-export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string; saved?: string; error?: string; edit?: string }> }) {
+export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string; saved?: string; error?: string; edit?: string; fwd?: string }> }) {
   const { id } = await params;
-  const { created, saved, error, edit } = await searchParams;
+  const { created, saved, error, edit, fwd } = await searchParams;
   const session = await getSession();
   await markTaskNotificationsRead(id).catch(() => {});
   await markTaskRead(id).catch(() => {});
@@ -80,6 +80,8 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
         <form action={renameTask.bind(null, id)} className="absolute right-0 z-20 mt-2 w-[min(90vw,520px)] card p-3 flex gap-2 shadow-lg"><input name="title" defaultValue={task.title} className="input" required autoFocus /><button className="btn-primary whitespace-nowrap">บันทึก</button></form></details>}
         <span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{statusLabel(task.status, task.work_rooms?.key)}</span></span>} />
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สั่งงานแล้ว ผู้รับจะเห็นในหน้างานของตัวเอง</div>}
+      {fwd === "done" && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ส่งต่องานแล้ว — แจ้งเตือนคนรับใหม่และผู้สั่งงานให้แล้ว</div>}
+      {fwd === "pending" && <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm px-4 py-3">ส่งคำขอส่งต่องานแล้ว — รอหัวหน้าห้องอนุมัติ</div>}
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
 
@@ -197,6 +199,31 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 <button formAction={swStepBack.bind(null, id)} className="btn-outline w-full text-xs py-1.5">↩ ย้อนกลับไป “{task.status === "prep" ? "รอตรวจรับ" : task.status === "shipped" ? "เตรียมส่ง" : "ส่งสินค้าแล้ว"}”</button>
               </form>
             )}
+            {/* ส่งต่องาน (0059) */}
+            {task.pending_forward_to && (
+              <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm p-3 space-y-2">
+                <div>⏳ ขอส่งต่องานให้ <b>{nameOf(task.pending_forward_to)}</b> · รอหัวหน้าอนุมัติ{task.pending_forward_note ? ` · ${task.pending_forward_note}` : ""}</div>
+                {(session.isAdmin || isLead) && <div className="flex gap-2">
+                  <form action={decideForward.bind(null, id, true)} className="flex-1"><button className="btn-primary w-full py-1.5">อนุมัติ</button></form>
+                  <form action={decideForward.bind(null, id, false)} className="flex-1"><button className="btn-outline w-full py-1.5">ไม่อนุมัติ</button></form>
+                </div>}
+              </div>
+            )}
+            {!task.pending_forward_to && !["accepted", "cancelled"].includes(task.status) && (isOwner || task.assignee_id === myEmp) && (() => {
+              const needApprove = !isOwner && (task.forward_count ?? 0) > 0;
+              return (
+                <details className="rounded-xl border border-line">
+                  <summary className="list-none cursor-pointer px-3 py-2 text-sm font-semibold text-purple flex items-center gap-1.5">↪ ส่งต่องาน{needApprove ? " (ต้องให้หัวหน้าอนุมัติ)" : ""}</summary>
+                  <form action={forwardTask.bind(null, id)} className="px-3 pb-3 space-y-2">
+                    <div><label className="label">ส่งต่อให้</label><select name="to" required defaultValue="" className="input"><option value="" disabled>เลือกคนรับงานใหม่</option>{people.filter((p) => !p.id.startsWith("u:") && p.id !== task.assignee_id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+                    <div><label className="label">เหตุผล (ไม่บังคับ)</label><input name="note" className="input" placeholder="เช่น ติดงานด่วน / งานนี้ต้องใช้คนคลัง" /></div>
+                    <label className="flex items-center gap-2 text-xs"><input type="checkbox" name="keep" /> ให้ผู้รับเดิมเป็นผู้ร่วมงานต่อ</label>
+                    <button className="btn-primary w-full">{needApprove ? "ส่งขออนุมัติ" : "ส่งต่องาน"}</button>
+                    <div className="text-[11px] text-ink-soft">งานเดิมใบเดียว เปลี่ยนแค่ผู้รับ · คนใหม่และผู้สั่งงานได้แจ้งเตือน</div>
+                  </form>
+                </details>
+              );
+            })()}
             {isOwner && !["accepted", "cancelled"].includes(task.status) && (
               <form action={setTaskStatus.bind(null, id, "cancelled")}><button className="btn-ghost w-full text-ink-soft">ยกเลิกงาน</button></form>
             )}

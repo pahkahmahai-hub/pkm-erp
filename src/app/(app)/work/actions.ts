@@ -719,3 +719,21 @@ export async function renameTask(id: string, formData: FormData) {
   revalidatePath(`/work/tasks/${id}`);
   redirect(`/work/tasks/${id}?saved=1`);
 }
+
+/** ส่งต่องาน (0059): ทำทันที หรือส่งขออนุมัติหัวหน้า */
+export async function forwardTask(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("forward_task", { p_task: id, p_to: nul(formData.get("to")), p_note: nul(formData.get("note")), p_keep: formData.get("keep") === "on" });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  redirect(`/work/tasks/${id}?${data === "pending" ? "fwd=pending" : "fwd=done"}`);
+}
+export async function decideForward(id: string, approve: boolean) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("decide_task_forward", { p_task: id, p_approve: approve });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  redirect(`/work/tasks/${id}`);
+}
