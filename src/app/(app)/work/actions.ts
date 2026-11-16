@@ -644,3 +644,11 @@ export async function deleteCorpFile(orderId: string, fileId: string): Promise<{
   revalidatePath(`${CORP_BASE}/${orderId}`);
   return {};
 }
+
+/** ใครอ่านแชทห้องถึงเวลาไหน (0050) */
+export async function roomReadStatus(roomId: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("room_read_status", { p_room: roomId });
+  return (data ?? []) as { user_id: string; name: string; last_read_at: string }[];
+}

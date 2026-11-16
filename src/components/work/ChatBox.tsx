@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus, Reply, X } from "lucide-react";
+import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus, Reply, X, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 
 export interface ChatMember { employee_id: string; label: string; first_name: string }
+export interface Reader { user_id: string; name: string; last_read_at: string }
 export interface ChatMessage {
   id: string; author_id: string | null; body: string | null; image_url: string | null; file_url: string | null; file_name: string | null;
   kind?: string; task_id?: string | null; mentions?: string[] | null; reply_to?: string | null; created_at: string;
@@ -15,7 +16,7 @@ export interface ChatMessage {
 }
 
 export function ChatBox({
-  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px", members = [],
+  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px", members = [], markRead, loadReads,
 }: {
   table: "work_comments" | "work_room_messages"; filterColumn: "task_id" | "room_id"; filterValue: string; initial: ChatMessage[]; meId: string;
   onPost: (fd: FormData) => Promise<{ error?: string; row?: Record<string, unknown> }>;
@@ -24,7 +25,11 @@ export function ChatBox({
   makeTaskHref?: (m: ChatMessage, assignee?: string) => string;   // "เปลี่ยนเป็นงาน" (assignee = employee id ที่ถูก @)
   maxHeight?: string;
   members?: ChatMember[];                          // สำหรับ @mention
+  markRead?: () => Promise<void>;                   // บันทึกว่าอ่านแล้ว (แชทห้อง)
+  loadReads?: () => Promise<Reader[]>;              // ใครอ่านถึงไหน (แชทห้อง)
 }) {
+  const [readers, setReaders] = useState<Reader[]>([]);
+  const [seenOpen, setSeenOpen] = useState<string | null>(null);
   const [mentionQ, setMentionQ] = useState<string | null>(null);   // text after the "@" being typed
   const [mentionIdx, setMentionIdx] = useState(0);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -119,6 +124,24 @@ export function ChatBox({
 
   useEffect(() => { bottom.current?.scrollIntoView({ block: "nearest" }); }, [messages.length]);
 
+  // อ่านแล้ว: มีข้อความใหม่ขณะเปิดหน้าอยู่ → บันทึกว่าอ่าน · ดึงสถานะคนอ่านทุก 10 วิ
+  const readsRef = useRef({ markRead, loadReads }); readsRef.current = { markRead, loadReads };
+  useEffect(() => {
+    if (!readsRef.current.markRead || document.visibilityState !== "visible") return;
+    const t = setTimeout(() => { readsRef.current.markRead?.().then(() => readsRef.current.loadReads?.().then(setReaders)).catch(() => {}); }, 800);
+    return () => clearTimeout(t);
+  }, [messages.length]);
+  useEffect(() => {
+    if (!readsRef.current.loadReads) return;
+    let alive = true;
+    const tick = () => { readsRef.current.loadReads?.().then((r) => { if (alive) setReaders(r); }).catch(() => {}); };
+    tick(); const t = setInterval(tick, 10000);
+    const onVis = () => { if (document.visibilityState === "visible") { readsRef.current.markRead?.().then(tick).catch(() => {}); } };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
+  }, []);
+  const seenBy = (m: ChatMessage) => readers.filter((x) => x.user_id !== m.author_id && new Date(x.last_read_at).getTime() >= new Date(m.created_at).getTime());
+
   function pick(f: File | undefined) {
     if (!f) return;
     // รูปจะถูกย่อก่อนส่ง จึงตรวจขนาดตอนส่ง · ไฟล์อื่นตรวจทันที
@@ -172,7 +195,7 @@ export function ChatBox({
                 {m.body && <div className="whitespace-pre-wrap break-words">{renderBody(m.body)}</div>}
                 {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
                 {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" download className={`mt-1 flex items-center gap-2 underline ${mine ? "text-white" : "text-purple"}`}><Download size={14} /> {m.file_name ?? "ไฟล์แนบ"}</a>}
-                <div className={`text-[10px] mt-1 flex items-center gap-3 ${mine ? "text-white/70" : "text-ink-soft"}`}>
+                <div className={`text-[10px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
@@ -180,8 +203,12 @@ export function ChatBox({
                       ? m.mentions!.map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
                       : <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>
                   )}
+                  {loadReads && (() => { const sb = seenBy(m); return <button type="button" onClick={() => setSeenOpen(seenOpen === m.id ? null : m.id)} className="flex items-center gap-1 underline" title="ใครอ่านแล้วบ้าง"><Eye size={11} /> {sb.length ? `อ่านแล้ว ${sb.length}` : "ยังไม่มีคนอ่าน"}</button>; })()}
                   {mine && <button onClick={() => start(() => onDelete(m.id))} className="hover:text-red" title="ลบ"><Trash2 size={11} /></button>}
                 </div>
+                {seenOpen === m.id && <div className={`mt-1.5 rounded-lg px-2 py-1.5 text-[11px] ${mine ? "bg-white/15 text-white" : "bg-cream text-ink"}`}>
+                  {seenBy(m).length ? seenBy(m).map((x) => <div key={x.user_id} className="flex justify-between gap-3"><span>✓ {x.name}</span><span className="opacity-70">{fmtDateTime(x.last_read_at)}</span></div>) : <div className="opacity-80">ยังไม่มีใครเปิดอ่าน</div>}
+                </div>}
               </div>
             </div>
           );
