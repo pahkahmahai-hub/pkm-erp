@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights, isFutureRoutine } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, type DirEmp, roomRights, isFutureRoutine, userNames } from "@/lib/work/queries";
 import { STATUS_TH, statusLabel, type Room, type RoomMember, type Task, type TaskStatus } from "@/lib/work/types";
 import { RoomChat } from "./RoomChat";
 import { markRoomRead, setRoomMember } from "../../actions";
@@ -52,7 +52,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       <div className="space-y-4">
         <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
         <RoomTabs roomKey={key} tab={tab === "chat" ? "chat" : "tasks"} />
-        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} />
+        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} names={await userNames(supabase)} />
         <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · พิมพ์ @ชื่อ เพื่อเอ่ยถึง แล้วกด “สั่งงานให้…” ใต้ข้อความเพื่อมอบหมายเป็นงานสั่ง</p>
       </div>
     );

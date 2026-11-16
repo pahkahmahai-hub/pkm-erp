@@ -16,7 +16,7 @@ export interface ChatMessage {
 }
 
 export function ChatBox({
-  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px", members = [], markRead, loadReads,
+  table, filterColumn, filterValue, initial, meId, onPost, onDelete, title, placeholder, makeTaskHref, maxHeight = "480px", members = [], markRead, loadReads, names = {},
 }: {
   table: "work_comments" | "work_room_messages"; filterColumn: "task_id" | "room_id"; filterValue: string; initial: ChatMessage[]; meId: string;
   onPost: (fd: FormData) => Promise<{ error?: string; row?: Record<string, unknown> }>;
@@ -27,6 +27,7 @@ export function ChatBox({
   members?: ChatMember[];                          // สำหรับ @mention
   markRead?: () => Promise<void>;                   // บันทึกว่าอ่านแล้ว (แชทห้อง)
   loadReads?: () => Promise<Reader[]>;              // ใครอ่านถึงไหน (แชทห้อง)
+  names?: Record<string, string>;                   // user id → ชื่อ (0056) เพราะพนักงานอ่าน app_users คนอื่นไม่ได้
 }) {
   const [readers, setReaders] = useState<Reader[]>([]);
   const [seenOpen, setSeenOpen] = useState<string | null>(null);
@@ -69,7 +70,8 @@ export function ChatBox({
   const [err, setErr] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [dragging, setDragging] = useState(false);
-  const nameOf = (m: ChatMessage | undefined) => (m ? (m.author_id === meId ? "คุณ" : m.app_users?.display_name ?? m.app_users?.email ?? "") : "");
+  const authorName = (m: ChatMessage) => (m.author_id && names[m.author_id]) || m.app_users?.display_name || m.app_users?.email || "";
+  const nameOf = (m: ChatMessage | undefined) => (m ? (m.author_id === meId ? "คุณ" : authorName(m)) : "");
   const snippet = (m: ChatMessage | undefined) => (m ? (m.body?.slice(0, 80) || (m.image_url ? "📷 รูปภาพ" : m.file_name ? "📎 " + m.file_name : "")) : "ข้อความก่อนหน้า");
   const [pending, start] = useTransition();
   const bottom = useRef<HTMLDivElement>(null);
@@ -183,11 +185,11 @@ export function ChatBox({
       <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight }}>
         {messages.map((m) => {
           const mine = m.author_id === meId;
-          if (m.kind === "status") return <div key={m.id} className="text-center text-[11px] text-ink-soft"><span className="bg-cream px-2 py-0.5 rounded-full">{m.app_users?.display_name ?? ""} · {m.body} · {fmtDateTime(m.created_at)}</span></div>;
+          if (m.kind === "status") return <div key={m.id} className="text-center text-[11px] text-ink-soft"><span className="bg-cream px-2 py-0.5 rounded-full">{authorName(m)} · {m.body} · {fmtDateTime(m.created_at)}</span></div>;
           return (
             <div key={m.id} id={"msg-" + m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm ${mine ? "bg-purple text-white rounded-br-sm" : "bg-cream rounded-bl-sm"}`}>
-                {!mine && <div className="text-[11px] font-semibold opacity-70 mb-0.5">{m.app_users?.display_name ?? m.app_users?.email}</div>}
+                {!mine && <div className="text-[11px] font-semibold opacity-70 mb-0.5">{authorName(m)}</div>}
                 {m.reply_to && (() => { const q = messages.find((x) => x.id === m.reply_to); return (
                   <button type="button" onClick={() => document.getElementById("msg-" + m.reply_to)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block w-full text-left mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[11px] ${mine ? "bg-white/15 border-white/70 text-white/90" : "bg-white/70 border-purple text-ink-soft"}`}>
                     <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span><span className="block truncate">{snippet(q)}</span>

@@ -85,3 +85,9 @@ export async function roomFamilyIds(supabase: SupabaseClient, roomId: string): P
   all.filter((x) => x.parent_key === me.key).forEach((x) => ids.add(x.id));
   return [...ids];
 }
+
+/** user id → ชื่อที่แสดง (0056) — ใช้แสดงชื่อคนส่งในแชท/คอมเมนต์ */
+export async function userNames(supabase: SupabaseClient): Promise<Record<string, string>> {
+  const { data } = await supabase.rpc("user_names");
+  return Object.fromEntries(((data ?? []) as { user_id: string; name: string }[]).map((x) => [x.user_id, x.name]));
+}

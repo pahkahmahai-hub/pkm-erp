@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
-import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
+import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds, userNames } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
 import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask } from "../../actions";
 import { Storyboard } from "./Storyboard";
@@ -150,7 +150,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           </div>
 
           {/* thread */}
-          <Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} members={mentionMembers} />
+          <Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} members={mentionMembers} names={await userNames(supabase)} />
         </div>
 
         {/* actions */}

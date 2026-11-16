@@ -3,7 +3,7 @@
 import { ChatBox, type ChatMessage, type ChatMember } from "@/components/work/ChatBox";
 import { postRoomMessage, deleteRoomMessage, markRoomRead, roomReadStatus } from "../../actions";
 
-export function RoomChat({ roomId, roomKey, initial, meId, members }: { roomId: string; roomKey: string; initial: ChatMessage[]; meId: string; members: ChatMember[] }) {
+export function RoomChat({ roomId, roomKey, initial, meId, members, names = {} }: { roomId: string; roomKey: string; initial: ChatMessage[]; meId: string; members: ChatMember[]; names?: Record<string, string> }) {
   return (
     <ChatBox
       table="work_room_messages"
@@ -14,6 +14,7 @@ export function RoomChat({ roomId, roomKey, initial, meId, members }: { roomId: 
       onPost={postRoomMessage.bind(null, roomId)}
       onDelete={deleteRoomMessage}
       placeholder="คุยกับทีมในห้องนี้… @ เอ่ยถึงคน"
+      names={names}
       markRead={() => markRoomRead(roomId)}
       loadReads={() => roomReadStatus(roomId)}
       maxHeight="60vh"
