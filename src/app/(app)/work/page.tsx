@@ -7,7 +7,7 @@ import { Header, Stat } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
 import { myRooms, ensureRoutines, TASK_SELECT, isOverdue, loadDirectory, fillEmployees, isFutureRoutine } from "@/lib/work/queries";
 import type { Task } from "@/lib/work/types";
-import { fmtDate, todayBkk } from "@/lib/format";
+import { fmtDate, fmtDateShort, todayBkk } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 const GC_KEYS = ["gc-room", "graphic", "visual", "content"];
@@ -28,6 +28,13 @@ export default async function WorkHome() {
     loadDirectory(supabase),
     supabase.from("app_users").select("id, display_name, email").eq("role", "admin"),
   ]);
+  // ขั้นตอนในเช็คลิสต์ที่ได้รับมอบหมาย (รวมงานของห้อง/แผนกอื่น) — 0052/0053
+  const { data: mySteps } = empId
+    ? await supabase.from("work_checklist").select("id, label, due_date, task_id, work_tasks(task_no, title, status, work_rooms(name, color))").eq("assignee_id", empId).eq("is_done", false).order("due_date", { ascending: true, nullsFirst: false }).limit(30)
+    : { data: [] };
+  const steps = ((mySteps ?? []) as unknown as { id: string; label: string; due_date: string | null; task_id: string; work_tasks: { task_no: number; title: string; status: string; work_rooms: { name: string; color: string } | null } | null }[])
+    .filter((x) => x.work_tasks && !["accepted", "cancelled"].includes(x.work_tasks.status));
+  const todayStr = todayBkk();
   // ข้อมูลสำหรับแยก "รอตรวจรับ" (ผู้บริหาร): หัวหน้าห้อง และ user ↔ พนักงาน
   const [{ data: leadRows }, { data: userRows }] = session.isAdmin
     ? await Promise.all([
@@ -116,6 +123,16 @@ export default async function WorkHome() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <section>
+          {steps.length > 0 && <div className="mb-5">
+            <h2 className="font-display font-bold mb-3">ขั้นตอนที่ได้รับมอบหมาย ({steps.length})</h2>
+            <div className="card divide-y divide-line">
+              {steps.map((x) => { const od = !!x.due_date && x.due_date < todayStr; const td = x.due_date === todayStr; return (
+                <Link key={x.id} href={`/work/tasks/${x.task_id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-cream">
+                  <div className="min-w-0 flex-1"><div className="font-semibold truncate">{x.label}</div><div className="text-[11px] text-ink-soft truncate">#{x.work_tasks!.task_no} {x.work_tasks!.title}{x.work_tasks!.work_rooms && <span className="ml-1.5 inline-block px-1 rounded text-white" style={{ background: x.work_tasks!.work_rooms.color }}>{x.work_tasks!.work_rooms.name}</span>}</div></div>
+                  {x.due_date && <span className={`text-[11px] rounded-md px-1.5 py-0.5 whitespace-nowrap ${od ? "bg-red/10 text-red font-semibold" : td ? "bg-yellow/30 text-[#7a4a00] font-semibold" : "bg-lavender/30 text-purple"}`}>{od ? "เลย " : td ? "วันนี้ " : ""}{fmtDateShort(x.due_date)}</span>}
+                </Link>); })}
+            </div>
+          </div>}
           <h2 className="font-display font-bold mb-3">งานของฉัน ({mine.length})</h2>
           <div className="space-y-2">
             {mine.slice(0, 20).map((t) => <TaskCard key={t.id} t={t} />)}

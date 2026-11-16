@@ -54,6 +54,10 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const canStage = session.isAdmin || isLead;
   const overdue = (() => { const d = effectiveDue(task); return !!d && d < todayBkk() && !["accepted", "cancelled", "done"].includes(task.status); })();
   const items = (checklist ?? []) as Checklist[];
+  // ผู้รับผิดชอบรายข้อ: ทุกคนในบริษัท (คนในห้องขึ้นก่อน) — งานบางขั้นเกี่ยวกับแผนกอื่น
+  const memIds = new Set(mem.map((m) => m.employee_id));
+  const people = [...mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" })), ...dir.filter((e) => !memIds.has(e.id)).map((e) => ({ id: e.id, name: `${e.nickname ?? e.first_name} (แผนกอื่น)` }))];
+  const nameOf = (empId: string) => { const e = dir.find((d) => d.id === empId); return e ? e.nickname ?? e.first_name : ""; };
   const todayTH = todayBkk();
   const doneCount = items.filter((c) => c.is_done).length;
 
@@ -113,20 +117,20 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                   <form action={toggleChecklist.bind(null, c.id, id, !c.is_done)}><button className={`h-5 w-5 rounded border grid place-items-center ${c.is_done ? "bg-teal border-teal text-white" : "border-line"}`}>{c.is_done ? "✓" : ""}</button></form>
                   <span className={c.is_done ? "line-through text-ink-soft" : ""}>{c.label}</span>
                   {c.due_date && (() => { const od = !c.is_done && c.due_date < todayTH; const td = !c.is_done && c.due_date === todayTH; return <span className={`text-[11px] rounded-md px-1.5 py-0.5 whitespace-nowrap ${c.is_done ? "text-ink-soft" : od ? "bg-red/10 text-red font-semibold" : td ? "bg-yellow/30 text-[#7a4a00] font-semibold" : "bg-lavender/30 text-purple"}`}>{od ? "เลยกำหนด " : td ? "วันนี้ " : ""}{fmtDateShort(c.due_date)}</span>; })()}
-                  {c.assignee_id && <span className="text-[11px] text-ink-soft whitespace-nowrap">· {mem.find((m) => m.employee_id === c.assignee_id)?.employees?.nickname ?? mem.find((m) => m.employee_id === c.assignee_id)?.employees?.first_name ?? dir.find((e) => e.id === c.assignee_id)?.first_name ?? ""}</span>}
-                  {(isOwner || isAssignee) && <details className="ml-auto group"><summary className="list-none cursor-pointer text-[11px] text-purple underline whitespace-nowrap">กำหนด</summary>
+                  {c.assignee_id && <span className={`text-[11px] whitespace-nowrap ${c.assignee_id === myEmp ? "text-purple font-semibold" : "text-ink-soft"}`}>· {nameOf(c.assignee_id)}{c.assignee_id === myEmp ? " (ฉัน)" : ""}</span>}
+                  {(isOwner || isAssignee || (!!myEmp && c.assignee_id === myEmp)) && <details className="ml-auto group"><summary className="list-none cursor-pointer text-[11px] text-purple underline whitespace-nowrap">กำหนด</summary>
                     <form action={updateChecklistItem.bind(null, c.id, id)} className="absolute right-0 top-6 z-10 w-72 max-w-[85vw] card p-3 space-y-2 shadow-lg">
                       <div><label className="label">ข้อ</label><input name="label" defaultValue={c.label} className="input" /></div>
                       <div><label className="label">วันกำหนด</label><DateInput name="due_date" defaultValue={c.due_date ?? ""} className="input" /></div>
-                      <div><label className="label">ผู้รับผิดชอบ (ไม่บังคับ)</label><select name="assignee_id" defaultValue={c.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
+                      <div><label className="label">ผู้รับผิดชอบ (ไม่บังคับ)</label><select name="assignee_id" defaultValue={c.assignee_id ?? ""} className="input"><option value="">—</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
                       <button className="btn-primary w-full">บันทึก</button>
                     </form></details>}
-                  {isOwner && <form action={deleteChecklistItem.bind(null, c.id, id)} className={isOwner || isAssignee ? "" : "ml-auto"}><button className="text-ink-soft hover:text-red"><Trash2 size={13} /></button></form>}
+                  {isOwner && <form action={deleteChecklistItem.bind(null, c.id, id)} className=""><button className="text-ink-soft hover:text-red"><Trash2 size={13} /></button></form>}
                   </div>
                 </li>
               ))}
             </ul>
-            <form action={addChecklistItem.bind(null, id)} className="flex flex-wrap sm:flex-nowrap gap-2 mt-3"><input name="label" className="input" placeholder="+ เพิ่มข้อ" /><DateInput name="due_date" className="input w-40" /><select name="assignee_id" defaultValue="" className="input sm:w-36"><option value="">ผู้รับผิดชอบ</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select><button className="btn-outline whitespace-nowrap">เพิ่ม</button></form>
+            <form action={addChecklistItem.bind(null, id)} className="flex flex-wrap sm:flex-nowrap gap-2 mt-3"><input name="label" className="input" placeholder="+ เพิ่มข้อ" /><DateInput name="due_date" className="input w-40" /><select name="assignee_id" defaultValue="" className="input sm:w-36"><option value="">ผู้รับผิดชอบ</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="btn-outline whitespace-nowrap">เพิ่ม</button></form>
           </div>
 
           {/* thread */}
