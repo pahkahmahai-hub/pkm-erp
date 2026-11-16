@@ -145,7 +145,7 @@ export function ChatBox({
       const res = await onPost(fd);
       if (res.error) { setErr(res.error); return; }
       if (res.row) addMessages([res.row as unknown as ChatMessage]);
-      setBody(""); setFile(null); setPreview(null); setReplyTo(null);
+      setBody(""); if (taRef.current) taRef.current.style.height = ""; setFile(null); setPreview(null); setReplyTo(null);
     });
   }
 
@@ -195,12 +195,12 @@ export function ChatBox({
         {preview && <div className="relative inline-block">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="" className="h-24 rounded-xl object-cover" /><button onClick={() => { setFile(null); setPreview(null); }} className="absolute -top-2 -right-2 bg-red text-white rounded-full h-6 w-6 text-xs">✕</button></div>}
         {file && !preview && <div className="text-xs flex items-center gap-2"><Paperclip size={12} /> {file.name} <button onClick={() => setFile(null)} className="text-red">ลบ</button></div>}
         {err && <div className="text-xs text-red">{err}</div>}
-        <div className="flex gap-2 items-end">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 items-end">
           <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <input ref={fileRef} type="file" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป (ไม่เกิน 5 MB)"><ImageIcon size={18} /></button>
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์ (ไม่เกิน 5 MB)"><Paperclip size={18} /></button>
-          <div className="relative flex-1">
+          <div className="relative basis-full sm:basis-auto sm:flex-1 order-first sm:order-none">
             {mentionQ !== null && mentionResults.length > 0 && (
               <div className="absolute bottom-full mb-1 left-0 w-64 card p-1 z-20">
                 {mentionResults.map((m, i) => <button key={m.employee_id} type="button" onMouseDown={(e) => { e.preventDefault(); insertMention(m); }} className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${i === mentionIdx ? "bg-lavender/40" : "hover:bg-cream"}`}>@{m.label} <span className="text-[11px] text-ink-soft">{m.first_name}</span></button>)}
@@ -213,10 +213,14 @@ export function ChatBox({
                 if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertMention(mentionResults[mentionIdx]); return; }
                 if (e.key === "Escape") { setMentionQ(null); return; }
               }
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-            }} className="input resize-none w-full" rows={1} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… @ เอ่ยถึงคน · ลากไฟล์/วางรูปลงได้ (Enter ส่ง)" : "พิมพ์ข้อความ… (Enter ส่ง, Shift+Enter ขึ้นบรรทัด)")} />
+              // มือถือ: Enter = ขึ้นบรรทัดใหม่ (กดปุ่มส่ง) · คอม: Enter = ส่ง, Shift+Enter = ขึ้นบรรทัด
+              const touch = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+              if (e.key === "Enter" && !e.shiftKey && !touch && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
+            }} onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 240)}px`; }}
+              className="input resize-none w-full min-h-[88px] sm:min-h-[52px] leading-relaxed" rows={3} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… @ เอ่ยถึงคน · ลากไฟล์/วางรูปลงได้" : "พิมพ์ข้อความ…")} />
+            <div className="hidden sm:block text-[10px] text-ink-soft mt-0.5">Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่</div>
           </div>
-          <button type="button" onClick={send} disabled={pending || (!body.trim() && !file)} className="btn-primary px-3.5"><Send size={16} /></button>
+          <button type="button" onClick={send} disabled={pending || (!body.trim() && !file)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
         </div>
       </div>
     </div>
