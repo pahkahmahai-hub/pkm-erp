@@ -28,7 +28,13 @@ export function ChatBox({
   const [mentionQ, setMentionQ] = useState<string | null>(null);   // text after the "@" being typed
   const [mentionIdx, setMentionIdx] = useState(0);
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const mentionResults = mentionQ === null ? [] : members.filter((m) => m.label.toLowerCase().includes(mentionQ.toLowerCase()) || m.first_name.toLowerCase().includes(mentionQ.toLowerCase())).slice(0, 6);
+  // @ทุกคน (หรือ @all) = เอ่ยถึงสมาชิกทุกคนในห้อง
+  const ALL: ChatMember = { employee_id: "__all__", label: "ทุกคน", first_name: `แจ้งเตือนสมาชิกทั้งห้อง (${members.length} คน)` } as ChatMember;
+  const q = (mentionQ ?? "").toLowerCase();
+  const mentionResults = mentionQ === null ? [] : [
+    ...(members.length > 1 && ("ทุกคน".includes(q) || "all".includes(q) || "everyone".includes(q)) ? [ALL] : []),
+    ...members.filter((m) => m.label.toLowerCase().includes(q) || m.first_name.toLowerCase().includes(q)),
+  ].slice(0, 7);
   function onBodyChange(v: string) {
     setBody(v);
     const el = taRef.current; const pos = el ? el.selectionStart : v.length;
@@ -42,10 +48,11 @@ export function ChatBox({
     setBody(next); setMentionQ(null);
     requestAnimationFrame(() => { if (el) { el.focus(); const p = at + m.label.length + 2; el.setSelectionRange(p, p); } });
   }
-  const mentionedIds = (text: string) => members.filter((m) => text.includes(`@${m.label}`)).map((m) => m.employee_id);
+  const isAll = (text: string) => /@(ทุกคน|all|everyone)(?![\p{L}\p{M}\w])/iu.test(text);
+  const mentionedIds = (text: string) => members.filter((m) => isAll(text) || text.includes(`@${m.label}`)).map((m) => m.employee_id);
   const labelOf = (empId: string) => members.find((m) => m.employee_id === empId)?.label ?? "";
   const renderBody = (text: string) => {
-    const labels = members.map((m) => m.label).filter(Boolean).sort((a, b) => b.length - a.length);
+    const labels = [...members.map((m) => m.label), "ทุกคน", "all", "everyone"].filter(Boolean).sort((a, b) => b.length - a.length);
     if (!labels.length) return text;
     const re = new RegExp(`(@(?:${labels.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}))`, "g");
     return text.split(re).map((part, i) => (part.startsWith("@") && labels.includes(part.slice(1)) ? <mark key={i} className="bg-yellow/40 text-inherit rounded px-0.5 font-semibold">{part}</mark> : part));
@@ -169,7 +176,7 @@ export function ChatBox({
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
-                    (m.mentions?.length ? m.mentions : []).length > 0
+                    (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
                       ? m.mentions!.map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
                       : <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>
                   )}
