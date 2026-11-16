@@ -687,3 +687,16 @@ export async function moveChecklistItem(id: string, taskId: string, dir: -1 | 1)
   await Promise.all(list.map((cid, k) => supabase.from("work_checklist").update({ sort_order: k }).eq("id", cid)));
   revalidatePath(`/work/tasks/${taskId}`);
 }
+
+/** คอมเมนต์ในงาน: บันทึกว่าอ่านแล้ว / ใครอ่านถึงไหน (0055) */
+export async function markTaskRead(taskId: string) {
+  await getSession();
+  const supabase = await createClient();
+  await supabase.rpc("mark_task_read", { p_task: taskId });
+}
+export async function taskReadStatus(taskId: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("task_read_status", { p_task: taskId });
+  return (data ?? []) as { user_id: string; name: string; last_read_at: string }[];
+}

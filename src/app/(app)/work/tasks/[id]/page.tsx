@@ -9,7 +9,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -22,6 +22,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const { created, saved, error, edit } = await searchParams;
   const session = await getSession();
   await markTaskNotificationsRead(id).catch(() => {});
+  await markTaskRead(id).catch(() => {});
   const supabase = await createClient();
   const [tRes, { data: checklist }, { data: comments }, { data: filesRaw }] = await Promise.all([
     supabase.from("work_tasks").select(TASK_SELECT + ", work_topics(id, name, color)").eq("id", id).maybeSingle(),
