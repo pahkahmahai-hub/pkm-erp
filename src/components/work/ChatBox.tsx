@@ -152,25 +152,37 @@ export function ChatBox({
     setFile(f);
     setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
   }
+  // กันกดส่งรัวๆ: ล็อกทันทีที่กด (ไม่รอ state) + ล้างช่องพิมพ์ทันที ถ้าส่งไม่สำเร็จค่อยคืนข้อความ
+  const sendingRef = useRef(false);
   function send() {
+    if (sendingRef.current) return;
     if (!body.trim() && !file) return;
+    sendingRef.current = true;
     setErr(null);
+    const snap = { body, file, preview, replyTo };
+    setBody(""); if (taRef.current) taRef.current.style.height = ""; setFile(null); setPreview(null); setReplyTo(null);
+    const restore = (msg: string) => { setErr(msg); setBody(snap.body); setFile(snap.file); setPreview(snap.preview); setReplyTo(snap.replyTo); };
     start(async () => {
-      const fd = new FormData();
-      fd.set("body", body);
-      fd.set("mentions", JSON.stringify(mentionedIds(body)));
-      if (file) {
-        // อัปโหลดจากเบราว์เซอร์ตรงไป storage (ไม่ผ่าน server action ซึ่งรับได้ ~1 MB) แล้วส่งแค่ลิงก์
-        try {
-          const up = await uploadChatFile(`chat/${filterValue}`, file);
-          fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", up.is_image ? "1" : "0");
-        } catch (e) { setErr((e as Error).message); return; }
+      try {
+        const fd = new FormData();
+        fd.set("body", snap.body);
+        fd.set("mentions", JSON.stringify(mentionedIds(snap.body)));
+        if (snap.file) {
+          // อัปโหลดจากเบราว์เซอร์ตรงไป storage (ไม่ผ่าน server action ซึ่งรับได้ ~1 MB) แล้วส่งแค่ลิงก์
+          try {
+            const up = await uploadChatFile(`chat/${filterValue}`, snap.file);
+            fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", up.is_image ? "1" : "0");
+          } catch (e) { restore((e as Error).message); return; }
+        }
+        if (snap.replyTo) fd.set("reply_to", snap.replyTo.id);
+        const res = await onPost(fd);
+        if (res.error) { restore(res.error); return; }
+        if (res.row) addMessages([res.row as unknown as ChatMessage]);
+      } catch (e) {
+        restore((e as Error).message || "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง");
+      } finally {
+        sendingRef.current = false;
       }
-      if (replyTo) fd.set("reply_to", replyTo.id);
-      const res = await onPost(fd);
-      if (res.error) { setErr(res.error); return; }
-      if (res.row) addMessages([res.row as unknown as ChatMessage]);
-      setBody(""); if (taRef.current) taRef.current.style.height = ""; setFile(null); setPreview(null); setReplyTo(null);
     });
   }
 
