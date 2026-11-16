@@ -32,6 +32,10 @@ export function TaskCard({ t, showRoom = true, note, compact }: { t: Task; showR
           </span>
         )}
       </div>
+      {t.next_step_due && !isClosed(t) && (() => { const od = t.next_step_due < today; const td = t.next_step_due === today; return (
+        <div className={`mt-1.5 text-[11px] flex items-center gap-1 rounded-md px-1.5 py-0.5 w-fit max-w-full ${od ? "bg-red/10 text-red font-semibold" : td ? "bg-yellow/30 text-[#7a4a00] font-semibold" : "bg-lavender/30 text-purple"}`}>
+          <span className="shrink-0">ขั้นถัดไป:</span><span className="truncate">{t.next_step_label ?? "—"}</span><span className="shrink-0">· {od ? "เลย " : td ? "วันนี้ " : ""}{fmtDateShort(t.next_step_due)}</span>
+        </div>); })()}
     </Link>
   );
 }
