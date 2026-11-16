@@ -2,14 +2,14 @@ import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
 import { SwDeadlineStrip } from "@/components/work/TaskCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flame, Repeat, Trash2, CalendarDays, ChevronUp, ChevronDown } from "lucide-react";
+import { Flame, Repeat, Trash2, CalendarDays, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -73,7 +73,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
 
   return (
     <div className="space-y-6">
-      <Header crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${task.work_rooms?.key}`, label: task.work_rooms?.name ?? "ห้อง" }]} title={`#${task.task_no} ${task.title}`} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{statusLabel(task.status, task.work_rooms?.key)}</span>} />
+      <Header crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${task.work_rooms?.key}`, label: task.work_rooms?.name ?? "ห้อง" }]} title={`#${task.task_no} ${task.title}`} sub={`สั่งโดย ${task.app_users?.display_name ?? "—"} · ${fmtDateTime(task.created_at)}`} action={<span className="flex items-center gap-2">{isOwner && <details className="relative"><summary className="list-none cursor-pointer btn-outline !py-1 text-sm flex items-center gap-1"><Pencil size={14} /> แก้ชื่องาน</summary>
+        <form action={renameTask.bind(null, id)} className="absolute right-0 z-20 mt-2 w-[min(90vw,520px)] card p-3 flex gap-2 shadow-lg"><input name="title" defaultValue={task.title} className="input" required autoFocus /><button className="btn-primary whitespace-nowrap">บันทึก</button></form></details>}
+        <span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{statusLabel(task.status, task.work_rooms?.key)}</span></span>} />
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สั่งงานแล้ว ผู้รับจะเห็นในหน้างานของตัวเอง</div>}
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}

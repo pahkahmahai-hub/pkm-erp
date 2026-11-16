@@ -700,3 +700,15 @@ export async function taskReadStatus(taskId: string) {
   const { data } = await supabase.rpc("task_read_status", { p_task: taskId });
   return (data ?? []) as { user_id: string; name: string; last_read_at: string }[];
 }
+
+/** แก้ชื่องานอย่างเดียว */
+export async function renameTask(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const title = nul(formData.get("title"));
+  if (!title) return;
+  const { error } = await supabase.from("work_tasks").update({ title }).eq("id", id);
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  redirect(`/work/tasks/${id}?saved=1`);
+}
