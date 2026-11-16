@@ -7,6 +7,7 @@ import type { ExpenseCategory } from "@/lib/expenses/types";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { submitPurchaseRequest, reviewPurchaseRequest, convertPrToPo, issuePo, receivePo, expenseFromPo, cancelPurchaseDoc } from "@/app/(app)/purchase/actions";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
 
@@ -89,7 +90,7 @@ export function PurchaseDetail({ d, items, receipts, derived: children, session,
           )}
           {!isPo && d.status === "approved" && (
             <form action={convertPrToPo.bind(null, d.id)} className="card p-5 space-y-3"><h3 className="font-display font-bold">เปิดใบสั่งซื้อจากใบนี้</h3>
-              <div><label className="label">วันที่ PO</label><input type="date" name="doc_date" defaultValue={today} className="input" /></div>
+              <div><label className="label">วันที่ PO</label><DateInput name="doc_date" defaultValue={today} className="input" /></div>
               <button className="btn-primary w-full"><ArrowRight size={16} /> สร้าง PO (ร่าง)</button>
               <p className="text-[11px] text-ink-soft">คัดลอกรายการ/ราคา ไปแก้ราคาที่ตกลงกับซัพพลายเออร์ได้ก่อนส่ง</p></form>
           )}
@@ -99,7 +100,7 @@ export function PurchaseDetail({ d, items, receipts, derived: children, session,
           {isPo && d.status === "draft" && (session.isAdmin || mine) && <form action={issuePo.bind(null, d.id)}><button className="btn-primary w-full"><Send size={16} /> ยืนยัน PO</button><p className="text-[11px] text-ink-soft mt-1 text-center">ล็อกการแก้ไข · จากนั้นกดพิมพ์ แล้วส่ง PDF ให้ซัพพลายเออร์เอง</p></form>}
           {canReceive && remaining > 0 && (
             <form action={receivePo.bind(null, d.id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><PackageCheck size={18} className="text-green" /> รับของ</h3>
-              <div className="grid grid-cols-2 gap-2"><div><label className="label">วันที่รับ</label><input type="date" name="received_at" defaultValue={today} className="input" /></div><div><label className="label">เลขที่ใบส่งของ</label><input name="supplier_doc_no" className="input" placeholder="ของซัพพลายเออร์" /></div></div>
+              <div className="grid grid-cols-2 gap-2"><div><label className="label">วันที่รับ</label><DateInput name="received_at" defaultValue={today} className="input" /></div><div><label className="label">เลขที่ใบส่งของ</label><input name="supplier_doc_no" className="input" placeholder="ของซัพพลายเออร์" /></div></div>
               <div className="space-y-2">{items.filter((i) => Number(i.received_qty) < Number(i.qty)).map((i) => (
                 <div key={i.id} className="grid grid-cols-[1fr_84px_84px] gap-2 items-center text-sm"><input type="hidden" name="item_id" value={i.id} />
                   <div className="truncate">{i.description}<div className="text-[10px] text-ink-soft">ค้าง {Number(i.qty) - Number(i.received_qty)} {i.unit}</div></div>
@@ -111,7 +112,7 @@ export function PurchaseDetail({ d, items, receipts, derived: children, session,
           )}
           {isPo && !d.expense_id && !["draft", "cancelled"].includes(d.status) && (
             <form action={expenseFromPo.bind(null, d.id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><Receipt size={18} className="text-purple" /> สร้างบิลค่าใช้จ่าย</h3>
-              <div className="grid grid-cols-2 gap-2"><div><label className="label">เลขที่บิล/ใบกำกับ</label><input name="bill_no" className="input" placeholder="จากซัพพลายเออร์" /></div><div><label className="label">วันที่บิล</label><input type="date" name="bill_date" defaultValue={today} className="input" /></div></div>
+              <div className="grid grid-cols-2 gap-2"><div><label className="label">เลขที่บิล/ใบกำกับ</label><input name="bill_no" className="input" placeholder="จากซัพพลายเออร์" /></div><div><label className="label">วันที่บิล</label><DateInput name="bill_date" defaultValue={today} className="input" /></div></div>
               <div className="grid grid-cols-2 gap-2"><div><label className="label">หมวด</label><select name="category_id" className="input"><option value="">—</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div><div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" className="input">{[0, 1, 2, 3, 5].map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div></div>
               <button className="btn-outline w-full">สร้างรายการค่าใช้จ่าย (รออนุมัติ) {fmt(d.grand_total)}</button></form>
           )}

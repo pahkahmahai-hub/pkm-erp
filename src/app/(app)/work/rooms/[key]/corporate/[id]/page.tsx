@@ -12,6 +12,7 @@ import { todayBkk } from "@/lib/today";
 import { fmtDateTime } from "@/lib/format";
 import { CORP_STATUS, CORP_PAY, corpStatus, corpPay, corpOverdue, corpName, baht, type CorpOrder, type CorpShipment, type CorpFile, type CorpLog } from "@/lib/work/corp";
 import { setCorpField, addCorpShipment, deleteCorpShipment, deleteCorpOrder } from "@/app/(app)/work/actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const TH_M = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -129,7 +130,7 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
                 </li>))}</ul>
             ) : <p className="text-xs text-ink-soft">ยังไม่มีบันทึกการส่ง</p>}
             <form action={addCorpShipment.bind(null, id)} className="space-y-2 border-t border-line pt-3">
-              <div className="grid grid-cols-2 gap-2"><input type="date" name="ship_date" defaultValue={today} className="input text-sm" required /><input name="qty_note" className="input text-sm" placeholder="จำนวน เช่น 100 ชิ้น" required /></div>
+              <div className="grid grid-cols-2 gap-2"><DateInput name="ship_date" defaultValue={today} className="input text-sm" required /><input name="qty_note" className="input text-sm" placeholder="จำนวน เช่น 100 ชิ้น" required /></div>
               <input name="note" className="input text-sm" placeholder="หมายเหตุ เช่น ส่งทาง iShip / ผู้รับ" />
               <div className="flex flex-wrap gap-3 text-xs"><label className="flex items-center gap-1"><input type="radio" name="mark" value="" defaultChecked className="accent-purple" /> ไม่เปลี่ยนสถานะ</label><label className="flex items-center gap-1"><input type="radio" name="mark" value="partial" className="accent-purple" /> → ส่งบางส่วน</label><label className="flex items-center gap-1"><input type="radio" name="mark" value="delivered" className="accent-purple" /> → ส่งครบแล้ว</label></div>
               <button className="btn-primary w-full text-sm">บันทึกการส่ง</button>

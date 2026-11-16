@@ -6,6 +6,7 @@ import type { CompanyEvent, EventCategory } from "@/lib/work/types";
 import { addDays, fmtDM, TH_MONTHS } from "@/lib/work/deliveries";
 import { expandEvents, dayDiff, type Occ } from "@/lib/work/events";
 import { saveCompanyEvent, deleteCompanyEvent } from "@/app/(app)/work/actions";
+import { DateInput } from "@/components/DateInput";
 
 const DOW = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
 interface Props { month: string; today: string; events: CompanyEvent[]; categories: EventCategory[]; meId: string; isAdmin: boolean }
@@ -101,14 +102,14 @@ export function MonthCalendar({ month, today, events, categories, meId, isAdmin 
               <div className="sm:col-span-2"><label className="label">ชื่อกิจกรรม *</label><input name="title" defaultValue={draft.title ?? ""} className="input" required autoFocus placeholder="เช่น ออกบูธ Central Chidlom / ประชุมประจำเดือน" /></div>
               <div className="sm:col-span-2"><label className="label">ประเภท</label>
                 <div className="flex flex-wrap gap-1.5">{categories.map((c) => <label key={c.id} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs has-[:checked]:ring-2 has-[:checked]:ring-ink cursor-pointer"><input type="radio" name="category_id" value={c.id} defaultChecked={draft.category_id === c.id} className="sr-only" /><span className="h-3 w-3 rounded-full" style={{ background: c.color }} />{c.name}</label>)}</div></div>
-              <div><label className="label">วันเริ่ม *</label><input type="date" name="start_date" defaultValue={draft.start_date ?? ""} className="input" required /></div>
-              <div><label className="label">วันสิ้นสุด <span className="text-ink-soft font-normal">(ว่าง = วันเดียว)</span></label><input type="date" name="end_date" defaultValue={draft.end_date && draft.end_date !== draft.start_date ? draft.end_date : ""} className="input" /></div>
+              <div><label className="label">วันเริ่ม *</label><DateInput name="start_date" defaultValue={draft.start_date ?? ""} className="input" required /></div>
+              <div><label className="label">วันสิ้นสุด <span className="text-ink-soft font-normal">(ว่าง = วันเดียว)</span></label><DateInput name="end_date" defaultValue={draft.end_date && draft.end_date !== draft.start_date ? draft.end_date : ""} className="input" /></div>
               <div><label className="label">เวลาเริ่ม</label><input type="time" name="start_time" defaultValue={draft.start_time?.slice(0, 5) ?? ""} className="input" /></div>
               <div><label className="label">เวลาสิ้นสุด</label><input type="time" name="end_time" defaultValue={draft.end_time?.slice(0, 5) ?? ""} className="input" /></div>
               <div className="sm:col-span-2 flex items-center gap-2"><MapPin size={14} className="text-ink-soft" /><input name="location" defaultValue={draft.location ?? ""} className="input" placeholder="สถานที่ (ห้าง / ชั้น / showroom)" /></div>
               <div className="sm:col-span-2"><label className="label">รายละเอียด</label><textarea name="note" defaultValue={draft.note ?? ""} className="input" rows={2} /></div>
               <div><label className="label flex items-center gap-1"><Repeat size={12} /> งานซ้ำ</label><select name="recur" defaultValue={draft.recur ?? ""} className="input"><option value="">ไม่ซ้ำ</option><option value="weekly">ทุกสัปดาห์ (วันเดียวกับวันเริ่ม)</option><option value="monthly">ทุกเดือน (วันที่เดียวกับวันเริ่ม)</option></select></div>
-              <div><label className="label">ซ้ำถึงวันที่ <span className="text-ink-soft font-normal">(ว่าง = ไม่มีกำหนด)</span></label><input type="date" name="recur_until" defaultValue={draft.recur_until ?? ""} className="input" /></div>
+              <div><label className="label">ซ้ำถึงวันที่ <span className="text-ink-soft font-normal">(ว่าง = ไม่มีกำหนด)</span></label><DateInput name="recur_until" defaultValue={draft.recur_until ?? ""} className="input" /></div>
             </fieldset>
             <div className="flex items-center gap-2 pt-1">
               {draft.id && canEdit(draft) && <button type="button" onClick={remove} disabled={pending} className="btn-outline !border-red !text-red"><Trash2 size={14} /> ลบ</button>}

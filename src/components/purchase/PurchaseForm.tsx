@@ -6,6 +6,7 @@ import type { Company, VatMode } from "@/lib/sales/types";
 import type { Contact, Product, Material } from "@/lib/stock/types";
 import type { PurchaseDoc, PurchaseItem } from "@/lib/purchase/types";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 type SupplierLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code"> & { default_vat_mode_purchase?: VatMode | null };
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit">;
@@ -57,8 +58,8 @@ export function PurchaseForm({ type, companies, suppliers, products, materials, 
       <div className="card p-5 space-y-4">
         <div className="grid sm:grid-cols-3 gap-4">
           <div><label className="label">บริษัทผู้ซื้อ</label><select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="input">{companies.map((c) => <option key={c.id} value={c.id}>{c.name_th}</option>)}</select></div>
-          <div><label className="label">วันที่เอกสาร</label><input type="date" name="doc_date" defaultValue={doc?.doc_date ?? today} className="input" required /></div>
-          <div><label className="label">{type === "pr" ? "ต้องการของภายใน" : "กำหนดส่งของ"}</label><input type="date" name="need_by" defaultValue={doc?.need_by ?? ""} className="input" /></div>
+          <div><label className="label">วันที่เอกสาร</label><DateInput name="doc_date" defaultValue={doc?.doc_date ?? today} className="input" required /></div>
+          <div><label className="label">{type === "pr" ? "ต้องการของภายใน" : "กำหนดส่งของ"}</label><DateInput name="need_by" defaultValue={doc?.need_by ?? ""} className="input" /></div>
         </div>
         <div className="relative">
           <label className="label">ซัพพลายเออร์ / ผู้จำหน่าย {type === "pr" && <span className="text-ink-soft font-normal">(ถ้ารู้)</span>}</label>

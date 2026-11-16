@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
@@ -22,7 +21,7 @@ export default async function NotificationsPage() {
       <ul className="card divide-y divide-line">
         {rows.map((n) => (
           <li key={n.id} className={`px-4 py-3 text-sm flex justify-between gap-3 ${n.read_at ? "text-ink-soft" : "font-semibold"}`}>
-            <Link href={n.task_id ? `/work/tasks/${n.task_id}` : n.work_rooms?.key ? `/work/rooms/${n.work_rooms.key}?tab=chat` : "/work"} className="hover:underline">{!n.read_at && <span className="inline-block h-2 w-2 rounded-full bg-red mr-2" />}{n.message}</Link>
+            <a href={`/work/notifications/open/${n.id}`} className="hover:underline">{!n.read_at && <span className="inline-block h-2 w-2 rounded-full bg-red mr-2" />}{n.message}</a>
             <span className="text-xs text-ink-soft whitespace-nowrap">{fmtDateTime(n.created_at)}</span>
           </li>
         ))}

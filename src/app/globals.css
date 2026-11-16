@@ -107,3 +107,9 @@ h1, h2, h3, .font-display {
 /* NavFeedback top bar */
 @keyframes nav-progress { 0% { transform: translateX(-100%); } 60% { transform: translateX(-20%); } 100% { transform: translateX(0); } }
 .nav-progress { animation: nav-progress 4s cubic-bezier(.2,.8,.2,1) forwards; }
+
+/* DateInput: ซ่อนตัวเลขวันที่ของเบราว์เซอร์ (ซึ่งเรียงตามภาษาเครื่อง) แล้วแสดง วัน/เดือน/ปี ซ้อนแทน */
+input.date-dmy::-webkit-datetime-edit { color: transparent; }
+input.date-dmy:focus::-webkit-datetime-edit { color: transparent; }
+input.date-dmy { color: transparent; }
+input.date-dmy::-webkit-calendar-picker-indicator { opacity: .6; cursor: pointer; }

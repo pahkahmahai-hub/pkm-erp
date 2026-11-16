@@ -8,6 +8,7 @@ import type { CompanyEvent } from "@/lib/work/types";
 import { fmtDate } from "@/lib/format";
 import { todayBkk } from "@/lib/today";
 import { saveHoliday, deleteHoliday } from "../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }, { href: "/work/company-calendar", label: "ปฏิทินบริษัท" }];
@@ -39,8 +40,8 @@ export default async function HolidaysPage({ searchParams }: { searchParams: Pro
       <form action={saveHoliday} className="card p-5 grid md:grid-cols-5 gap-3 items-end">
         <input type="hidden" name="id" value={e?.id ?? ""} />
         <div className="md:col-span-2"><label className="label">{e ? "แก้ไขวันหยุด" : "เพิ่มวันหยุด"}</label><input name="title" defaultValue={e?.title ?? ""} className="input" required placeholder="เช่น วันสงกรานต์ / หยุดพิเศษบริษัท" /></div>
-        <div><label className="label">วันที่</label><input type="date" name="start_date" defaultValue={e?.start_date ?? `${year}-01-01`} className="input" required /></div>
-        <div><label className="label">ถึงวันที่ <span className="text-ink-soft font-normal">(ว่าง = วันเดียว)</span></label><input type="date" name="end_date" defaultValue={e && e.end_date !== e.start_date ? e.end_date : ""} className="input" /></div>
+        <div><label className="label">วันที่</label><DateInput name="start_date" defaultValue={e?.start_date ?? `${year}-01-01`} className="input" required /></div>
+        <div><label className="label">ถึงวันที่ <span className="text-ink-soft font-normal">(ว่าง = วันเดียว)</span></label><DateInput name="end_date" defaultValue={e && e.end_date !== e.start_date ? e.end_date : ""} className="input" /></div>
         <div className="flex gap-2"><button className="btn-primary">{e ? "บันทึก" : "เพิ่ม"}</button>{e && <Link href={`/work/holidays?year=${year}`} className="btn-outline"><X size={14} /></Link>}</div>
         <div className="md:col-span-5"><input name="note" defaultValue={e?.note ?? ""} className="input" placeholder="หมายเหตุ (ถ้ามี) เช่น หยุดเฉพาะสถาบันการเงิน / หยุดครึ่งวัน" /></div>
       </form>

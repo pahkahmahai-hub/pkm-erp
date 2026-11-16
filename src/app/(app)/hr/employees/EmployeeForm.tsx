@@ -1,4 +1,5 @@
 import type { Employee, Team } from "@/lib/types";
+import { DateInput } from "@/components/DateInput";
 
 export function EmployeeForm({ employee, teams, isAdmin }: { employee?: Employee | null; teams: Team[]; isAdmin: boolean }) {
   const e = employee;
@@ -40,14 +41,14 @@ export function EmployeeForm({ employee, teams, isAdmin }: { employee?: Employee
         <Field label="อีเมล"><input value={e?.email ?? ""} className="input bg-cream" readOnly /></Field>
       )}
       <Field label="โทรศัพท์"><input name="phone" defaultValue={e?.phone ?? ""} className="input" /></Field>
-      {isAdmin && <Field label="วันเกิด"><input name="birth_date" type="date" defaultValue={e?.birth_date ?? ""} className="input" /></Field>}
+      {isAdmin && <Field label="วันเกิด"><DateInput name="birth_date" defaultValue={e?.birth_date ?? ""} className="input" /></Field>}
       <div className="md:col-span-2">
         <Field label="ที่อยู่"><textarea name="address" defaultValue={e?.address ?? ""} className="input" rows={2} /></Field>
       </div>
       {isAdmin && (
         <>
-          <Field label="วันเริ่มงาน"><input name="start_date" type="date" defaultValue={e?.start_date ?? ""} className="input" /></Field>
-          <Field label="วันสิ้นสุด (ถ้าลาออก)"><input name="end_date" type="date" defaultValue={e?.end_date ?? ""} className="input" /></Field>
+          <Field label="วันเริ่มงาน"><DateInput name="start_date" defaultValue={e?.start_date ?? ""} className="input" /></Field>
+          <Field label="วันสิ้นสุด (ถ้าลาออก)"><DateInput name="end_date" defaultValue={e?.end_date ?? ""} className="input" /></Field>
           <Field label="สถานะ">
             <select name="status" defaultValue={e?.status ?? "probation"} className="input">
               <option value="probation">ทดลองงาน</option>

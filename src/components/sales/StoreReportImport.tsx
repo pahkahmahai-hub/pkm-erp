@@ -6,6 +6,7 @@ import type { Company, VatMode, SalesChannel } from "@/lib/sales/types";
 import type { Contact } from "@/lib/stock/types";
 import { parseStoreReport, blockFromPdfRows, FORMAT_HINT, type ParsedReport, type StoreBlock, type PdfParsed } from "@/lib/sales/store-report";
 import { createStoreReportDocs, parseStoreReportPdf, type StoreDocInput } from "@/app/(app)/sales/actions";
+import { DateInput } from "@/components/DateInput";
 
 type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "credit_days"> & { default_discount_pct?: number | null; default_vat_mode?: VatMode | null; default_channel?: SalesChannel | null };
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -165,7 +166,7 @@ function BlockCard({ b, s, customers, upd, done, error }: { b: StoreBlock; s: Bl
         <div><label className="label">GP / ส่วนลดท้ายบิล %</label>
           <input type="number" step="0.01" min={0} max={100} value={s.gpPct} disabled={b.vendor != null} onChange={(e) => upd({ gpPct: Number(e.target.value) })} className="input" />
           {b.vendor != null && <p className="text-[11px] text-ink-soft mt-1">ล็อกตามไฟล์ห้าง — ยอดสุทธิตรง Final Vendor Amt</p>}</div>
-        <div><label className="label">วันที่เอกสาร</label><input type="date" value={s.docDate} onChange={(e) => upd({ docDate: e.target.value })} className="input" /></div>
+        <div><label className="label">วันที่เอกสาร</label><DateInput value={s.docDate} onChange={(e) => upd({ docDate: e.target.value })} className="input" /></div>
         <div className="md:col-span-2"><label className="label">เลข PO / อ้างอิงห้าง (ถ้ามี)</label><input value={s.poNo} onChange={(e) => upd({ poNo: e.target.value })} className="input" placeholder="เช่น PO ห้าง, เลขรายงาน" /></div>
       </div>
 

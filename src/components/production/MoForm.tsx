@@ -6,6 +6,7 @@ import type { Company } from "@/lib/sales/types";
 import type { Contact, Product } from "@/lib/stock/types";
 import type { ProductionOrder, ProductionOrderItem } from "@/lib/production/types";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 type FactoryLite = Pick<Contact, "id" | "name" | "code"> & { phone?: string | null };
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit" | "stock_qty"> & { has_bom: boolean; wage: number };
@@ -35,8 +36,8 @@ export function MoForm({ companies, factories, products, order, items, showCost 
               <div className="relative w-40 shrink-0"><Search size={14} className="absolute left-3 top-3 text-ink-soft" /><input value={fq} onChange={(e) => setFq(e.target.value)} className="input pl-8" placeholder="ค้นหา" />
                 {facResults.length > 0 && <div className="absolute z-10 right-0 mt-1 w-72 card p-1 max-h-60 overflow-auto">{facResults.map((f) => <button key={f.id} type="button" onClick={() => { setFac({ id: f.id, name: f.name }); setFq(""); }} className="block w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-cream">{f.name}<div className="text-[11px] text-ink-soft">{f.code ?? ""} {f.phone ?? ""}</div></button>)}</div>}</div></div>
             {fac.id && <p className="text-[11px] text-green mt-1">✓ ผูกกับสมุดรายชื่อ (ซัพพลายเออร์) — ใช้ออกบิลค่าจ้างและ 50 ทวิ</p>}</div>
-          <div><label className="label">วันที่สั่ง</label><input type="date" name="doc_date" defaultValue={order?.doc_date ?? today} className="input" required /></div>
-          <div><label className="label">กำหนดส่งงาน</label><input type="date" name="due_date" defaultValue={order?.due_date ?? ""} className="input" /></div>
+          <div><label className="label">วันที่สั่ง</label><DateInput name="doc_date" defaultValue={order?.doc_date ?? today} className="input" required /></div>
+          <div><label className="label">กำหนดส่งงาน</label><DateInput name="due_date" defaultValue={order?.due_date ?? ""} className="input" /></div>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className="label">หมายเหตุถึงโรงงาน (พิมพ์บนใบสั่งผลิต)</label><input name="notes" defaultValue={order?.notes ?? ""} className="input" placeholder="เช่น เย็บตามแพทเทิร์นเดิม ติดป้ายแบรนด์ทุกชิ้น" /></div>

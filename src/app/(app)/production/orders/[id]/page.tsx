@@ -8,6 +8,7 @@ import { MO_STATUS_TH, MO_STATUS_BADGE, KIND_TH, type ProductionOrder, type Prod
 import { issueMaterials, receiveProduction, expenseFromProduction, cancelProductionOrder } from "../../actions";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number, d = 2) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -77,7 +78,7 @@ export default async function MoDetail({ params, searchParams }: { params: Promi
 
           {open && (
             <form action={issueMaterials.bind(null, id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><Scissors size={18} className="text-purple" /> เบิกวัสดุให้โรงงาน</h3>
-              <div><label className="label">วันที่เบิก</label><input type="date" name="issued_at" defaultValue={today} className="input" /></div>
+              <div><label className="label">วันที่เบิก</label><DateInput name="issued_at" defaultValue={today} className="input" /></div>
               <div className="space-y-1.5 max-h-72 overflow-auto">{reqs.map((r) => <div key={r.material_id} className="grid grid-cols-[1fr_96px] gap-2 items-center text-sm"><input type="hidden" name="material_id" value={r.material_id} />
                 <div className="truncate">{r.name}<div className="text-[10px] text-ink-soft">คงค้าง {fmt(r.remaining)} · คลัง {fmt(r.stock)} {r.unit}</div></div>
                 <input type="number" name="issue_qty" step="0.01" min={0} defaultValue={Number(r.remaining) > 0 ? Number(r.remaining) : 0} className="input !py-1 text-right" /></div>)}
@@ -89,7 +90,7 @@ export default async function MoDetail({ params, searchParams }: { params: Promi
           )}
           {open && remainingPieces > 0 && (
             <form action={receiveProduction.bind(null, id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><PackageCheck size={18} className="text-green" /> รับสินค้าสำเร็จรูป</h3>
-              <div><label className="label">วันที่รับ</label><input type="date" name="received_at" defaultValue={today} className="input" /></div>
+              <div><label className="label">วันที่รับ</label><DateInput name="received_at" defaultValue={today} className="input" /></div>
               <div className="space-y-2">{its.filter((i) => i.qty_ordered - i.qty_received - i.qty_defect > 0).map((i) => <div key={i.id} className="grid grid-cols-[1fr_72px_72px] gap-2 items-center text-sm"><input type="hidden" name="item_id" value={i.id} />
                 <div className="truncate">{i.products?.name}<div className="text-[10px] text-ink-soft">ค้าง {i.qty_ordered - i.qty_received - i.qty_defect}</div></div>
                 <div><div className="text-[10px] text-green">ดี</div><input type="number" name="qty_good" min={0} defaultValue={i.qty_ordered - i.qty_received - i.qty_defect} className="input !py-1 text-right" /></div>
@@ -100,7 +101,7 @@ export default async function MoDetail({ params, searchParams }: { params: Promi
           )}
           {!d.expense_id && its.some((i) => i.qty_received + i.qty_defect > 0) && (
             <form action={expenseFromProduction.bind(null, id)} className="card p-5 space-y-3"><h3 className="font-display font-bold flex items-center gap-2"><Receipt size={18} className="text-purple" /> บิลค่าจ้างผลิต</h3>
-              <div className="grid grid-cols-2 gap-2"><div><label className="label">เลขที่บิลโรงงาน</label><input name="bill_no" className="input" placeholder="ถ้ามี" /></div><div><label className="label">วันที่บิล</label><input type="date" name="bill_date" defaultValue={today} className="input" /></div></div>
+              <div className="grid grid-cols-2 gap-2"><div><label className="label">เลขที่บิลโรงงาน</label><input name="bill_no" className="input" placeholder="ถ้ามี" /></div><div><label className="label">วันที่บิล</label><DateInput name="bill_date" defaultValue={today} className="input" /></div></div>
               <div><label className="label">หัก ณ ที่จ่าย %</label><select name="wht_pct" defaultValue={3} className="input">{[0, 1, 2, 3, 5].map((w) => <option key={w} value={w}>{w === 0 ? "ไม่หัก" : `${w}%`}</option>)}</select></div>
               <button className="btn-outline w-full">สร้างบิลค่าใช้จ่าย (รออนุมัติ){admin ? ` ${fmt(d.wage_total)} บาท` : ""}</button>
               <p className="text-[11px] text-ink-soft">คิดจากชิ้นที่รับแล้วทั้งหมด × ค่าจ้าง/ชิ้น · เข้ารอบจ่าย 1/15 และออก 50 ทวิ เมื่อจ่าย</p></form>

@@ -6,6 +6,7 @@ import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { requirePayroll } from "@/lib/payroll/server";
 import { money, periodLabel, type PayrollLine, type PayrollRun } from "@/lib/payroll/calc";
 import { refreshPayrollAuto, setPayrollRunStatus, deletePayrollRun, updatePayDate, setRunDeductLate, createPayrollWht } from "../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
       <div className="grid sm:grid-cols-3 gap-3 text-sm">
         <div className="card p-4"><div className="text-xs text-ink-soft">ประกันสังคมนำส่ง (ลูกจ้าง + นายจ้าง)</div><div className="font-display font-bold text-lg">{money(sum("sso_employee") + sum("sso_employer"))}</div><div className="text-[11px] text-ink-soft">นายจ้างสมทบ {money(sum("sso_employer"))}</div></div>
         <div className="card p-4"><div className="text-xs text-ink-soft">ภาษีหัก ณ ที่จ่ายนำส่ง</div><div className="font-display font-bold text-lg">{money(sum("tax_wht"))}</div></div>
-        <form action={updatePayDate.bind(null, runId)} className="card p-4 space-y-2"><div className="text-xs text-ink-soft">วันที่จ่าย / หมายเหตุงวด</div><div className="flex gap-2"><input type="date" name="pay_date" defaultValue={r.pay_date ?? ""} className="input py-1" /><button className="btn-outline py-1 px-3 text-xs">บันทึก</button></div><input name="note" defaultValue={r.note ?? ""} className="input py-1 text-sm" placeholder="หมายเหตุ" /></form>
+        <form action={updatePayDate.bind(null, runId)} className="card p-4 space-y-2"><div className="text-xs text-ink-soft">วันที่จ่าย / หมายเหตุงวด</div><div className="flex gap-2"><DateInput name="pay_date" defaultValue={r.pay_date ?? ""} className="input py-1" /><button className="btn-outline py-1 px-3 text-xs">บันทึก</button></div><input name="note" defaultValue={r.note ?? ""} className="input py-1 text-sm" placeholder="หมายเหตุ" /></form>
       </div>
     </div>
   );

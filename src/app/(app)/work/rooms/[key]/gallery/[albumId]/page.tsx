@@ -8,6 +8,7 @@ import type { Album, AlbumPhoto } from "@/lib/work/types";
 import { fmtDate } from "@/lib/format";
 import { AlbumView } from "@/components/work/AlbumView";
 import { updateAlbum, deleteAlbum } from "../../../../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function AlbumPage({ params, searchParams }: { params: Prom
       {canManage && sp.edit && (
         <form action={updateAlbum.bind(null, key, a.id)} className="card p-5 grid sm:grid-cols-4 gap-3 items-end">
           <div className="sm:col-span-2"><label className="label">ชื่ออัลบั้ม</label><input name="title" defaultValue={a.title} className="input" required /></div>
-          <div><label className="label">วันที่</label><input type="date" name="event_date" defaultValue={a.event_date ?? ""} className="input" /></div>
+          <div><label className="label">วันที่</label><DateInput name="event_date" defaultValue={a.event_date ?? ""} className="input" /></div>
           <div><button className="btn-primary">บันทึก</button></div>
           <div className="sm:col-span-4"><input name="description" defaultValue={a.description ?? ""} className="input" placeholder="คำอธิบาย" /></div>
         </form>

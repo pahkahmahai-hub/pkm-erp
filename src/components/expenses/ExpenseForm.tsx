@@ -9,6 +9,7 @@ import type { Contact } from "@/lib/stock/types";
 import type { AiBill, Expense, ExpenseCategory, ExpenseItem } from "@/lib/expenses/types";
 import type { Product, Material } from "@/lib/stock/types";
 import { whtCalc, WHT_PAYER_TH, WHT_CHOICES, nextPayRound } from "@/lib/expenses/types";
+import { DateInput } from "@/components/DateInput";
 
 type SupplierLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "entity_type"> & { default_expense_category?: string | null; default_wht_pct?: number | null; default_vat_mode_purchase?: VatMode | null };
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "unit">;
@@ -217,9 +218,9 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
           <div><label className="label">ที่อยู่ผู้รับเงิน</label><input name="supplier_address" value={sup.address} onChange={(ev) => setSup({ ...sup, address: ev.target.value })} className="input" /></div>
           <div className="grid sm:grid-cols-4 gap-4">
             <div><label className="label">เลขที่บิล</label><input name="bill_no" value={billNo} onChange={(ev) => setBillNo(ev.target.value)} className="input" /></div>
-            <div><label className="label">วันที่บิล</label><input type="date" name="bill_date" value={billDate} onChange={(ev) => { setBillDate(ev.target.value); setPayRound(nextPayRound(ev.target.value)); }} className="input" required /></div>
-            <div><label className="label">ครบกำหนด</label><input type="date" name="due_date" value={dueDate} onChange={(ev) => setDueDate(ev.target.value)} className="input" /></div>
-            <div><label className="label">รอบจ่าย (1 / 15)</label><input type="date" name="pay_round" value={payRound} onChange={(ev) => setPayRound(ev.target.value)} className="input" /></div>
+            <div><label className="label">วันที่บิล</label><DateInput name="bill_date" value={billDate} onChange={(ev) => { setBillDate(ev.target.value); setPayRound(nextPayRound(ev.target.value)); }} className="input" required /></div>
+            <div><label className="label">ครบกำหนด</label><DateInput name="due_date" value={dueDate} onChange={(ev) => setDueDate(ev.target.value)} className="input" /></div>
+            <div><label className="label">รอบจ่าย (1 / 15)</label><DateInput name="pay_round" value={payRound} onChange={(ev) => setPayRound(ev.target.value)} className="input" /></div>
           </div>
           <div><label className="label">รายละเอียดสั้นๆ</label><input name="description" value={desc} onChange={(ev) => setDesc(ev.target.value)} className="input" placeholder="เช่น ค่าจ้างเย็บกระเป๋า ล็อต ก.ย." /></div>
         </div>
@@ -275,7 +276,7 @@ export function ExpenseForm({ companies, suppliers, categories, products = [], m
                     <input type="number" step="0.01" min="0" value={deposit} onChange={(ev) => setDeposit(ev.target.value)} className="input" placeholder={depPct ? "เช่น 50" : "0"} />
                     {depPct && depRaw > 0 && <div className="text-[11px] text-ink-soft mt-0.5">= {fmt(depRaw)} บาท ({deposit}% ของยอดตามบิล)</div>}</div>
                   {depMode === "first" ? (<>
-                    <div><label className="label">ส่วนที่เหลือครบกำหนดจ่าย</label><input type="date" value={restDueEff} onChange={(ev) => setRestDue(ev.target.value)} className="input" /><div className="text-[11px] text-ink-soft mt-0.5">ตามระยะเวลาผลิตของงานนี้</div></div>
+                    <div><label className="label">ส่วนที่เหลือครบกำหนดจ่าย</label><DateInput value={restDueEff} onChange={(ev) => setRestDue(ev.target.value)} className="input" /><div className="text-[11px] text-ink-soft mt-0.5">ตามระยะเวลาผลิตของงานนี้</div></div>
                     <div className="text-[12px] text-ink-soft self-end">บันทึกแล้วระบบจะแยกเป็น 2 บิล: บิลนี้ = มัดจำ (จ่ายรอบนี้) · บิลใหม่ = ส่วนที่เหลือ รอจ่ายรอบ {thD(nextPayRound(restDueEff))}</div>
                     {firstDep > 0 && !firstBad && <><input type="hidden" name="split_deposit" value={firstDep} /><input type="hidden" name="split_due" value={restDueEff} /><input type="hidden" name="split_round" value={nextPayRound(restDueEff)} /></>}
                   </>) : (

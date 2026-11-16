@@ -4,6 +4,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fullName, STATUS_TH, statusBadgeClass, todayBkk } from "@/lib/format";
 import { submitLeave, cancelLeave, reviewLeave } from "./actions";
 import type { LeaveRequest, LeaveType } from "@/lib/types";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -104,8 +105,8 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <div className="flex items-end pb-2">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="half_day" className="accent-purple" /> ลาครึ่งวัน</label>
         </div>
-        <div><label className="label">ตั้งแต่วันที่</label><input type="date" name="start_date" className="input" required /></div>
-        <div><label className="label">ถึงวันที่</label><input type="date" name="end_date" className="input" /></div>
+        <div><label className="label">ตั้งแต่วันที่</label><DateInput name="start_date" className="input" required /></div>
+        <div><label className="label">ถึงวันที่</label><DateInput name="end_date" className="input" /></div>
         <div className="md:col-span-2"><label className="label">เหตุผล</label><input name="reason" className="input" /></div>
         <div className="md:col-span-2"><button className="btn-primary">ส่งใบลา</button></div>
       </form>

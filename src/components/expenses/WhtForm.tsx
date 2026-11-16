@@ -6,6 +6,7 @@ import type { Company } from "@/lib/sales/types";
 import type { Contact } from "@/lib/stock/types";
 import { WHT_ROWS, PAYER_CONDITIONS } from "./WhtSheet";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 type SupplierLite = Pick<Contact, "id" | "name" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "entity_type"> & { default_wht_pct?: number | null };
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -34,7 +35,7 @@ export function WhtForm({ companies, suppliers, defaults }: { companies: Company
       <div className="card p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
           <div><label className="label">บริษัทผู้หักภาษี</label><select name="company_id" value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="input">{companies.map((c) => <option key={c.id} value={c.id}>{c.name_th}</option>)}</select></div>
-          <div><label className="label">วันที่จ่ายเงิน</label><input type="date" name="pay_date" defaultValue={d.pay_date ?? today} className="input" required /></div>
+          <div><label className="label">วันที่จ่ายเงิน</label><DateInput name="pay_date" defaultValue={d.pay_date ?? today} className="input" required /></div>
         </div>
         <div>
           <label className="label">ผู้ถูกหักภาษี ณ ที่จ่าย</label>

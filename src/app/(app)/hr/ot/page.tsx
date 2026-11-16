@@ -4,6 +4,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fullName, STATUS_TH, statusBadgeClass, todayBkk } from "@/lib/format";
 import { submitOt, cancelOt, reviewOt } from "./actions";
 import type { OtRequest } from "@/lib/types";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export default async function OtPage({ searchParams }: { searchParams: Promise<{
 
       <form action={submitOt} className="card p-6 grid md:grid-cols-3 gap-4">
         <h2 className="font-display font-bold md:col-span-3">ยื่นคำขอ OT <span className="text-xs font-normal text-ink-soft">(ยื่นล่วงหน้าหรือย้อนหลังได้)</span></h2>
-        <div><label className="label">วันที่</label><input type="date" name="work_date" defaultValue={todayBkk()} className="input" required /></div>
+        <div><label className="label">วันที่</label><DateInput name="work_date" defaultValue={todayBkk()} className="input" required /></div>
         <div><label className="label">เริ่ม</label><input type="time" name="start_time" defaultValue={workEnd} className="input" required /></div>
         <div><label className="label">สิ้นสุด</label><input type="time" name="end_time" className="input" required /></div>
         <div className="md:col-span-3"><label className="label">งานที่ทำ</label><input name="reason" className="input" placeholder="เช่น แพ็คออเดอร์ห้างล็อตใหญ่" /></div>

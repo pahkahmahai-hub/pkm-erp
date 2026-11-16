@@ -6,6 +6,7 @@ import { Receipt, X, Loader2 } from "lucide-react";
 import { uploadExpenseFiles, type UpFile } from "@/lib/expenses/upload";
 import { payWithSlip } from "@/app/(app)/expenses/actions";
 import { PAY_METHODS } from "@/lib/expenses/types";
+import { DateInput } from "@/components/DateInput";
 
 type Sel = { id: string; no: string; supplier: string; net: number };
 const Ctx = createContext<{ sel: Sel[]; toggle: (s: Sel) => void; open: (only?: Sel) => void } | null>(null);
@@ -54,7 +55,7 @@ export function PaySlipProvider({ children }: { children: React.ReactNode }) {
             <input ref={inp} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { up(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
             {slips.length > 0 && <div className="flex gap-2 flex-wrap">{slips.map((s) => <div key={s.path} className="relative h-20 w-16 rounded border border-line overflow-hidden bg-cream grid place-items-center text-[10px]">{/* eslint-disable-next-line @next/next/no-img-element */}{s.url ? <img src={s.url} alt="" className="w-full h-full object-cover" /> : "PDF"}<button onClick={() => setSlips((x) => x.filter((y) => y.path !== s.path))} className="absolute top-0 right-0 bg-white/90 rounded-full"><X size={12} /></button></div>)}</div>}
             <div className="grid grid-cols-2 gap-2">
-              <div><label className="label">วันที่จ่าย</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></div>
+              <div><label className="label">วันที่จ่าย</label><DateInput value={date} onChange={(e) => setDate(e.target.value)} className="input" /></div>
               <div><label className="label">วิธีจ่าย</label><select value={method} onChange={(e) => setMethod(e.target.value)} className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
               <div className="col-span-2"><label className="label">อ้างอิง (เลขที่รายการในสลิป)</label><input value={ref} onChange={(e) => setRef(e.target.value)} className="input" /></div>
             </div>

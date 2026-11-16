@@ -6,6 +6,7 @@ import { fmtDate, todayBkk, monthRange } from "@/lib/format";
 import { toggleChannelTks, saveChannel, deleteChannel } from "../actions";
 import { OnlineDayEditor } from "@/components/sales/OnlineDayEditor";
 import type { OnlineChannel, OnlineDaily, OnlineItem } from "@/lib/sales/types";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
@@ -51,7 +52,7 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
 
       <form className="flex items-center gap-2">
         <Link href={`/sales/online?date=${prev}`} className="btn-outline py-1.5 px-3">‹</Link>
-        <input type="date" name="date" defaultValue={date} max={todayBkk()} className="input w-44" />
+        <DateInput name="date" defaultValue={date} max={todayBkk()} className="input w-44" />
         <button className="btn-outline py-1.5 px-3">ไป</button>
         {next <= todayBkk() && <Link href={`/sales/online?date=${next}`} className="btn-outline py-1.5 px-3">›</Link>}
         <Link href="/sales/online" className="btn-ghost py-1.5 px-3 text-xs">วันนี้</Link>

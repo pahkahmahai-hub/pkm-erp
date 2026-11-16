@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Room, RoomMember } from "@/lib/work/types";
 import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
+import { DateInput } from "@/components/DateInput";
 
 type Emp = { id: string; first_name: string; nickname: string | null; emp_code: string };
 
@@ -38,10 +39,10 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
       <div className="md:col-span-2"><label className="label">ชื่องาน *</label><input name="title" defaultValue={initialTitle ?? ""} className="input" required autoFocus placeholder="เช่น ออกแบบกล่องของขวัญปีใหม่ 2570" />{fromMessage && <input type="hidden" name="from_message" value={fromMessage} />}</div>
       <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={3} placeholder="อธิบายสิ่งที่ต้องการ ขนาด จำนวน ลิงก์อ้างอิง…" /></div>
       {isSwRoom ? (<>
-        <div><label className="label">① กำหนดจัดของเสร็จ</label><input name="due_date" type="date" className="input" /></div>
-        <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><input name="arrive_due" type="date" className="input" /></div>
+        <div><label className="label">① กำหนดจัดของเสร็จ</label><DateInput name="due_date" className="input" /></div>
+        <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><DateInput name="arrive_due" className="input" /></div>
         <p className="md:col-span-2 text-[11px] text-ink-soft -mt-2">③ กำหนดอัพเข้าระบบ = วันที่กด “สินค้าถึงแล้ว” + 7 วัน (รอ PC อัพ) — ระบบนับให้อัตโนมัติ</p>
-      </>) : <div><label className="label">กำหนดเสร็จ</label><input name="due_date" type="date" className="input" /></div>}
+      </>) : <div><label className="label">กำหนดเสร็จ</label><DateInput name="due_date" className="input" /></div>}
       <div>
         <label className="label">ความสำคัญ</label>
         <div className="flex gap-4 py-2 text-sm">

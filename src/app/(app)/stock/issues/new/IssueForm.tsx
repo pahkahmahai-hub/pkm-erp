@@ -6,6 +6,7 @@ import { LineItemsEditor, type LineItem } from "@/components/stock/LineItemsEdit
 import { ContactPicker } from "@/components/stock/ContactPicker";
 import { createIssue, parseFlowAccountPdf, parseGenericPdf } from "../../actions";
 import type { Product, Contact } from "@/lib/stock/types";
+import { DateInput } from "@/components/DateInput";
 
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">;
 type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id">;
@@ -114,7 +115,7 @@ export function IssueForm({ products, customers }: { products: ProductLite[]; cu
       <div className="card p-6 grid md:grid-cols-2 gap-4">
         <ContactPicker key={pickerKey} kind="customer" contacts={customers} label="ลูกค้า / ปลายทาง" initial={customer} />
         <div><label className="label">เลขที่เอกสาร FlowAccount (ถ้ามี)</label><input name="source_doc_no" value={docNo} onChange={(e) => setDocNo(e.target.value)} className="input font-mono" placeholder="INV2026110010" /></div>
-        <div><label className="label">วันที่เบิก</label><input name="issue_date" type="date" className="input" /></div>
+        <div><label className="label">วันที่เบิก</label><DateInput name="issue_date" className="input" /></div>
         <div><label className="label">เบิกไปทำอะไร *</label><input name="purpose" className="input" placeholder="เช่น ส่งห้างเซ็นทรัลเวิลด์ / ของตัวอย่างลูกค้า / ถ่ายรูป" required /></div>
       </div>
 

@@ -9,10 +9,11 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { created, saved, error, edit } = await searchParams;
   const session = await getSession();
+  await markTaskNotificationsRead(id).catch(() => {});
   const supabase = await createClient();
   const [tRes, { data: checklist }, { data: comments }, { data: filesRaw }] = await Promise.all([
     supabase.from("work_tasks").select(TASK_SELECT + ", work_topics(id, name, color)").eq("id", id).maybeSingle(),
@@ -71,9 +73,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <div><label className="label">มอบหมายให้</label>
                 <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
               <div className="md:col-span-2"><CoAssigneePicker options={mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" }))} defaultIds={task.co_assignee_ids ?? []} primaryId={task.assignee_id} /></div>
-              {isSw && <div><label className="label">② กำหนดส่งถึงห้าง</label><input name="arrive_due" type="date" defaultValue={task.arrive_due ?? ""} className="input" /></div>}
-              <div><label className="label">{isSw ? "① กำหนดจัดของเสร็จ" : "กำหนดเสร็จ"}</label><div className="flex gap-2"><input name="due_date" type="date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
-              {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input name="start_date" type="date" defaultValue={task.start_date ?? ""} className="input" /></div>
+              {isSw && <div><label className="label">② กำหนดส่งถึงห้าง</label><DateInput name="arrive_due" defaultValue={task.arrive_due ?? ""} className="input" /></div>}
+              <div><label className="label">{isSw ? "① กำหนดจัดของเสร็จ" : "กำหนดเสร็จ"}</label><div className="flex gap-2"><DateInput name="due_date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
+              {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><DateInput name="start_date" defaultValue={task.start_date ?? ""} className="input" /></div>
                 <div><label className="label">หัวข้อ Routine</label><select name="topic_id" defaultValue={task.topic_id ?? ""} className="input"><option value="">—</option>{topics.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}{tp.employee_id ? "" : " (ห้อง)"}</option>)}</select></div></>}
               <div className="md:col-span-2 flex gap-4 text-sm"><label className="flex items-center gap-2"><input type="radio" name="priority" value="normal" defaultChecked={task.priority === "normal"} className="accent-purple" /> ปกติ</label><label className="flex items-center gap-2"><input type="radio" name="priority" value="urgent" defaultChecked={task.priority === "urgent"} className="accent-purple" /> 🔥 ด่วน</label></div>
               <div className="md:col-span-2 flex gap-2"><button className="btn-primary">บันทึก</button><Link href={`/work/tasks/${id}`} className="btn-ghost">ยกเลิก</Link></div>

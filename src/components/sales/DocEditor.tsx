@@ -5,6 +5,7 @@ import { Plus, Trash2, Search } from "lucide-react";
 import type { Company, SalesDoc, SalesDocItem, SalesDocType, VatMode, SalesChannel } from "@/lib/sales/types";
 import { DOC_META, VAT_TH, CHANNEL_TH } from "@/lib/sales/types";
 import type { Contact, Product } from "@/lib/stock/types";
+import { DateInput } from "@/components/DateInput";
 
 type ProductLite = Pick<Product, "id" | "code" | "name" | "barcode" | "price" | "unit" | "stock_qty">;
 type ContactLite = Pick<Contact, "id" | "name" | "code" | "tax_id" | "address" | "address2" | "address3" | "postcode" | "branch_code" | "credit_days"> & { default_discount_pct?: number | null; default_vat_mode?: VatMode | null; default_channel?: SalesChannel | null };
@@ -86,9 +87,9 @@ export function DocEditor({ docType, companies, products, customers, doc, items,
           </select>
           {doc && <input type="hidden" name="company_id" value={companyId} />}
         </div>
-        <div><label className="label">วันที่เอกสาร</label><input name="doc_date" type="date" defaultValue={doc?.doc_date ?? new Date().toISOString().slice(0, 10)} className="input" required /></div>
-        {docType === "quotation" ? <div><label className="label">ยืนราคาถึง</label><input name="valid_until" type="date" defaultValue={doc?.valid_until ?? ""} className="input" /></div>
-          : <div><label className="label">ครบกำหนด</label><input name="due_date" type="date" defaultValue={doc?.due_date ?? ""} className="input" /></div>}
+        <div><label className="label">วันที่เอกสาร</label><DateInput name="doc_date" defaultValue={doc?.doc_date ?? new Date().toISOString().slice(0, 10)} className="input" required /></div>
+        {docType === "quotation" ? <div><label className="label">ยืนราคาถึง</label><DateInput name="valid_until" defaultValue={doc?.valid_until ?? ""} className="input" /></div>
+          : <div><label className="label">ครบกำหนด</label><DateInput name="due_date" defaultValue={doc?.due_date ?? ""} className="input" /></div>}
         <div><label className="label">ช่องทาง</label>
           <select name="channel" value={channel} onChange={(e) => setChannel(e.target.value as SalesChannel)} className="input">{(Object.keys(CHANNEL_TH) as SalesChannel[]).map((k) => <option key={k} value={k}>{CHANNEL_TH[k]}</option>)}</select></div>
         <div><label className="label">PO ลูกค้า / ห้าง</label><input name="po_no" defaultValue={doc?.po_no ?? ""} className="input" /></div>

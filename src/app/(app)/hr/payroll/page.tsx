@@ -4,6 +4,7 @@ import { Header } from "@/components/ui";
 import { requirePayroll, loadPayrollSettings } from "@/lib/payroll/server";
 import { money, periodLabel, ssoActive, type PayrollRun } from "@/lib/payroll/calc";
 import { createPayrollRun, lockPayroll, createPayrollWhtAnnual } from "./actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function PayrollHome({ searchParams }: { searchParams: Prom
 
       <form action={createPayrollRun} className="card p-5 flex flex-wrap items-end gap-3">
         <div><label className="label">สร้างงวดเงินเดือน — เดือน</label><input type="month" name="period" defaultValue={now} className="input" required /></div>
-        <div><label className="label">วันที่จ่าย</label><input type="date" name="pay_date" className="input" /></div>
+        <div><label className="label">วันที่จ่าย</label><DateInput name="pay_date" className="input" /></div>
         <button className="btn-primary"><Plus size={16} /> สร้างงวด</button>
         <p className="text-[11px] text-ink-soft basis-full">ระบบดึงเงินเดือน/ค่าตำแหน่งจากข้อมูลพนักงาน · OT ที่อนุมัติแล้ว · นาทีสาย · วันขาดงาน จากระบบ HR ให้อัตโนมัติ แล้วแก้ไขรายคนได้ · {ssoActive(`${now}-01`, s) ? "เดือนนี้หักประกันสังคม" : `ยังไม่หักประกันสังคมจนถึง ${periodLabel(s.sso_start_month)}`}</p>
       </form>

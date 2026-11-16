@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fullName, STATUS_TH, statusBadgeClass, todayBkk } from "@/lib/format";
 import { submitTimeRequest, cancelTimeRequest, reviewTimeRequest } from "./actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export default async function TimeRequestsPage({ searchParams }: { searchParams:
       {error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{error}</div>}
       <form action={submitTimeRequest} className="card p-6 grid md:grid-cols-3 gap-4">
         <h2 className="font-display font-bold md:col-span-3">ยื่นคำขอ</h2>
-        <div><label className="label">วันที่</label><input type="date" name="work_date" defaultValue={todayBkk()} max={todayBkk()} className="input" required /></div>
+        <div><label className="label">วันที่</label><DateInput name="work_date" defaultValue={todayBkk()} max={todayBkk()} className="input" required /></div>
         <div><label className="label">เวลาเข้าจริง (ถ้าลืมเช็คอิน)</label><input type="time" name="requested_in" className="input" /></div>
         <div><label className="label">เวลาออกจริง (ถ้าลืมเช็คเอาท์)</label><input type="time" name="requested_out" className="input" /></div>
         <div className="md:col-span-3"><label className="label">เหตุผล *</label><input name="reason" className="input" placeholder="เช่น แบตมือถือหมด / ออกไปส่งของแล้วลืมกด" required /></div>

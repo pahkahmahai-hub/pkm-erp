@@ -7,6 +7,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import { DOC_META, STATUS_TH, STATUS_BADGE, CHANNEL_TH, NEXT_DOCS, type SalesDoc, type SalesDocItem } from "@/lib/sales/types";
 import { issueSalesDoc, convertSalesDoc, settleReceipt, cancelSalesDoc, deleteDraft, issueIntercompanyInvoice } from "../../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -125,7 +126,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
             {d.doc_type === "purchase_req" && d.status !== "cancelled" && !children?.some((c) => c.doc_type === "invoice" && c.status !== "cancelled") && (
               <form action={issueIntercompanyInvoice.bind(null, id)} className="space-y-2 pt-2 border-t border-line">
                 <div className="text-xs text-ink-soft font-semibold">ฝั่งปากาม้า</div>
-                <label className="label">วันที่ใบกำกับ PKM</label><input type="date" name="doc_date" defaultValue={d.doc_date} className="input" />
+                <label className="label">วันที่ใบกำกับ PKM</label><DateInput name="doc_date" defaultValue={d.doc_date} className="input" />
                 <button className="btn-primary w-full">ออกใบส่งสินค้า/ใบกำกับภาษี PKM → TKS (ร่าง)</button>
                 <p className="text-[11px] text-ink-soft">สร้างใบกำกับในนามปากาม้า ลูกค้า = ทีฆาซอร์ส รายการ/ราคาเดียวกับใบเบิกซื้อ ตัดสต็อกคลังใหญ่เมื่อกด “ออกเอกสาร”</p>
               </form>
@@ -134,7 +135,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
               <form action={settleReceipt.bind(null, id)} className="space-y-2 pt-2 border-t border-line">
                 <div className="text-xs text-ink-soft font-semibold">บันทึกรับเงิน</div>
                 <select name="payment_method" className="input"><option>โอน</option><option>เงินสด</option><option>เช็ค</option><option>บัตรเครดิต</option><option>หักจากแพลตฟอร์ม</option></select>
-                <input name="payment_date" type="date" className="input" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <DateInput name="payment_date" className="input" defaultValue={new Date().toISOString().slice(0, 10)} />
                 <input name="payment_ref" className="input" placeholder="เลขอ้างอิง / ธนาคาร" />
                 <button className="btn-primary w-full">รับเงินแล้ว{isDraft && " (ออกใบเสร็จด้วย)"}</button>
               </form>

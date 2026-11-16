@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ClipboardPaste } from "lucide-react";
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 type P = { id: string; code: string; name: string; unit: string; barcode: string | null };
 
@@ -34,7 +35,7 @@ export function ConsignQtyForm({ mode, action, products, balances }: { mode: "re
     <form action={action} className="space-y-4">
       <input type="hidden" name="items" value={JSON.stringify(items)} />
       <div className="card p-5 grid sm:grid-cols-3 gap-4">
-        {mode === "return" && <div><label className="label">วันที่รับคืน</label><input type="date" name="date" defaultValue={todayBkk()} className="input" /></div>}
+        {mode === "return" && <div><label className="label">วันที่รับคืน</label><DateInput name="date" defaultValue={todayBkk()} className="input" /></div>}
         <div><label className="label">{mode === "reconcile" ? "อ้างอิงรายงาน" : "เลขที่เอกสารคืน (ถ้ามี)"}</label><input name="ref" className="input" placeholder={mode === "reconcile" ? "เช่น Stock ห้าง 30/11/2026" : "เช่น ใบคืนสินค้าห้าง"} /></div>
         <div className={mode === "reconcile" ? "sm:col-span-2" : ""}><label className="label">หมายเหตุ</label><input name="note" className="input" placeholder={mode === "reconcile" ? "เช่น ของหาย/ชำรุดที่ห้าง" : "เช่น ดึงกลับเปลี่ยนคอลเลกชัน"} /></div>
         <p className="sm:col-span-3 text-xs text-ink-soft">{mode === "reconcile"

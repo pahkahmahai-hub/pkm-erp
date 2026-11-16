@@ -30,15 +30,19 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   const [{ data: members }, dir, { data: adminUsers }] = await Promise.all([
     supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id),
     loadDirectory(supabase),
-    supabase.from("app_users").select("employee_id").eq("role", "admin").not("employee_id", "is", null),
+    supabase.rpc("mentionable_admins"),
   ]);
   const mem = fillEmployees(members as RoomMember[], dir, "employee_id");
   // @mention targets: room members + admins (owners), label = nickname or first name
-  const adminEmps = ((adminUsers ?? []) as { employee_id: string }[]).map((a) => dir.find((e) => e.id === a.employee_id) ?? null);
+  const admins = ((adminUsers ?? []) as { user_id: string; employee_id: string | null; label: string }[]);
+  const adminEmps = admins.filter((a) => a.employee_id).map((a) => dir.find((e) => e.id === a.employee_id) ?? null);
+  // ผู้บริหารที่ไม่มีประวัติพนักงาน → @ ด้วยชื่อที่แสดงในระบบ (id = app_user id)
+  const adminUserMembers = admins.filter((a) => !a.employee_id).map((a) => ({ employee_id: a.user_id, label: a.label.split(/\s+/)[0], first_name: "ผู้บริหาร", isUser: true }));
   const chatMembers = [...mem.map((m) => m.employees), ...adminEmps]
     .filter((e): e is DirEmp => !!e)
     .filter((e, i, arr) => arr.findIndex((x) => x.id === e.id) === i)
-    .map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name }));
+    .map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name }))
+    .concat(adminUserMembers);
   if (!session.isAdmin && !mem.some((m) => m.employee_id === session.employee?.id) && !(await roomRights(supabase, r.id, false)).isMember) redirect("/work?denied=1");
 
   if (tab === "chat") {

@@ -8,6 +8,7 @@ import { payExpense } from "../actions";
 import { PaySlipProvider, PaySelect, PaySlipButton } from "@/components/expenses/PaySlip";
 
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
@@ -50,7 +51,7 @@ export default async function Payables() {
                   <td>
                     <form action={payExpense.bind(null, r.id)} className="flex flex-wrap gap-1.5 items-center">
                       <input type="hidden" name="back" value="/expenses/payables" />
-                      <input type="date" name="paid_date" defaultValue={today} className="input !py-1 !text-xs w-[130px]" />
+                      <DateInput name="paid_date" defaultValue={today} className="input !py-1 !text-xs w-[130px]" />
                       <select name="paid_method" className="input !py-1 !text-xs w-[84px]">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select>
                       <input name="paid_ref" placeholder="อ้างอิง" className="input !py-1 !text-xs w-[90px]" />
                       <button className="btn-outline !py-1 !px-2.5 !text-xs">จ่ายแล้ว</button>

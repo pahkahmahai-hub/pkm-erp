@@ -6,6 +6,7 @@ import { Camera, Receipt, X, Loader2, CheckCircle2 } from "lucide-react";
 import { uploadExpenseFiles, type UpFile } from "@/lib/expenses/upload";
 import { quickExpense } from "@/app/(app)/expenses/actions";
 import { PAY_METHODS } from "@/lib/expenses/types";
+import { DateInput } from "@/components/DateInput";
 
 type Sup = { id: string; name: string; default_expense_category: string | null; default_wht_pct: number | null; default_vat_mode_purchase: string | null };
 type Cat = { id: string; name: string; wht_pct: number | null };
@@ -114,7 +115,7 @@ export function QuickExpense({ companies, suppliers, categories, isAdmin, shared
         <div><label className="label">รายละเอียด</label><input value={desc} onChange={(e) => setDesc(e.target.value)} className="input" placeholder="เช่น ค่าป้ายแท็ก 10,000 ชิ้น" /></div>
         <div className="grid grid-cols-2 gap-2">
           <div><label className="label">เลขที่บิล</label><input value={billNo} onChange={(e) => setBillNo(e.target.value)} className="input" /></div>
-          <div><label className="label">วันที่บิล</label><input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className="input" /></div>
+          <div><label className="label">วันที่บิล</label><DateInput value={billDate} onChange={(e) => setBillDate(e.target.value)} className="input" /></div>
         </div>
       </div>
 
@@ -125,7 +126,7 @@ export function QuickExpense({ companies, suppliers, categories, isAdmin, shared
           </label>
           {payNow ? (
             <div className="grid grid-cols-2 gap-2">
-              <div><label className="label">วันที่จ่าย</label><input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="input" /></div>
+              <div><label className="label">วันที่จ่าย</label><DateInput value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="input" /></div>
               <div><label className="label">วิธีจ่าย</label><select value={method} onChange={(e) => setMethod(e.target.value)} className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
               <div className="col-span-2"><label className="label">อ้างอิง (เลขที่รายการในสลิป)</label><input value={ref} onChange={(e) => setRef(e.target.value)} className="input" /></div>
             </div>

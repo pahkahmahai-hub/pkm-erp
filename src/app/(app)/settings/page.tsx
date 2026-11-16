@@ -5,6 +5,7 @@ import { fmtDate, fmtDateTime } from "@/lib/format";
 import { saveGeneral, saveLeaveTypes, addHoliday, deleteHoliday, addUser, setUserRole, toggleUser, saveNetworks } from "./actions";
 import { clientIp, type AllowedNetwork } from "@/lib/network";
 import type { AppUser, LeaveType } from "@/lib/types";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <section className="card p-6 space-y-4">
           <h2 className="font-display font-bold">วันหยุดบริษัท</h2>
           <form action={addHoliday} className="flex gap-2">
-            <input type="date" name="holiday_date" className="input w-44" required />
+            <DateInput name="holiday_date" className="input w-44" required />
             <input name="name" className="input" placeholder="ชื่อวันหยุด" required />
             <button className="btn-outline whitespace-nowrap">เพิ่ม</button>
           </form>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CORP_STATUS, CORP_PAY, type CorpOrder } from "@/lib/work/corp";
 import { saveCorpOrder } from "@/app/(app)/work/actions";
+import { DateInput } from "@/components/DateInput";
 
 /** ฟอร์มสร้าง/แก้ไขออเดอร์ Corporate */
 export function CorpOrderForm({ o, customers, people, today, cancelHref }: { o?: CorpOrder | null; customers: string[]; people: { id: string; name: string }[]; today: string; cancelHref: string }) {
@@ -26,9 +27,9 @@ export function CorpOrderForm({ o, customers, people, today, cancelHref }: { o?:
 
       <Section title="กำหนดการ">
         <div className="grid md:grid-cols-3 gap-3">
-          <div><label className="label">วันที่รับออเดอร์</label><input name="order_date" type="date" defaultValue={o?.order_date ?? today} className="input" /></div>
-          <div><label className="label">กำหนดรับของจากซัพ/ผู้ผลิต</label><input name="supplier_due" type="date" defaultValue={o?.supplier_due ?? ""} className="input" /></div>
-          <div><label className="label">กำหนดส่งลูกค้า</label><input name="due_date" type="date" defaultValue={o?.due_date ?? ""} className="input" /></div>
+          <div><label className="label">วันที่รับออเดอร์</label><DateInput name="order_date" defaultValue={o?.order_date ?? today} className="input" /></div>
+          <div><label className="label">กำหนดรับของจากซัพ/ผู้ผลิต</label><DateInput name="supplier_due" defaultValue={o?.supplier_due ?? ""} className="input" /></div>
+          <div><label className="label">กำหนดส่งลูกค้า</label><DateInput name="due_date" defaultValue={o?.due_date ?? ""} className="input" /></div>
         </div>
       </Section>
 

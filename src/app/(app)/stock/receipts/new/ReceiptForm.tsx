@@ -5,6 +5,7 @@ import { LineItemsEditor, type LineItem } from "@/components/stock/LineItemsEdit
 import { ContactPicker } from "@/components/stock/ContactPicker";
 import { createReceipt } from "../../actions";
 import type { Product, Contact } from "@/lib/stock/types";
+import { DateInput } from "@/components/DateInput";
 
 export function ReceiptForm({ products, suppliers, showCost }: { products: Pick<Product, "id" | "code" | "name" | "barcode" | "stock_qty" | "unit">[]; suppliers: Pick<Contact, "id" | "name" | "code" | "tax_id">[]; showCost: boolean }) {
   const [items, setItems] = useState<LineItem[]>([]);
@@ -18,7 +19,7 @@ export function ReceiptForm({ products, suppliers, showCost }: { products: Pick<
       <div className="card p-6 grid md:grid-cols-2 gap-4">
         <ContactPicker kind="supplier" contacts={suppliers} label="ซัพพลายเออร์" />
         <div><label className="label">เลขที่ใบส่งของ / ใบแจ้งหนี้ของซัพพลายเออร์</label><input name="supplier_doc_no" className="input" placeholder="เช่น INV-2569-0123" /></div>
-        <div><label className="label">วันที่รับ</label><input name="receipt_date" type="date" className="input" /></div>
+        <div><label className="label">วันที่รับ</label><DateInput name="receipt_date" className="input" /></div>
         <div>
           <label className="label">สถานะชำระเงิน</label>
           <div className="flex gap-4 py-2 text-sm">

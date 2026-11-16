@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { monthBkk } from "@/lib/today";
 import { createPurchaseRequisition } from "../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
@@ -55,7 +56,7 @@ export default async function MonthClose({ searchParams }: { searchParams: Promi
       {lines.length > 0 && existing.length === 0 && (
         <form action={createPurchaseRequisition} className="card p-5 flex flex-wrap items-end gap-4">
           <input type="hidden" name="month" value={month} />
-          <div><label className="label">วันที่ใบเบิกซื้อ (ต้นเดือนถัดไป)</label><input type="date" name="doc_date" defaultValue={nextMonthFirst(month)} className="input" /></div>
+          <div><label className="label">วันที่ใบเบิกซื้อ (ต้นเดือนถัดไป)</label><DateInput name="doc_date" defaultValue={nextMonthFirst(month)} className="input" /></div>
           <button className="btn-primary">สร้างใบเบิกซื้อ ในนามทีฆาซอร์ส → ปากาม้า</button>
           <p className="text-xs text-ink-soft basis-full">สร้างเป็นฉบับร่าง เปิดตรวจ/พิมพ์ได้ จากนั้นในหน้าเอกสารจะมีปุ่ม “ออกใบส่งสินค้า/ใบกำกับภาษี PKM → TKS” เพื่อออกใบคู่กันฝั่งปากาม้าและตัดสต็อกคลังใหญ่</p>
         </form>

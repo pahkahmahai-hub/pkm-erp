@@ -230,6 +230,8 @@ export async function markRoomRead(roomId: string) {
   const s = await getSession();
   const supabase = await createClient();
   await supabase.from("work_room_reads").upsert({ room_id: roomId, user_id: s.appUser.id, last_read_at: new Date().toISOString() });
+  // เปิดแชทห้องแล้ว → แจ้งเตือน @ ของห้องนี้ถือว่าอ่านแล้ว
+  await supabase.from("work_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", s.appUser.id).eq("room_id", roomId).is("task_id", null).is("read_at", null);
 }
 
 
@@ -651,4 +653,11 @@ export async function roomReadStatus(roomId: string) {
   const supabase = await createClient();
   const { data } = await supabase.rpc("room_read_status", { p_room: roomId });
   return (data ?? []) as { user_id: string; name: string; last_read_at: string }[];
+}
+
+/** เปิดหน้างานแล้ว → แจ้งเตือนของงานนี้ถือว่าอ่านแล้ว */
+export async function markTaskNotificationsRead(taskId: string) {
+  const s = await getSession();
+  const supabase = await createClient();
+  await supabase.from("work_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", s.appUser.id).eq("task_id", taskId).is("read_at", null);
 }

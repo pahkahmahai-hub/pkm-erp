@@ -8,6 +8,7 @@ import { Flame, Plus, X, Repeat, Image as ImageIcon } from "lucide-react";
 import type { Task, Topic } from "@/lib/work/types";
 import { addDays, fmtDM } from "@/lib/work/deliveries";
 import { createCalendarTask } from "@/app/(app)/work/actions";
+import { DateInput } from "@/components/DateInput";
 
 const DOW = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
 interface Row { id: string; name: string; is_lead: boolean }
@@ -140,8 +141,8 @@ function NewTaskFields({ rows, topics, draft }: { rows: Row[]; topics: Topic[]; 
       <div><label className="label">ผู้รับผิดชอบ</label><select name="assignee_id" value={assignee} onChange={(e) => setAssignee(e.target.value)} className="input"><option value="">— ยังไม่ระบุ —</option>{rows.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
       <div><label className="label">หัวข้อ Routine</label><select name="topic_id" className="input" defaultValue=""><option value="">— ไม่ระบุ —</option>{myTopics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
       <div className="sm:col-span-2"><CoAssigneePicker options={rows.map((r) => ({ id: r.id, name: r.name }))} primaryId={assignee} /></div>
-      <div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><input type="date" name="start_date" value={start} onChange={(e) => { setStart(e.target.value); if (e.target.value) setDue(fridayOf(e.target.value)); }} className="input" required /></div>
-      <div><label className="label">กำหนดเสร็จ <span className="text-ink-soft font-normal">(ว่าง = ศุกร์ 17:30)</span></label><div className="flex gap-2"><input type="date" name="due_date" value={due} onChange={(e) => setDue(e.target.value)} className="input" /><input type="time" name="due_time" defaultValue="17:30" className="input w-28" /></div></div>
+      <div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><DateInput name="start_date" value={start} onChange={(e) => { setStart(e.target.value); if (e.target.value) setDue(fridayOf(e.target.value)); }} className="input" required /></div>
+      <div><label className="label">กำหนดเสร็จ <span className="text-ink-soft font-normal">(ว่าง = ศุกร์ 17:30)</span></label><div className="flex gap-2"><DateInput name="due_date" value={due} onChange={(e) => setDue(e.target.value)} className="input" /><input type="time" name="due_time" defaultValue="17:30" className="input w-28" /></div></div>
       <div className="sm:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={2} placeholder="brief / ลิงก์อ้างอิง / ขนาด" /></div>
       <div className="sm:col-span-2"><label className="label">เช็คลิสต์ย่อย (บรรทัดละ 1 ข้อ)</label><textarea name="checklist" className="input font-mono text-xs" rows={2} /></div>
       <div className="sm:col-span-2 flex gap-4 text-sm"><label className="flex items-center gap-2"><input type="radio" name="priority" value="normal" defaultChecked className="accent-purple" /> ปกติ</label><label className="flex items-center gap-2"><input type="radio" name="priority" value="urgent" className="accent-red" /> <Flame size={14} className="text-red" /> ด่วน</label></div>

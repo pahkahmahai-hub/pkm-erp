@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, X, Trash2, Search, ExternalLink, Check, ClipboardList } from "lucide-react";
 import { STEPS, stepMeta, fmtDM, addDays, mondayOf, TH_MONTHS, type DeliveryStore, type StoreDelivery, type WeekCol } from "@/lib/work/deliveries";
 import { saveStoreDelivery, deleteStoreDelivery, createDeliveryTask, type DeliveryPayload } from "@/app/(app)/work/actions";
+import { DateInput } from "@/components/DateInput";
 
 export interface EmpLite { id: string; first_name: string; nickname: string | null }
 export interface SalesDocLite { id: string; doc_no: string; doc_type: string; customer_name: string; doc_date: string; status: string }
@@ -112,9 +113,9 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
                 <div><label className="label">PO ห้าง</label><input value={draft.po_no} onChange={(e) => setDraft({ ...draft, po_no: e.target.value })} className="input" /></div>
                 <DocPicker docs={salesDocs} value={draft.sales_doc_id} onPick={(doc) => setDraft({ ...draft, sales_doc_id: doc?.id ?? null, doc_no: doc ? doc.doc_no : draft.doc_no, step: doc && doc.status !== "draft" && draft.step < 3 ? 3 : draft.step })} />
                 <div><label className="label">ผู้รับผิดชอบ</label><select value={draft.assignee_id} onChange={(e) => setDraft({ ...draft, assignee_id: e.target.value })} className="input"><option value="">— ไม่ระบุ —</option>{employees.map((e) => <option key={e.id} value={e.id}>{e.nickname ?? e.first_name}</option>)}</select></div>
-                <div><label className="label">สัปดาห์ (เลือกวันใดก็ได้ในสัปดาห์)</label><input type="date" value={draft.week} onChange={(e) => e.target.value && setDraft({ ...draft, week: mondayOf(e.target.value) })} className="input" /></div>
-                <div><label className="label">① กำหนดจัดของเสร็จ</label><input type="date" value={draft.target_date} onChange={(e) => setDraft({ ...draft, target_date: e.target.value })} className="input" /></div>
-                <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><input type="date" value={draft.arrive_due} onChange={(e) => setDraft({ ...draft, arrive_due: e.target.value })} className="input" /></div>
+                <div><label className="label">สัปดาห์ (เลือกวันใดก็ได้ในสัปดาห์)</label><DateInput value={draft.week} onChange={(e) => e.target.value && setDraft({ ...draft, week: mondayOf(e.target.value) })} className="input" /></div>
+                <div><label className="label">① กำหนดจัดของเสร็จ</label><DateInput value={draft.target_date} onChange={(e) => setDraft({ ...draft, target_date: e.target.value })} className="input" /></div>
+                <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><DateInput value={draft.arrive_due} onChange={(e) => setDraft({ ...draft, arrive_due: e.target.value })} className="input" /></div>
                 <p className="sm:col-span-2 text-[11px] text-ink-soft -mt-1">③ กำหนดอัพเข้าระบบ = วันที่กด “สินค้าถึงแล้ว” + 7 วัน (รอ PC อัพ) — ระบบนับให้อัตโนมัติ</p>
               </div>
               <div><label className="label">หมายเหตุ</label><input value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} className="input" placeholder="เช่น รอผ้าลายใหม่ / ส่งทาง Kerry" /></div>

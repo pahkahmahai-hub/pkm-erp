@@ -7,7 +7,7 @@ import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 
-export interface ChatMember { employee_id: string; label: string; first_name: string }
+export interface ChatMember { employee_id: string; label: string; first_name: string; isUser?: boolean }   // isUser = id เป็น app_user (ผู้บริหารที่ไม่มีประวัติพนักงาน)
 export interface Reader { user_id: string; name: string; last_read_at: string }
 export interface ChatMessage {
   id: string; author_id: string | null; body: string | null; image_url: string | null; file_url: string | null; file_name: string | null;
@@ -200,7 +200,7 @@ export function ChatBox({
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
                     (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
-                      ? m.mentions!.map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
+                      ? m.mentions!.filter((emp) => !members.find((x) => x.employee_id === emp)?.isUser).map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
                       : <a href={makeTaskHref(m)} className="flex items-center gap-1 underline" title="เปลี่ยนเป็นงาน"><ListPlus size={11} /> เป็นงาน</a>
                   )}
                   {loadReads && (() => { const sb = seenBy(m); return <button type="button" onClick={() => setSeenOpen(seenOpen === m.id ? null : m.id)} className="flex items-center gap-1 underline" title="ใครอ่านแล้วบ้าง"><Eye size={11} /> {sb.length ? `อ่านแล้ว ${sb.length}` : "ยังไม่มีคนอ่าน"}</button>; })()}

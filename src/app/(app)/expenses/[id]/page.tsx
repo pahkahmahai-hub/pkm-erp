@@ -12,6 +12,7 @@ import { AttachExpenseFiles } from "@/components/expenses/AttachExpenseFiles";
 import { SplitDeposit } from "@/components/expenses/SplitDeposit";
 
 import { todayBkk } from "@/lib/today";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 const fmt = (n: number) => Number(n).toLocaleString("th-TH", { minimumFractionDigits: 2 });
@@ -91,7 +92,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
                 <details className="pt-2 text-xs"><summary className="cursor-pointer text-green list-none">จ่ายแล้ว {fmtDate(x.paid_date)} · {x.paid_method}{x.paid_ref ? ` · ${x.paid_ref}` : ""} <span className="text-purple underline ml-1">แก้วันที่จ่าย</span></summary>
                   <form action={editPaidDate.bind(null, id)} className="mt-2 space-y-2 rounded-lg border border-line p-3">
                     <div className="grid grid-cols-2 gap-2">
-                      <div><label className="label">วันที่จ่าย</label><input type="date" name="paid_date" defaultValue={x.paid_date ?? ""} className="input" required /></div>
+                      <div><label className="label">วันที่จ่าย</label><DateInput name="paid_date" defaultValue={x.paid_date ?? ""} className="input" required /></div>
                       <div><label className="label">วิธี</label><select name="paid_method" defaultValue={x.paid_method ?? ""} className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
                     </div>
                     <div><label className="label">อ้างอิง</label><input name="paid_ref" defaultValue={x.paid_ref ?? ""} className="input" /></div>
@@ -107,7 +108,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
                 <div className="card p-5 space-y-3">
                   <h3 className="font-display font-bold">พิจารณา</h3>
                   <form className="space-y-3">
-                    <div><label className="label">รอบจ่าย</label><input type="date" name="pay_round" defaultValue={x.pay_round ?? nextPayRound(x.bill_date)} className="input" /></div>
+                    <div><label className="label">รอบจ่าย</label><DateInput name="pay_round" defaultValue={x.pay_round ?? nextPayRound(x.bill_date)} className="input" /></div>
                     <div><label className="label">หมายเหตุ</label><input name="note" className="input" placeholder="เหตุผล / คำสั่งเพิ่มเติม" /></div>
                     <div className="flex gap-2"><button formAction={reviewExpense.bind(null, id, "approved")} className="btn-primary"><CheckCircle2 size={16} /> อนุมัติ</button><button formAction={reviewExpense.bind(null, id, "rejected")} className="btn-danger"><XCircle size={16} /> ไม่อนุมัติ</button></div>
                   </form>
@@ -117,7 +118,7 @@ export default async function ExpenseDetail({ params, searchParams }: { params: 
                 <form action={payExpense.bind(null, id)} className="card p-5 space-y-3">
                   <h3 className="font-display font-bold flex items-center gap-2"><Banknote size={18} className="text-green" /> บันทึกการจ่าย</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><label className="label">วันที่จ่าย</label><input type="date" name="paid_date" defaultValue={todayBkk()} className="input" required /></div>
+                    <div><label className="label">วันที่จ่าย</label><DateInput name="paid_date" defaultValue={todayBkk()} className="input" required /></div>
                     <div><label className="label">วิธี</label><select name="paid_method" className="input">{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select></div>
                   </div>
                   <div><label className="label">อ้างอิง (เลขสลิป / ธนาคาร)</label><input name="paid_ref" className="input" /></div>

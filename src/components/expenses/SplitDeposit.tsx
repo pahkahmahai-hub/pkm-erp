@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Coins, X, Loader2 } from "lucide-react";
 import { splitExpenseDeposit } from "@/app/(app)/expenses/actions";
 import { nextPayRound } from "@/lib/expenses/types";
+import { DateInput } from "@/components/DateInput";
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const addDays = (s: string, n: number) => new Date(Date.parse(s + "T00:00:00Z") + n * 86400_000).toISOString().slice(0, 10);
@@ -44,8 +45,8 @@ export function SplitDeposit({ id, grand, whtPct, billDate }: { id: string; gran
               {whtPct > 0 && <div className="text-[11px] text-ink-soft">หัก ณ ที่จ่าย {whtPct}% คิดแยกในแต่ละบิล</div>}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div><label className="label">ครบกำหนดจ่ายส่วนที่เหลือ</label><input type="date" value={due} onChange={(e) => { setDue(e.target.value); if (e.target.value) setRound(nextPayRound(e.target.value)); }} className="input" /><p className="text-[11px] text-ink-soft mt-0.5">ตามระยะผลิตของงานนี้</p></div>
-              <div><label className="label">รอบจ่าย (1 / 15)</label><input type="date" value={round} onChange={(e) => setRound(e.target.value)} className="input" /></div>
+              <div><label className="label">ครบกำหนดจ่ายส่วนที่เหลือ</label><DateInput value={due} onChange={(e) => { setDue(e.target.value); if (e.target.value) setRound(nextPayRound(e.target.value)); }} className="input" /><p className="text-[11px] text-ink-soft mt-0.5">ตามระยะผลิตของงานนี้</p></div>
+              <div><label className="label">รอบจ่าย (1 / 15)</label><DateInput value={round} onChange={(e) => setRound(e.target.value)} className="input" /></div>
             </div>
             {err && <div className="text-sm text-red">{err}</div>}
             <button disabled={busy || dep <= 0 || rest <= 0} onClick={go} className="btn-primary w-full">{busy ? <Loader2 size={16} className="animate-spin" /> : null} แยกบิล — มัดจำ {fmt(dep)} / เหลือ {fmt(rest)}</button>

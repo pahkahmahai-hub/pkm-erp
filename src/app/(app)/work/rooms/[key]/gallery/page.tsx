@@ -10,6 +10,7 @@ import type { Album } from "@/lib/work/types";
 import { fmtDate } from "@/lib/format";
 import { todayBkk } from "@/lib/today";
 import { createAlbum } from "../../../actions";
+import { DateInput } from "@/components/DateInput";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function GalleryPage({ params, searchParams }: { params: Pr
       {sp.new && (
         <form action={createAlbum.bind(null, key, acc.room.id)} className="card p-5 grid sm:grid-cols-4 gap-3 items-end">
           <div className="sm:col-span-2"><label className="label">ชื่ออัลบั้ม *</label><input name="title" className="input" required autoFocus placeholder="เช่น ออกบูธ Central Chidlom พ.ย. 69" /></div>
-          <div><label className="label">วันที่</label><input type="date" name="event_date" defaultValue={todayBkk()} className="input" /></div>
+          <div><label className="label">วันที่</label><DateInput name="event_date" defaultValue={todayBkk()} className="input" /></div>
           <div className="flex gap-2"><button className="btn-primary">สร้างแล้วเพิ่มรูป</button><Link href={`/work/rooms/${key}/gallery`} className="btn-outline">ยกเลิก</Link></div>
           <div className="sm:col-span-4"><input name="description" className="input" placeholder="คำอธิบาย (ถ้ามี)" /></div>
         </form>
