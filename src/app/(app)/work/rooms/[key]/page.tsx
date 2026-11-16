@@ -15,7 +15,7 @@ import type { ChatMessage } from "@/components/work/ChatBox";
 export const dynamic = "force-dynamic";
 const WORK: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }];
 const COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done"];
-const SW_COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done", "prep", "shipped", "arrived", "accepted"];
+const SW_COLUMNS: TaskStatus[] = ["open", "in_progress", "returned", "done", "prep", "shipped", "arrived"];   // อัพเข้าระบบเรียบร้อย → อยู่ในแท็บ "เสร็จแล้ว"
 
 export default async function RoomPage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ who?: string; history?: string; deleted?: string; tab?: string }> }) {
   const { key } = await params;
@@ -63,14 +63,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
               : q.not("status", "in", "(accepted,cancelled)").order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(500);
   if (who) q = q.or(`assignee_id.eq.${who},co_assignee_ids.cs.{${who}}`);
   const { data } = await q;
-  // SW ROOM: คอลัมน์สุดท้าย "เข้าระบบเรียบร้อย" แสดงงานที่ปิดใน 7 วันล่าสุด
-  let doneRecent: Task[] = [];
-  if (key === "sw-room" && !history) {
-    let dq = supabase.from("work_tasks").select(TASK_SELECT).eq("room_id", r.id).eq("status", "accepted").gte("reviewed_at", new Date(Date.now() - 7 * 86400_000).toISOString()).order("reviewed_at", { ascending: false }).limit(100);
-    if (who) dq = dq.or(`assignee_id.eq.${who},co_assignee_ids.cs.{${who}}`);
-    doneRecent = ((await dq).data ?? []) as Task[];
-  }
-  const tasks = fillEmployees([...(data as Task[]), ...doneRecent], dir, "assignee_id").filter((t) => history || !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้
+  const tasks = fillEmployees(data as Task[], dir, "assignee_id").filter((t) => history || !isFutureRoutine(t));   // งานประจำโชว์เฉพาะสัปดาห์นี้
   // ห้องที่มีงานประจำ: แยก "ใหม่" เป็น งานประจำ · รอเริ่ม / งานสั่ง · รอเริ่ม
   const splitNew = tasks.some((t) => t.routine_id);
   type BoardCol = { id: string; status: TaskStatus; label?: string; filter?: (t: Task) => boolean };
