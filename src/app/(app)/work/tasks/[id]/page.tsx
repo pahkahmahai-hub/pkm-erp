@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, todayBkk } from "@/lib/format";
-import { TASK_SELECT, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
+import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
 import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead } from "../../actions";
 import { Storyboard } from "./Storyboard";
@@ -34,7 +34,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const task = t as unknown as Task;
   const files = (filesRaw ?? []) as TaskFile[];
   const hasCalendar = !tRes.error;
-  const [{ data: membersRaw }, dir, { data: topicsRaw }] = await Promise.all([supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id), loadDirectory(supabase), hasCalendar ? supabase.from("work_topics").select("*").eq("room_id", task.room_id).eq("is_active", true).order("sort_order") : Promise.resolve({ data: [] })]);
+  const [{ data: membersRaw }, dir, { data: topicsRaw }] = await Promise.all([supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", task.room_id), loadDirectory(supabase), hasCalendar ? roomFamilyIds(supabase, task.room_id).then((ids) => supabase.from("work_topics").select("*").in("room_id", ids).eq("is_active", true).order("sort_order")) : Promise.resolve({ data: [] })]);
   const topics = (topicsRaw ?? []) as Topic[];
   const members = fillEmployees(membersRaw as RoomMember[], dir, "employee_id");
   if (!task.employees && task.assignee_id) task.employees = dir.find((e) => e.id === task.assignee_id) ?? null;

@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ListChecks, Tags } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
-import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, roomRights } from "@/lib/work/queries";
+import { TASK_SELECT, ensureRoutines, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
 import type { Room, RoomMember, Task, Topic } from "@/lib/work/types";
 import { WeekCalendar, MonthTaskCalendar } from "@/components/work/WeekCalendar";
 import { RoomTabs } from "@/components/work/RoomTabs";
@@ -36,7 +36,7 @@ export default async function RoomCalendarPage({ params, searchParams }: { param
   const [{ data: members }, dir, { data: topics }, tasksRes] = await Promise.all([
     supabase.from("work_room_members").select("*, employees(id, first_name, nickname, emp_code)").eq("room_id", r.id),
     loadDirectory(supabase),
-    supabase.from("work_topics").select("*").eq("room_id", r.id).eq("is_active", true).order("sort_order"),
+    roomFamilyIds(supabase, r.id).then((ids) => supabase.from("work_topics").select("*").in("room_id", ids).eq("is_active", true).order("sort_order")),
     supabase.from("work_tasks").select(TASK_SELECT + ", work_topics(id, name, color)").eq("room_id", r.id).neq("status", "cancelled")
       .or(`and(start_date.gte.${from},start_date.lte.${to}),and(start_date.is.null,due_date.gte.${from},due_date.lte.${to})`).order("due_time").order("created_at"),
   ]);

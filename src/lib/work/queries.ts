@@ -73,3 +73,15 @@ export async function loadRoomAccess(supabase: SupabaseClient, key: string, sess
   const rights = await roomRights(supabase, room.id, session.isAdmin);
   return { room: room as Room, ...rights };
 }
+
+/** ห้องเดียวกัน + ห้องแม่ + ห้องย่อย — ใช้ดึงหัวข้อ Routine ที่ตั้งไว้ในห้องแม่/ห้องย่อยมาใช้ร่วมกัน */
+export async function roomFamilyIds(supabase: SupabaseClient, roomId: string): Promise<string[]> {
+  const { data } = await supabase.from("work_rooms").select("id, key, parent_key");
+  const all = (data ?? []) as { id: string; key: string; parent_key: string | null }[];
+  const me = all.find((x) => x.id === roomId);
+  if (!me) return [roomId];
+  const ids = new Set([roomId]);
+  if (me.parent_key) all.filter((x) => x.key === me.parent_key).forEach((x) => ids.add(x.id));
+  all.filter((x) => x.parent_key === me.key).forEach((x) => ids.add(x.id));
+  return [...ids];
+}
