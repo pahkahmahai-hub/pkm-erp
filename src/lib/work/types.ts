@@ -22,7 +22,7 @@ export interface Topic { id: string; room_id: string; employee_id: string | null
 export interface TaskFile { id: string; task_id: string; url: string; name: string | null; caption: string | null; sort_order: number; created_by: string | null; created_at: string }
 export type RoutineRule = "weekly" | "monthly" | "first_week" | "double_day";
 export const RULE_TH: Record<RoutineRule, string> = { weekly: "ทุกสัปดาห์ (เลือกวัน)", monthly: "ทุกเดือน (เลือกวันที่)", first_week: "สัปดาห์แรกของเดือน (เลือกวัน)", double_day: "วันเบิ้ล 1/1 … 12/12" };
-export interface Checklist { id: string; task_id: string; label: string; is_done: boolean; done_at: string | null; sort_order: number; due_date?: string | null; assignee_id?: string | null }
+export interface Checklist { id: string; task_id: string; label: string; is_done: boolean; done_at: string | null; sort_order: number; due_date?: string | null; assignee_id?: string | null; assignee_user_id?: string | null }
 export interface Comment {
   id: string; task_id: string; author_id: string | null; body: string | null; image_url: string | null; file_url: string | null; file_name: string | null; kind: string; created_at: string;
   app_users?: { display_name: string | null; email: string } | null;

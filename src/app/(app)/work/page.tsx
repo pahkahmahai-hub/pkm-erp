@@ -29,9 +29,9 @@ export default async function WorkHome() {
     supabase.from("app_users").select("id, display_name, email").eq("role", "admin"),
   ]);
   // ขั้นตอนในเช็คลิสต์ที่ได้รับมอบหมาย (รวมงานของห้อง/แผนกอื่น) — 0052/0053
-  const { data: mySteps } = empId
-    ? await supabase.from("work_checklist").select("id, label, due_date, task_id, work_tasks(task_no, title, status, work_rooms(name, color))").eq("assignee_id", empId).eq("is_done", false).order("due_date", { ascending: true, nullsFirst: false }).limit(30)
-    : { data: [] };
+  const { data: mySteps } = await supabase.from("work_checklist").select("id, label, due_date, task_id, work_tasks(task_no, title, status, work_rooms(name, color))")
+    .or(empId ? `assignee_id.eq.${empId},assignee_user_id.eq.${session.appUser.id}` : `assignee_user_id.eq.${session.appUser.id}`)
+    .eq("is_done", false).order("due_date", { ascending: true, nullsFirst: false }).limit(30);
   const steps = ((mySteps ?? []) as unknown as { id: string; label: string; due_date: string | null; task_id: string; work_tasks: { task_no: number; title: string; status: string; work_rooms: { name: string; color: string } | null } | null }[])
     .filter((x) => x.work_tasks && !["accepted", "cancelled"].includes(x.work_tasks.status));
   const todayStr = todayBkk();

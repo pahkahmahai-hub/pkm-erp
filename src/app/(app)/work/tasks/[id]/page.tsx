@@ -57,16 +57,19 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const items = (checklist ?? []) as Checklist[];
   // ผู้รับผิดชอบรายข้อ: ทุกคนในบริษัท (คนในห้องขึ้นก่อน) — งานบางขั้นเกี่ยวกับแผนกอื่น
   const memIds = new Set(mem.map((m) => m.employee_id));
-  const people = [...mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" })), ...dir.filter((e) => !memIds.has(e.id)).map((e) => ({ id: e.id, name: `${e.nickname ?? e.first_name} (แผนกอื่น)` }))];
-  // @ ในคอมเมนต์: คนในห้อง + ผู้รับงาน/ผู้ร่วมงาน + ผู้รับผิดชอบรายข้อ + ผู้บริหาร
-  const involved = new Set<string>([...mem.map((m) => m.employee_id), ...(task.assignee_id ? [task.assignee_id] : []), ...(task.co_assignee_ids ?? []), ...items.map((c) => c.assignee_id).filter((x): x is string => !!x)]);
   const { data: adminRows } = await supabase.rpc("mentionable_admins");
   const admins = (adminRows ?? []) as { user_id: string; employee_id: string | null; label: string }[];
+  const people = [...admins.filter((a) => !a.employee_id).map((a) => ({ id: `u:${a.user_id}`, name: `${a.label} (ผู้บริหาร)` })), ...mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" })), ...dir.filter((e) => !memIds.has(e.id)).map((e) => ({ id: e.id, name: `${e.nickname ?? e.first_name} (แผนกอื่น)` }))];
+  // @ ในคอมเมนต์: คนในห้อง + ผู้รับงาน/ผู้ร่วมงาน + ผู้รับผิดชอบรายข้อ + ผู้บริหาร
+  const involved = new Set<string>([...mem.map((m) => m.employee_id), ...(task.assignee_id ? [task.assignee_id] : []), ...(task.co_assignee_ids ?? []), ...items.map((c) => c.assignee_id).filter((x): x is string => !!x)]);
   admins.forEach((a) => { if (a.employee_id) involved.add(a.employee_id); });
   const mentionMembers = [
     ...[...involved].map((eid) => dir.find((e) => e.id === eid)).filter((e): e is NonNullable<typeof e> => !!e).map((e) => ({ employee_id: e.id, label: (e.nickname ?? e.first_name).replace(/\s+/g, ""), first_name: e.first_name })),
     ...admins.filter((a) => !a.employee_id).map((a) => ({ employee_id: a.user_id, label: a.label.split(/\s+/)[0], first_name: "ผู้บริหาร", isUser: true })),
   ];
+  const asgVal = (c: Checklist) => (c.assignee_user_id ? `u:${c.assignee_user_id}` : c.assignee_id ?? "");
+  const asgName = (c: Checklist) => (c.assignee_user_id ? admins.find((a) => a.user_id === c.assignee_user_id)?.label ?? "ผู้บริหาร" : c.assignee_id ? nameOf(c.assignee_id) : "");
+  const asgMe = (c: Checklist) => (c.assignee_user_id ? c.assignee_user_id === me : !!myEmp && c.assignee_id === myEmp);
   const nameOf = (empId: string) => { const e = dir.find((d) => d.id === empId); return e ? e.nickname ?? e.first_name : ""; };
   const todayTH = todayBkk();
   const doneCount = items.filter((c) => c.is_done).length;
@@ -129,12 +132,12 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                   <form action={toggleChecklist.bind(null, c.id, id, !c.is_done)}><button className={`h-5 w-5 rounded border grid place-items-center ${c.is_done ? "bg-teal border-teal text-white" : "border-line"}`}>{c.is_done ? "✓" : ""}</button></form>
                   <span className={c.is_done ? "line-through text-ink-soft" : ""}>{c.label}</span>
                   {c.due_date && (() => { const od = !c.is_done && c.due_date < todayTH; const td = !c.is_done && c.due_date === todayTH; return <span className={`text-[11px] rounded-md px-1.5 py-0.5 whitespace-nowrap ${c.is_done ? "text-ink-soft" : od ? "bg-red/10 text-red font-semibold" : td ? "bg-yellow/30 text-[#7a4a00] font-semibold" : "bg-lavender/30 text-purple"}`}>{od ? "เลยกำหนด " : td ? "วันนี้ " : ""}{fmtDateShort(c.due_date)}</span>; })()}
-                  {c.assignee_id && <span className={`text-[11px] whitespace-nowrap ${c.assignee_id === myEmp ? "text-purple font-semibold" : "text-ink-soft"}`}>· {nameOf(c.assignee_id)}{c.assignee_id === myEmp ? " (ฉัน)" : ""}</span>}
-                  {(isOwner || isAssignee || (!!myEmp && c.assignee_id === myEmp)) && <details className="ml-auto group"><summary className="list-none cursor-pointer text-[11px] text-purple underline whitespace-nowrap">กำหนด</summary>
+                  {(c.assignee_id || c.assignee_user_id) && <span className={`text-[11px] whitespace-nowrap ${asgMe(c) ? "text-purple font-semibold" : "text-ink-soft"}`}>· {asgName(c)}{asgMe(c) ? " (ฉัน)" : ""}</span>}
+                  {(isOwner || isAssignee || asgMe(c)) && <details className="ml-auto group"><summary className="list-none cursor-pointer text-[11px] text-purple underline whitespace-nowrap">กำหนด</summary>
                     <form action={updateChecklistItem.bind(null, c.id, id)} className="absolute right-0 top-6 z-10 w-72 max-w-[85vw] card p-3 space-y-2 shadow-lg">
                       <div><label className="label">ข้อ</label><input name="label" defaultValue={c.label} className="input" /></div>
                       <div><label className="label">วันกำหนด</label><DateInput name="due_date" defaultValue={c.due_date ?? ""} className="input" /></div>
-                      <div><label className="label">ผู้รับผิดชอบ (ไม่บังคับ)</label><select name="assignee_id" defaultValue={c.assignee_id ?? ""} className="input"><option value="">—</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+                      <div><label className="label">ผู้รับผิดชอบ (ไม่บังคับ)</label><select name="assignee_id" defaultValue={asgVal(c)} className="input"><option value="">—</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
                       <button className="btn-primary w-full">บันทึก</button>
                     </form></details>}
                   {(isOwner || isAssignee) && <span className="flex flex-col -my-1">

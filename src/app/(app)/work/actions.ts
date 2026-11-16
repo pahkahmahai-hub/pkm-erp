@@ -89,13 +89,20 @@ export async function toggleChecklist(id: string, taskId: string, done: boolean)
   revalidatePath(`/work/tasks/${taskId}`);
 }
 
+/** ผู้รับผิดชอบรายข้อ: "u:<app_user id>" = ผู้บริหาร (0058) · อื่นๆ = employee id */
+function checklistAssignee(formData: FormData) {
+  const v = nul(formData.get("assignee_id"));
+  if (v?.startsWith("u:")) return { assignee_id: null, assignee_user_id: v.slice(2) };
+  return { assignee_id: v, assignee_user_id: null };
+}
+
 export async function addChecklistItem(taskId: string, formData: FormData) {
   await getSession();
   const supabase = await createClient();
   const label = nul(formData.get("label"));
   if (!label) return;
   const { count } = await supabase.from("work_checklist").select("id", { count: "exact", head: true }).eq("task_id", taskId);
-  await supabase.from("work_checklist").insert({ task_id: taskId, label, sort_order: count ?? 0, due_date: nul(formData.get("due_date")), assignee_id: nul(formData.get("assignee_id")) });
+  await supabase.from("work_checklist").insert({ task_id: taskId, label, sort_order: count ?? 0, due_date: nul(formData.get("due_date")), ...checklistAssignee(formData) });
   revalidatePath(`/work/tasks/${taskId}`);
 }
 
@@ -104,7 +111,7 @@ export async function updateChecklistItem(id: string, taskId: string, formData: 
   await getSession();
   const supabase = await createClient();
   const label = nul(formData.get("label"));
-  const { error } = await supabase.from("work_checklist").update({ ...(label ? { label } : {}), due_date: nul(formData.get("due_date")), assignee_id: nul(formData.get("assignee_id")) }).eq("id", id);
+  const { error } = await supabase.from("work_checklist").update({ ...(label ? { label } : {}), due_date: nul(formData.get("due_date")), ...checklistAssignee(formData) }).eq("id", id);
   if (error) redirect(`/work/tasks/${taskId}?error=${encodeURIComponent(error.message)}`);
   revalidatePath(`/work/tasks/${taskId}`);
 }
