@@ -2,14 +2,14 @@ import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
 import { SwDeadlineStrip } from "@/components/work/TaskCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flame, Repeat, Trash2, CalendarDays } from "lucide-react";
+import { Flame, Repeat, Trash2, CalendarDays, ChevronUp, ChevronDown } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -111,7 +111,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             <div className="flex items-center justify-between mb-2"><h2 className="font-display font-bold">เช็คลิสต์</h2>{items.length > 0 && <span className="text-xs text-ink-soft">{doneCount}/{items.length}</span>}</div>
             {items.length > 0 && <div className="h-1.5 rounded-full bg-lavender/40 mb-3"><div className="h-full rounded-full bg-teal" style={{ width: `${(doneCount / items.length) * 100}%` }} /></div>}
             <ul className="space-y-1.5">
-              {items.map((c) => (
+              {items.map((c, ci) => (
                 <li key={c.id} className="text-sm relative">
                   <div className="flex items-center gap-2">
                   <form action={toggleChecklist.bind(null, c.id, id, !c.is_done)}><button className={`h-5 w-5 rounded border grid place-items-center ${c.is_done ? "bg-teal border-teal text-white" : "border-line"}`}>{c.is_done ? "✓" : ""}</button></form>
@@ -125,6 +125,10 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                       <div><label className="label">ผู้รับผิดชอบ (ไม่บังคับ)</label><select name="assignee_id" defaultValue={c.assignee_id ?? ""} className="input"><option value="">—</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
                       <button className="btn-primary w-full">บันทึก</button>
                     </form></details>}
+                  {(isOwner || isAssignee) && <span className="flex flex-col -my-1">
+                    <form action={moveChecklistItem.bind(null, c.id, id, -1)}><button disabled={ci === 0} title="เลื่อนขึ้น" className="text-ink-soft hover:text-purple disabled:opacity-20 leading-none"><ChevronUp size={14} /></button></form>
+                    <form action={moveChecklistItem.bind(null, c.id, id, 1)}><button disabled={ci === items.length - 1} title="เลื่อนลง" className="text-ink-soft hover:text-purple disabled:opacity-20 leading-none"><ChevronDown size={14} /></button></form>
+                  </span>}
                   {isOwner && <form action={deleteChecklistItem.bind(null, c.id, id)} className=""><button className="text-ink-soft hover:text-red"><Trash2 size={13} /></button></form>}
                   </div>
                 </li>

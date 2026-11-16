@@ -671,3 +671,16 @@ export async function markTaskNotificationsRead(taskId: string) {
   const supabase = await createClient();
   await supabase.from("work_notifications").update({ read_at: new Date().toISOString() }).eq("user_id", s.appUser.id).eq("task_id", taskId).is("read_at", null);
 }
+
+/** เลื่อนข้อในเช็คลิสต์ขึ้น/ลง 1 ตำแหน่ง (จัดลำดับ sort_order ใหม่ทั้งชุด) */
+export async function moveChecklistItem(id: string, taskId: string, dir: -1 | 1) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.from("work_checklist").select("id, sort_order").eq("task_id", taskId).order("sort_order").order("id");
+  const list = (data ?? []).map((x) => x.id as string);
+  const i = list.indexOf(id); const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  await Promise.all(list.map((cid, k) => supabase.from("work_checklist").update({ sort_order: k }).eq("id", cid)));
+  revalidatePath(`/work/tasks/${taskId}`);
+}
