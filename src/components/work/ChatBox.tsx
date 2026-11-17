@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
+import { ShareFileButton } from "@/components/ShareFileButton";
 
 export interface ChatMember { employee_id: string; label: string; first_name: string; isUser?: boolean }   // isUser = id เป็น app_user (ผู้บริหารที่ไม่มีประวัติพนักงาน)
 export interface Reader { user_id: string; name: string; last_read_at: string }
@@ -219,6 +220,7 @@ export function ChatBox({
                 <div className={`text-[12px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
+                  {(m.image_url || m.file_url) && <ShareFileButton url={(m.image_url || m.file_url)!} name={m.file_name} />}
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
                     table === "work_room_messages" && (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
                       ? m.mentions!.filter((emp) => !members.find((x) => x.employee_id === emp)?.isUser).map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)

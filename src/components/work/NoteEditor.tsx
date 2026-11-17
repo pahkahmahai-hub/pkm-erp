@@ -7,6 +7,7 @@ import { NOTE_COLORS, type Note, type NoteFile } from "@/lib/work/types";
 import { uploadRoomFiles } from "@/lib/work/upload";
 import { saveNote, deleteNote } from "@/app/(app)/work/actions";
 import { CameraButton } from "@/components/CameraButton";
+import { ShareFileButton } from "@/components/ShareFileButton";
 
 type Pending = { key: string; file: File; preview: string | null };
 
@@ -76,7 +77,7 @@ export function NoteEditor({ roomKey, roomId, note, canEdit }: { roomKey: string
       )}
       {(docs.length > 0 || pending.some((p) => !p.preview)) && (
         <div className="space-y-1 text-sm">
-          {docs.map((f) => <div key={f.id} className="flex items-center gap-2"><a href={f.url} target="_blank" rel="noopener" className="flex items-center gap-1.5 text-purple underline"><Download size={13} /> {f.name ?? "ไฟล์แนบ"}</a>{canEdit && <button type="button" onClick={() => setRemoved((r) => [...r, f.id])} className="text-ink-soft hover:text-red"><X size={13} /></button>}</div>)}
+          {docs.map((f) => <div key={f.id} className="flex items-center gap-2"><a href={f.url} target="_blank" rel="noopener" className="flex items-center gap-1.5 text-purple underline"><Download size={13} /> {f.name ?? "ไฟล์แนบ"}</a><ShareFileButton url={f.url} name={f.name} className="text-xs text-ink-soft" />{canEdit && <button type="button" onClick={() => setRemoved((r) => [...r, f.id])} className="text-ink-soft hover:text-red"><X size={13} /></button>}</div>)}
           {pending.filter((p) => !p.preview).map((p) => <div key={p.key} className="flex items-center gap-2 text-ink-soft"><Paperclip size={13} /> {p.file.name} <span className="text-[10px] text-purple">(ใหม่)</span><button type="button" onClick={() => setPending((x) => x.filter((y) => y.key !== p.key))} className="hover:text-red"><X size={13} /></button></div>)}
         </div>
       )}

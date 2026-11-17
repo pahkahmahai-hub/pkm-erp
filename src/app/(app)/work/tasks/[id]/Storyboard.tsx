@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Images, Trash2, Upload, Film, Camera } from "lucide-react";
 import type { TaskFile } from "@/lib/work/types";
+import { ShareFileButton } from "@/components/ShareFileButton";
 
 const isImg = (u: string) => /\.(png|jpe?g|gif|webp|avif|heic)$/i.test(u.split("?")[0]);
 
@@ -37,6 +38,7 @@ export function Storyboard({ taskId, files, canEdit, addAction, deleteAction }: 
         <div className="fixed inset-0 z-50 bg-ink/80 grid place-items-center p-4" onClick={() => setBig(null)}>
           {isImg(big.url) ? <img src={big.url} alt="" className="max-h-[90vh] max-w-full rounded-lg" /> : <a href={big.url} target="_blank" className="btn-primary">เปิดไฟล์ {big.name}</a>}
           {big.caption && <div className="absolute bottom-6 left-0 right-0 text-center text-white text-sm">{big.caption}</div>}
+          <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}><ShareFileButton url={big.url} name={big.name} className="rounded-lg bg-white/90 text-ink px-3 py-1.5 text-sm" /></div>
         </div>
       )}
     </div>

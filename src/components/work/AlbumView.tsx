@@ -8,6 +8,7 @@ import type { Album, AlbumPhoto } from "@/lib/work/types";
 import { uploadRoomFiles } from "@/lib/work/upload";
 import { addAlbumPhotos, deleteAlbumPhoto, setAlbumCover, setPhotoCaption } from "@/app/(app)/work/actions";
 import { CameraButton } from "@/components/CameraButton";
+import { ShareFileButton } from "@/components/ShareFileButton";
 
 export function AlbumView({ roomKey, roomId, album, photos, meId, canManage, deleteAlbumAction }: { roomKey: string; roomId: string; album: Album; photos: AlbumPhoto[]; meId: string; canManage: boolean; deleteAlbumAction: () => Promise<void> }) {
   const router = useRouter();
@@ -79,6 +80,7 @@ export function AlbumView({ roomKey, roomId, album, photos, meId, canManage, del
               <a href={cur.url} download target="_blank" rel="noopener" className="rounded-lg bg-white/15 px-3 py-1.5 flex items-center gap-1"><Download size={14} /> ดาวน์โหลด</a>
               <button type="button" onClick={() => start(async () => { const r = await setAlbumCover(roomKey, album.id, cur.url); if (r.error) setErr(r.error); router.refresh(); })} className="rounded-lg bg-white/15 px-3 py-1.5 flex items-center gap-1"><Star size={14} /> ตั้งเป็นปก</button>
               {(canManage || cur.created_by === meId) && <button type="button" onClick={() => { if (!confirm("ลบรูปนี้?")) return; const id = cur.id; start(async () => { const r = await deleteAlbumPhoto(roomKey, album.id, id); if (r.error) { setErr(r.error); return; } setIdx(null); router.refresh(); }); }} className="rounded-lg bg-red/80 px-3 py-1.5 flex items-center gap-1"><Trash2 size={14} /> ลบ</button>}
+              <ShareFileButton url={cur.url} title={album.title} className="rounded-lg bg-white/15 px-3 py-1.5 text-sm" />
               <button type="button" onClick={() => setIdx(null)} className="rounded-lg bg-white/15 p-1.5"><X size={18} /></button>
             </span>
           </div>
