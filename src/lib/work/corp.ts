@@ -7,6 +7,7 @@ export interface CorpOrder {
   id: string; order_no: string; customer_name: string; customer_label: string | null; contact_id: string | null; contact_person: string | null; contact_phone: string | null;
   title: string; detail: string | null; amount: number; order_date: string; supplier_due: string | null; due_date: string | null;
   status: CorpStatus; pay_status: CorpPay; doc_qt: string | null; doc_bill: string | null; doc_iv: string | null; doc_dr: string | null; doc_cn: string | null; docs_original_sent: boolean;
+  customer_tax_id?: string | null; customer_address?: string | null; contact_email?: string | null; po_no?: string | null; spec_rev?: number;
   owner_id: string | null; note: string | null; delivered_at: string | null; created_by: string | null; created_at: string; updated_at: string;
 }
 export interface CorpShipment { id: string; order_id: string; ship_date: string; qty_note: string; note: string | null; created_by: string | null; created_at: string }

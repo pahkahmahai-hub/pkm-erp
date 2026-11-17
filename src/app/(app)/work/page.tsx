@@ -36,6 +36,9 @@ export default async function WorkHome() {
   const steps = ((mySteps ?? []) as unknown as { id: string; label: string; due_date: string | null; task_id: string; work_tasks: { task_no: number; title: string; status: string; work_rooms: { name: string; color: string } | null } | null }[])
     .filter((x) => x.work_tasks && !["accepted", "cancelled"].includes(x.work_tasks.status));
   const todayStr = todayBkk();
+  // ขั้นตอนออเดอร์ Corporate ที่มอบหมายให้ผู้บริหาร (ไม่มีงานใน WORK) — 0066
+  const { data: corpMine } = await supabase.from("corp_item_steps").select("id, label, due_date, order_id, corp_orders(order_no, customer_name, customer_label), corp_order_items(line_code, name)").eq("assignee_user_id", session.appUser.id).eq("status", "todo").order("due_date", { ascending: true, nullsFirst: false }).limit(30);
+  const corpSteps = (corpMine ?? []) as unknown as { id: string; label: string; due_date: string | null; order_id: string; corp_orders: { order_no: string; customer_name: string; customer_label: string | null } | null; corp_order_items: { line_code: string | null; name: string } | null }[];
   // ข้อมูลสำหรับแยก "รอตรวจรับ" (ผู้บริหาร): หัวหน้าห้อง และ user ↔ พนักงาน
   const [{ data: leadRows }, { data: userRows }] = session.isAdmin
     ? await Promise.all([
@@ -149,6 +152,16 @@ export default async function WorkHome() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <section>
+          {corpSteps.length > 0 && <div className="mb-5">
+            <h2 className="font-display font-bold mb-3">ขั้นตอนออเดอร์ Corporate ({corpSteps.length})</h2>
+            <div className="card divide-y divide-line">
+              {corpSteps.map((x) => { const od = !!x.due_date && x.due_date < todayStr; return (
+                <Link key={x.id} href={`/work/rooms/operation/corporate/${x.order_id}#spec`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-cream">
+                  <div className="min-w-0 flex-1"><div className="font-semibold truncate">{x.label}</div><div className="text-[11px] text-ink-soft truncate">{x.corp_orders?.order_no} · {x.corp_orders?.customer_label || x.corp_orders?.customer_name} · {x.corp_order_items?.line_code ? `${x.corp_order_items.line_code} ` : ""}{x.corp_order_items?.name}</div></div>
+                  {x.due_date && <span className={`text-[11px] rounded-md px-1.5 py-0.5 whitespace-nowrap ${od ? "bg-red/10 text-red font-semibold" : "bg-lavender/30 text-purple"}`}>{od ? "เลย " : ""}{fmtDateShort(x.due_date)}</span>}
+                </Link>); })}
+            </div>
+          </div>}
           {steps.length > 0 && <div className="mb-5">
             <h2 className="font-display font-bold mb-3">ขั้นตอนที่ได้รับมอบหมาย ({steps.length})</h2>
             <div className="card divide-y divide-line">

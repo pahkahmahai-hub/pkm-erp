@@ -12,7 +12,11 @@ export function CorpOrderForm({ o, customers, people, today, cancelHref }: { o?:
           <div><label className="label">ชื่อลูกค้า (ใช้รวมยอด) *</label><input name="customer_name" list="corp-customers" defaultValue={o?.customer_name ?? ""} className="input" required placeholder="เช่น Mandarin Oriental" /><datalist id="corp-customers">{customers.map((c) => <option key={c} value={c} />)}</datalist></div>
           <div><label className="label">ชื่อที่แสดง <span className="font-normal text-ink-soft">(ถ้าต่างจากชื่อลูกค้า เช่น Lot 3.1)</span></label><input name="customer_label" defaultValue={o?.customer_label ?? ""} className="input" /></div>
           <div><label className="label">ผู้ติดต่อ</label><input name="contact_person" defaultValue={o?.contact_person ?? ""} className="input" /></div>
-          <div><label className="label">เบอร์โทร / LINE / อีเมล</label><input name="contact_phone" defaultValue={o?.contact_phone ?? ""} className="input" /></div>
+          <div><label className="label">เบอร์โทร / LINE</label><input name="contact_phone" defaultValue={o?.contact_phone ?? ""} className="input" /></div>
+          <div><label className="label">อีเมล</label><input name="contact_email" type="email" defaultValue={o?.contact_email ?? ""} className="input" /></div>
+          <div><label className="label">เลขผู้เสียภาษีลูกค้า</label><input name="customer_tax_id" defaultValue={o?.customer_tax_id ?? ""} className="input" inputMode="numeric" /></div>
+          <div className="md:col-span-2"><label className="label">ที่อยู่ลูกค้า (ใช้ในใบงานสั่งสินค้า)</label><textarea name="customer_address" defaultValue={o?.customer_address ?? ""} className="input" rows={2} /></div>
+          <div><label className="label">เลขที่ใบสั่งซื้อลูกค้า (PO)</label><input name="po_no" defaultValue={o?.po_no ?? ""} className="input" /></div>
         </div>
       </Section>
 

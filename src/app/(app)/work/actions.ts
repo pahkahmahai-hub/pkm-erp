@@ -594,6 +594,7 @@ const corpFields = (formData: FormData) => ({
   customer_label: nul(formData.get("customer_label")),
   contact_person: nul(formData.get("contact_person")),
   contact_phone: nul(formData.get("contact_phone")),
+  ...(formData.has("customer_tax_id") ? { customer_tax_id: nul(formData.get("customer_tax_id")), customer_address: nul(formData.get("customer_address")), contact_email: nul(formData.get("contact_email")), po_no: nul(formData.get("po_no")) } : {}),
   title: String(formData.get("title") ?? "").trim(),
   detail: nul(formData.get("detail")),
   amount: Number(String(formData.get("amount") ?? "0").replace(/,/g, "")) || 0,
@@ -784,4 +785,106 @@ export async function messageAcks(kind: "room" | "comment", ids: string[]) {
   const supabase = await createClient();
   const { data } = await supabase.rpc("message_acks", { p_kind: kind, p_ids: ids });
   return (data ?? []) as { message_id: string; user_id: string; name: string; created_at: string }[];
+}
+
+// ---------------- ใบงานสั่งสินค้า (Order Spec, 0066) ----------------
+const corpBack = (orderId: string, q = "") => `${CORP_BASE}/${orderId}${q ? `?${q}` : ""}#spec`;
+const itemFields = (f: FormData) => ({
+  line_code: nul(f.get("line_code")), name: String(f.get("name") ?? "").trim(), base_model: nul(f.get("base_model")),
+  qty: f.get("qty") ? Math.max(0, Number(f.get("qty")) || 0) : null, unit: nul(f.get("unit")) ?? "ชิ้น", size: nul(f.get("size")), material: nul(f.get("material")),
+  color_process: nul(f.get("color_process")), pantone: nul(f.get("pantone")), logo_method: nul(f.get("logo_method")), logo_position: nul(f.get("logo_position")),
+  tag_position: nul(f.get("tag_position")), packaging: nul(f.get("packaging")), sample_required: f.get("sample_required") === "on", supplier_name: nul(f.get("supplier_name")), remarks: nul(f.get("remarks")),
+});
+export async function addCorpItem(orderId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { STEP_TEMPLATES } = await import("@/lib/work/corpSpec");
+  const design_type = formData.get("design_type") === "new" ? "new" : "existing";
+  const f = itemFields(formData);
+  if (!f.name) redirect(corpBack(orderId, `error=${encodeURIComponent("กรอกชื่อสินค้า")}`));
+  const { count } = await supabase.from("corp_order_items").select("id", { count: "exact", head: true }).eq("order_id", orderId);
+  const { data, error } = await supabase.from("corp_order_items").insert({ ...f, order_id: orderId, design_type, sort: count ?? 0 }).select("id").single();
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  const steps = STEP_TEMPLATES[design_type].map((s, i) => ({ item_id: data.id, order_id: orderId, step_key: s.key, label: s.label, optional: s.optional, sort: i }));
+  const { error: e2 } = await supabase.from("corp_item_steps").insert(steps);
+  if (e2) redirect(corpBack(orderId, `error=${encodeURIComponent(e2.message)}`));
+  await supabase.from("corp_order_log").insert({ order_id: orderId, message: `เพิ่มรายการสินค้า ${f.line_code ?? ""} ${f.name} (${design_type === "new" ? "แบบใหม่" : "แบบที่มีอยู่"})` });
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function updateCorpItem(itemId: string, orderId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const f = itemFields(formData);
+  const { error } = await supabase.from("corp_order_items").update({ ...f, updated_at: new Date().toISOString() }).eq("id", itemId);
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function deleteCorpItem(itemId: string, orderId: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data: st } = await supabase.from("corp_item_steps").select("task_id").eq("item_id", itemId).not("task_id", "is", null);
+  const ids = (st ?? []).map((x) => x.task_id as string);
+  if (ids.length) await supabase.from("work_tasks").update({ status: "cancelled" }).in("id", ids).not("status", "in", "(accepted,cancelled)");
+  const { error } = await supabase.from("corp_order_items").delete().eq("id", itemId);
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function assignCorpStep(stepId: string, orderId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const v = nul(formData.get("assignee"));
+  const { error } = await supabase.rpc("corp_assign_step", { p_step: stepId, p_emp: v && !v.startsWith("u:") ? v : null, p_user: v?.startsWith("u:") ? v.slice(2) : null, p_due: nul(formData.get("due_date")) });
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function setCorpStepStatus(stepId: string, orderId: string, status: "todo" | "done" | "skipped") {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("corp_set_step", { p_step: stepId, p_status: status });
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function addCorpStep(itemId: string, orderId: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const label = nul(formData.get("label"));
+  if (!label) return;
+  const { count } = await supabase.from("corp_item_steps").select("id", { count: "exact", head: true }).eq("item_id", itemId);
+  const { error } = await supabase.from("corp_item_steps").insert({ item_id: itemId, order_id: orderId, step_key: `custom_${Date.now()}`, label, sort: (count ?? 0) + 100 });
+  if (error) redirect(corpBack(orderId, `error=${encodeURIComponent(error.message)}`));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  redirect(corpBack(orderId));
+}
+export async function addCorpItemImages(itemId: string, orderId: string, kind: string, files: { url: string; name: string; is_image: boolean }[]): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("corp_item_images").insert(files.map((f) => ({ item_id: itemId, order_id: orderId, kind, url: f.url, caption: f.is_image ? null : f.name })));
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return error ? { error: error.message } : {};
+}
+export async function approveCorpImage(imageId: string, orderId: string, evidenceUrl: string | null, note: string | null): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("corp_approve_image", { p_image: imageId, p_evidence_url: evidenceUrl, p_note: note });
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return error ? { error: error.message } : {};
+}
+export async function unapproveCorpImage(imageId: string, orderId: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("corp_unapprove_image", { p_image: imageId });
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return error ? { error: error.message } : {};
+}
+export async function deleteCorpImage(imageId: string, orderId: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.from("corp_item_images").delete().eq("id", imageId);
+  revalidatePath(`${CORP_BASE}/${orderId}`);
+  return error ? { error: error.message } : {};
 }

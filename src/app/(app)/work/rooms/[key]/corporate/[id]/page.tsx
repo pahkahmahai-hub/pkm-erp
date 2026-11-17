@@ -13,6 +13,8 @@ import { fmtDateTime } from "@/lib/format";
 import { CORP_STATUS, CORP_PAY, corpStatus, corpPay, corpOverdue, corpName, baht, type CorpOrder, type CorpShipment, type CorpFile, type CorpLog } from "@/lib/work/corp";
 import { setCorpField, addCorpShipment, deleteCorpShipment, deleteCorpOrder } from "@/app/(app)/work/actions";
 import { DateInput } from "@/components/DateInput";
+import { CorpSpecSection } from "@/components/work/CorpSpecSection";
+import type { CorpItem, CorpStep, CorpImage } from "@/lib/work/corpSpec";
 
 export const dynamic = "force-dynamic";
 const TH_M = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -26,7 +28,9 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
   const supabase = await createClient();
   const acc = await loadRoomAccess(supabase, key, session);
   if (!acc) notFound();
-  if (!acc.isMember) redirect("/work?denied=1");
+  // ทีม OPERATION หรือคนที่ได้รับมอบหมายขั้นตอนในออเดอร์นี้ (0066)
+  const canCorp = acc.isMember;
+  if (!canCorp) { const { data: ok } = await supabase.rpc("can_corp_order", { p_order: id }); if (!ok) redirect("/work?denied=1"); }
   const [{ data: o }, { data: ships }, { data: files }, { data: logs }, dir, { data: cust }] = await Promise.all([
     supabase.from("corp_orders").select("*").eq("id", id).maybeSingle(),
     supabase.from("corp_order_shipments").select("*").eq("order_id", id).order("ship_date"),
@@ -35,6 +39,16 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
     loadDirectory(supabase),
     supabase.from("corp_orders").select("customer_name").limit(2000),
   ]);
+  const [{ data: items }, { data: steps }, { data: imgs }, { data: adminRows }] = await Promise.all([
+    supabase.from("corp_order_items").select("*").eq("order_id", id).order("sort"),
+    supabase.from("corp_item_steps").select("*").eq("order_id", id).order("sort"),
+    supabase.from("corp_item_images").select("*").eq("order_id", id).order("created_at"),
+    supabase.rpc("mentionable_admins"),
+  ]);
+  const people = [
+    ...dir.map((e) => ({ id: e.id, name: e.nickname ?? e.first_name })),
+    ...((adminRows ?? []) as { user_id: string; employee_id: string | null; label: string }[]).filter((a) => !a.employee_id).map((a) => ({ id: `u:${a.user_id}`, name: `${a.label} (ผู้บริหาร)` })),
+  ];
   if (!o) notFound();
   const order = o as CorpOrder;
   const today = todayBkk();
@@ -58,14 +72,14 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
   return (
     <div className="space-y-4">
       <Header crumbs={crumbs} title={`${order.order_no} · ${corpName(order)}`} sub={order.title}
-        action={<span className="flex gap-2"><Link href={`${base}/${id}?edit=1`} className="btn-outline"><Pencil size={15} /> แก้ไข</Link>{canManage && <ConfirmDelete action={deleteCorpOrder.bind(null, id)} label="ลบออเดอร์" warning={`ลบ ${order.order_no} พร้อมไฟล์แนบและประวัติทั้งหมด — กู้คืนไม่ได้ (ถ้าลูกค้ายกเลิก แนะนำเปลี่ยนสถานะเป็น "ยกเลิก" แทน)`} />}</span>} />
+        action={<span className="flex gap-2">{canCorp && <Link href={`${base}/${id}?edit=1`} className="btn-outline"><Pencil size={15} /> แก้ไข</Link>}{canManage && <ConfirmDelete action={deleteCorpOrder.bind(null, id)} label="ลบออเดอร์" warning={`ลบ ${order.order_no} พร้อมไฟล์แนบและประวัติทั้งหมด — กู้คืนไม่ได้ (ถ้าลูกค้ายกเลิก แนะนำเปลี่ยนสถานะเป็น "ยกเลิก" แทน)`} />}</span>} />
       {sp.error && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-3">{sp.error}</div>}
       {(sp.saved || sp.created) && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">{sp.created ? `สร้างออเดอร์ ${order.order_no} แล้ว — แนบไฟล์ได้ด้านล่าง` : "บันทึกแล้ว"}</div>}
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6">
         <div className="space-y-4">
           {/* status steppers */}
-          <div className="card p-5 space-y-4">
+          {canCorp && <div className="card p-5 space-y-4">
             <div>
               <div className="text-xs text-ink-soft mb-1.5">สถานะงาน — กดเพื่อเปลี่ยน</div>
               <div className="flex flex-wrap gap-1.5">
@@ -86,7 +100,7 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* details */}
           <div className="card p-5 space-y-3 text-sm">
@@ -99,10 +113,16 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
               <Item label="ผู้ติดต่อ">{order.contact_person ?? "—"}{order.contact_phone && <div className="text-[11px] text-ink-soft">{order.contact_phone}</div>}</Item>
               <Item label="ผู้ดูแลออเดอร์">{owner ? owner.nickname ?? owner.first_name : "—"}</Item>
               <Item label="ส่งครบเมื่อ">{dmy(order.delivered_at)}</Item>
+              {order.po_no && <Item label="PO ลูกค้า">{order.po_no}</Item>}
+              {order.customer_tax_id && <Item label="เลขผู้เสียภาษี">{order.customer_tax_id}</Item>}
+              {order.contact_email && <Item label="อีเมล">{order.contact_email}</Item>}
             </dl>
             {order.detail && <div><div className="text-xs text-ink-soft">รายละเอียดสินค้า / Packaging</div><p className="whitespace-pre-wrap">{order.detail}</p></div>}
             {order.note && <div className="rounded-xl bg-cream px-3 py-2 whitespace-pre-wrap"><b>หมายเหตุ:</b> {order.note}</div>}
           </div>
+
+          <CorpSpecSection orderId={id} roomId={acc.room.id} items={(items ?? []) as CorpItem[]} steps={(steps ?? []) as CorpStep[]} images={(imgs ?? []) as CorpImage[]} people={people}
+            canCorp={canCorp} canManage={canManage} meId={session.appUser.id} myEmp={session.employee?.id ?? null} today={today} rev={order.spec_rev ?? 0} />
 
           <CorpFiles orderId={id} roomId={acc.room.id} files={(files ?? []) as CorpFile[]} meId={session.appUser.id} canManage={canManage} />
         </div>
