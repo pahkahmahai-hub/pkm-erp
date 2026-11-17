@@ -7,6 +7,7 @@ import { uploadExpenseFiles, type UpFile } from "@/lib/expenses/upload";
 import { quickExpense } from "@/app/(app)/expenses/actions";
 import { PAY_METHODS } from "@/lib/expenses/types";
 import { DateInput } from "@/components/DateInput";
+import { CameraButton } from "@/components/CameraButton";
 
 type Sup = { id: string; name: string; default_expense_category: string | null; default_wht_pct: number | null; default_vat_mode_purchase: string | null };
 type Cat = { id: string; name: string; wht_pct: number | null };
@@ -81,8 +82,8 @@ export function QuickExpense({ companies, suppliers, categories, isAdmin, shared
       {/* photos */}
       <div className="card p-4 space-y-3">
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => billRef.current?.click()} className="btn-outline py-3"><Camera size={18} /> รูปบิล / รายการ</button>
-          <button type="button" onClick={() => slipRef.current?.click()} className="btn-outline py-3"><Receipt size={18} /> สลิปโอนเงิน</button>
+          <div className="flex gap-2"><button type="button" onClick={() => billRef.current?.click()} className="btn-outline py-3 flex-1"><Receipt size={18} /> รูปบิล / รายการ</button><CameraButton className="btn-outline py-3" label="" onFiles={(f) => add(f, "bill")} /></div>
+          <div className="flex gap-2"><button type="button" onClick={() => slipRef.current?.click()} className="btn-outline py-3 flex-1"><Receipt size={18} /> สลิปโอนเงิน</button><CameraButton className="btn-outline py-3" label="" onFiles={(f) => add(f, "slip")} /></div>
         </div>
         <input ref={billRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { add(Array.from(e.target.files ?? []), "bill"); e.target.value = ""; }} />
         <input ref={slipRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { add(Array.from(e.target.files ?? []), "slip"); e.target.value = ""; }} />

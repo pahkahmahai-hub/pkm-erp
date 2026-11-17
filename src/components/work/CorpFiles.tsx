@@ -6,6 +6,7 @@ import { Paperclip, FileText, Trash2, Upload, Loader2 } from "lucide-react";
 import { uploadRoomFiles } from "@/lib/work/upload";
 import { addCorpFiles, deleteCorpFile } from "@/app/(app)/work/actions";
 import type { CorpFile } from "@/lib/work/corp";
+import { CameraButton } from "@/components/CameraButton";
 
 /** ไฟล์แนบออเดอร์ Corporate: โลโก้ลูกค้า artwork ใบเสนอราคา PO ลูกค้า รูปงาน */
 export function CorpFiles({ orderId, roomId, files, meId, canManage }: { orderId: string; roomId: string; files: CorpFile[]; meId: string; canManage: boolean }) {
@@ -41,6 +42,7 @@ export function CorpFiles({ orderId, roomId, files, meId, canManage }: { orderId
       <div className="flex items-center justify-between">
         <h3 className="font-display font-bold flex items-center gap-2"><Paperclip size={16} /> ไฟล์แนบ ({files.length})</h3>
         <button type="button" disabled={!!busy} onClick={() => input.current?.click()} className="btn-outline py-1 px-3 text-xs">{busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} {busy ?? "แนบไฟล์"}</button>
+        <CameraButton disabled={!!busy} className="btn-outline py-1 px-3 text-xs" onFiles={upload} />
       </div>
       <input ref={input} type="file" multiple hidden onChange={(e) => upload(Array.from(e.target.files ?? []))} />
       <div className={`rounded-xl border-2 border-dashed px-3 py-2 text-[11px] text-ink-soft ${drag ? "border-purple bg-purple/5" : "border-line"}`}>ลากไฟล์มาวางได้ — โลโก้ลูกค้า, artwork, ใบเสนอราคา, PO ลูกค้า, รูปงานก่อนส่ง</div>

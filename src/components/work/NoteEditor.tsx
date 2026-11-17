@@ -6,6 +6,7 @@ import { Pin, Trash2, Paperclip, Image as ImageIcon, X, Check, Download } from "
 import { NOTE_COLORS, type Note, type NoteFile } from "@/lib/work/types";
 import { uploadRoomFiles } from "@/lib/work/upload";
 import { saveNote, deleteNote } from "@/app/(app)/work/actions";
+import { CameraButton } from "@/components/CameraButton";
 
 type Pending = { key: string; file: File; preview: string | null };
 
@@ -84,6 +85,7 @@ export function NoteEditor({ roomKey, roomId, note, canEdit }: { roomKey: string
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-ink/10">
           <input ref={imgRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
           <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
+          <CameraButton className="btn-ghost px-2.5" label="" onFiles={(f) => add(f as unknown as FileList)} />
           <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป"><ImageIcon size={18} /></button>
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์"><Paperclip size={18} /></button>
           <div className="flex gap-1 ml-1">{NOTE_COLORS.map((c) => <button key={c} type="button" onClick={() => setColor(c)} className={`h-6 w-6 rounded-full border ${color === c ? "ring-2 ring-ink" : "border-line"}`} style={{ background: c }} title="สีโน้ต" />)}</div>

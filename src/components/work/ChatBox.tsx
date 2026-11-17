@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus, Reply, X, Eye } from "lucide-react";
+import { Image as ImageIcon, Paperclip, Send, Download, Trash2, ListPlus, Reply, X, Eye, Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
@@ -65,8 +65,9 @@ export function ChatBox({
   };
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
   const [body, setBody] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  // แนบได้หลายไฟล์ (สูงสุด 10) — ส่งเป็นข้อความละ 1 ไฟล์ ข้อความพิมพ์ติดไปกับไฟล์แรก
+  const [files, setFiles] = useState<{ f: File; url: string | null }[]>([]);
+  const camRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -144,42 +145,48 @@ export function ChatBox({
   }, []);
   const seenBy = (m: ChatMessage) => readers.filter((x) => x.user_id !== m.author_id && new Date(x.last_read_at).getTime() >= new Date(m.created_at).getTime());
 
-  function pick(f: File | undefined) {
-    if (!f) return;
+  function pick(list: FileList | File[] | null | undefined) {
+    const arr = Array.from(list ?? []);
+    if (!arr.length) return;
     // รูปจะถูกย่อก่อนส่ง จึงตรวจขนาดตอนส่ง · ไฟล์อื่นตรวจทันที
-    if (!f.type.startsWith("image/") && f.size > CHAT_MAX_BYTES) { setErr(`ไฟล์ "${f.name}" ใหญ่ ${(f.size / 1024 / 1024).toFixed(1)} MB — ส่งได้ไม่เกิน 5 MB ต่อไฟล์`); return; }
+    const big = arr.find((f) => !f.type.startsWith("image/") && f.size > CHAT_MAX_BYTES);
+    if (big) { setErr(`ไฟล์ "${big.name}" ใหญ่ ${(big.size / 1024 / 1024).toFixed(1)} MB — ส่งได้ไม่เกิน 5 MB ต่อไฟล์`); return; }
     setErr(null);
-    setFile(f);
-    setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
+    setFiles((cur) => [...cur, ...arr.map((f) => ({ f, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null }))].slice(0, 10));
   }
   // กันกดส่งรัวๆ: ล็อกทันทีที่กด (ไม่รอ state) + ล้างช่องพิมพ์ทันที ถ้าส่งไม่สำเร็จค่อยคืนข้อความ
   const sendingRef = useRef(false);
   function send() {
     if (sendingRef.current) return;
-    if (!body.trim() && !file) return;
+    if (!body.trim() && !files.length) return;
     sendingRef.current = true;
     setErr(null);
-    const snap = { body, file, preview, replyTo };
-    setBody(""); if (taRef.current) taRef.current.style.height = ""; setFile(null); setPreview(null); setReplyTo(null);
-    const restore = (msg: string) => { setErr(msg); setBody(snap.body); setFile(snap.file); setPreview(snap.preview); setReplyTo(snap.replyTo); };
+    const snap = { body, files, replyTo };
+    setBody(""); if (taRef.current) taRef.current.style.height = ""; setFiles([]); setReplyTo(null);
+    const restore = (msg: string, left: typeof files, keepText: boolean) => { setErr(msg); if (keepText) { setBody(snap.body); setReplyTo(snap.replyTo); } setFiles(left); };
     start(async () => {
       try {
-        const fd = new FormData();
-        fd.set("body", snap.body);
-        fd.set("mentions", JSON.stringify(mentionedIds(snap.body)));
-        if (snap.file) {
-          // อัปโหลดจากเบราว์เซอร์ตรงไป storage (ไม่ผ่าน server action ซึ่งรับได้ ~1 MB) แล้วส่งแค่ลิงก์
-          try {
-            const up = await uploadChatFile(`chat/${filterValue}`, snap.file);
-            fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", up.is_image ? "1" : "0");
-          } catch (e) { restore((e as Error).message); return; }
+        // ข้อความละ 1 ไฟล์ (ไม่มีไฟล์ = ส่งข้อความเดียว) · ข้อความพิมพ์/ตอบกลับ/@ ติดไปกับอันแรก
+        const jobs = snap.files.length ? snap.files : [null];
+        for (let i = 0; i < jobs.length; i++) {
+          const it = jobs[i];
+          const fd = new FormData();
+          fd.set("body", i === 0 ? snap.body : "");
+          fd.set("mentions", JSON.stringify(i === 0 ? mentionedIds(snap.body) : []));
+          if (it) {
+            // อัปโหลดจากเบราว์เซอร์ตรงไป storage (ไม่ผ่าน server action ซึ่งรับได้ ~1 MB) แล้วส่งแค่ลิงก์
+            try {
+              const up = await uploadChatFile(`chat/${filterValue}`, it.f);
+              fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", up.is_image ? "1" : "0");
+            } catch (e) { restore((e as Error).message, snap.files.slice(i) as typeof files, i === 0); return; }
+          }
+          if (i === 0 && snap.replyTo) fd.set("reply_to", snap.replyTo.id);
+          const res = await onPost(fd);
+          if (res.error) { restore(res.error, snap.files.slice(i) as typeof files, i === 0); return; }
+          if (res.row) addMessages([res.row as unknown as ChatMessage]);
         }
-        if (snap.replyTo) fd.set("reply_to", snap.replyTo.id);
-        const res = await onPost(fd);
-        if (res.error) { restore(res.error); return; }
-        if (res.row) addMessages([res.row as unknown as ChatMessage]);
       } catch (e) {
-        restore((e as Error).message || "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง");
+        setErr((e as Error).message || "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง");
       } finally {
         sendingRef.current = false;
       }
@@ -190,8 +197,8 @@ export function ChatBox({
     <div className={`card p-5 flex flex-col relative ${dragging ? "ring-2 ring-purple" : ""}`}
       onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragging(true); } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
-      onDrop={(e) => { if (e.dataTransfer.files?.length) { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files[0]); } }}
-      onPaste={(e) => { const f = Array.from(e.clipboardData?.files ?? [])[0]; if (f) { e.preventDefault(); pick(f); } }}>
+      onDrop={(e) => { if (e.dataTransfer.files?.length) { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files); } }}
+      onPaste={(e) => { const fs = Array.from(e.clipboardData?.files ?? []); if (fs.length) { e.preventDefault(); pick(fs); } }}>
       {dragging && <div className="absolute inset-0 z-30 rounded-2xl bg-lavender/60 grid place-items-center text-purple font-semibold pointer-events-none">วางไฟล์ที่นี่เพื่อแนบ</div>}
       {title && <h2 className="font-display font-bold mb-3">{title}</h2>}
       <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight }}>
@@ -233,13 +240,19 @@ export function ChatBox({
 
       <div className="mt-4 border-t border-line pt-3 space-y-2">
         {replyTo && <div className="flex items-start gap-2 rounded-lg bg-lavender/30 border-l-2 border-purple px-3 py-1.5 text-xs"><Reply size={12} className="mt-0.5 text-purple shrink-0" /><div className="min-w-0 flex-1"><div className="font-semibold text-purple">ตอบกลับ {nameOf(replyTo)}</div><div className="truncate text-ink-soft">{snippet(replyTo)}</div></div><button type="button" onClick={() => setReplyTo(null)} className="text-ink-soft hover:text-red"><X size={14} /></button></div>}
-        {preview && <div className="relative inline-block">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={preview} alt="" className="h-24 rounded-xl object-cover" /><button onClick={() => { setFile(null); setPreview(null); }} className="absolute -top-2 -right-2 bg-red text-white rounded-full h-6 w-6 text-xs">✕</button></div>}
-        {file && !preview && <div className="text-xs flex items-center gap-2"><Paperclip size={12} /> {file.name} <button onClick={() => setFile(null)} className="text-red">ลบ</button></div>}
+        {files.length > 0 && <div className="flex flex-wrap gap-2 items-end">
+          {files.map((x, i) => x.url
+            ? <div key={i} className="relative">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={x.url} alt="" className="h-20 w-20 rounded-xl object-cover" /><button type="button" onClick={() => setFiles((c) => c.filter((_, j) => j !== i))} className="absolute -top-2 -right-2 bg-red text-white rounded-full h-6 w-6 text-xs">✕</button></div>
+            : <div key={i} className="text-xs flex items-center gap-2 rounded-lg border border-line px-2 py-1"><Paperclip size={12} /> <span className="max-w-[160px] truncate">{x.f.name}</span> <button type="button" onClick={() => setFiles((c) => c.filter((_, j) => j !== i))} className="text-red">ลบ</button></div>)}
+          {files.length > 1 && <span className="text-[11px] text-ink-soft">{files.length} ไฟล์ · ส่งทีละรายการ</span>}
+        </div>}
         {err && <div className="text-xs text-red">{err}</div>}
         <div className="flex flex-wrap sm:flex-nowrap gap-2 items-end">
-          <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <input ref={fileRef} type="file" className="hidden" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-          <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป (ไม่เกิน 5 MB)"><ImageIcon size={18} /></button>
+          <input ref={imgRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+          <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+          <button type="button" onClick={() => camRef.current?.click()} className="btn-ghost px-2.5" title="ถ่ายรูปด้วยกล้อง"><Camera size={18} /></button>
+          <button type="button" onClick={() => imgRef.current?.click()} className="btn-ghost px-2.5" title="แนบรูป (เลือกได้หลายรูป)"><ImageIcon size={18} /></button>
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์ (ไม่เกิน 5 MB)"><Paperclip size={18} /></button>
           <div className="relative basis-full sm:basis-auto sm:flex-1 order-first sm:order-none">
             {mentionQ !== null && mentionResults.length > 0 && (
@@ -261,7 +274,7 @@ export function ChatBox({
               className="input !text-[17px] resize-none w-full min-h-[96px] sm:min-h-[56px] leading-relaxed" rows={3} placeholder={placeholder ?? (members.length ? "พิมพ์ข้อความ… @ เอ่ยถึงคน · ลากไฟล์/วางรูปลงได้" : "พิมพ์ข้อความ…")} />
             <div className="hidden sm:block text-[10px] text-ink-soft mt-0.5">Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่</div>
           </div>
-          <button type="button" onClick={send} disabled={pending || (!body.trim() && !file)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
+          <button type="button" onClick={send} disabled={pending || (!body.trim() && !files.length)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
         </div>
       </div>
     </div>

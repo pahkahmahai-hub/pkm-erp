@@ -7,6 +7,7 @@ import { uploadExpenseFiles, type UpFile } from "@/lib/expenses/upload";
 import { payWithSlip } from "@/app/(app)/expenses/actions";
 import { PAY_METHODS } from "@/lib/expenses/types";
 import { DateInput } from "@/components/DateInput";
+import { CameraButton } from "@/components/CameraButton";
 
 type Sel = { id: string; no: string; supplier: string; net: number };
 const Ctx = createContext<{ sel: Sel[]; toggle: (s: Sel) => void; open: (only?: Sel) => void } | null>(null);
@@ -51,7 +52,7 @@ export function PaySlipProvider({ children }: { children: React.ReactNode }) {
             <div className="flex justify-between items-start"><h3 className="font-display font-bold text-lg">จ่ายแล้ว {modal.length > 1 ? `${modal.length} ใบ` : modal[0].no}</h3><button onClick={() => setModal(null)}><X size={18} /></button></div>
             <ul className="text-sm divide-y divide-line max-h-40 overflow-auto">{modal.map((m) => <li key={m.id} className="py-1.5 flex justify-between"><span>{m.supplier} <span className="text-[11px] text-ink-soft">{m.no}</span></span><b>{fmt(m.net)}</b></li>)}</ul>
             <div className="text-right text-sm">รวมโอน <b className="text-lg font-display">฿{fmt(total(modal))}</b></div>
-            <button type="button" onClick={() => inp.current?.click()} className="btn-outline w-full py-3"><Receipt size={18} /> {slips.length ? "เพิ่มสลิป" : "เลือก / ถ่ายสลิปโอนเงิน"}</button>
+            <div className="flex gap-2"><div className="flex-1"><button type="button" onClick={() => inp.current?.click()} className="btn-outline w-full py-3"><Receipt size={18} /> {slips.length ? "เพิ่มสลิป" : "เลือก / ถ่ายสลิปโอนเงิน"}</button></div><CameraButton className="btn-outline py-3" label="ถ่าย" onFiles={up} /></div>
             <input ref={inp} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { up(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
             {slips.length > 0 && <div className="flex gap-2 flex-wrap">{slips.map((s) => <div key={s.path} className="relative h-20 w-16 rounded border border-line overflow-hidden bg-cream grid place-items-center text-[10px]">{/* eslint-disable-next-line @next/next/no-img-element */}{s.url ? <img src={s.url} alt="" className="w-full h-full object-cover" /> : "PDF"}<button onClick={() => setSlips((x) => x.filter((y) => y.path !== s.path))} className="absolute top-0 right-0 bg-white/90 rounded-full"><X size={12} /></button></div>)}</div>}
             <div className="grid grid-cols-2 gap-2">

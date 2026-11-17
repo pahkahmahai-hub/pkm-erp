@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Receipt, Loader2 } from "lucide-react";
 import { uploadExpenseFiles } from "@/lib/expenses/upload";
 import { attachExpenseFiles } from "@/app/(app)/expenses/actions";
+import { CameraButton } from "@/components/CameraButton";
 
 /** แนบสลิป/ไฟล์เพิ่มให้รายการที่มีอยู่ */
 export function AttachExpenseFiles({ id }: { id: string }) {
@@ -18,7 +19,7 @@ export function AttachExpenseFiles({ id }: { id: string }) {
   return (
     <div className="space-y-1.5">
       <div className="flex gap-1.5 text-xs">{(["slip", "bill"] as const).map((k) => <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full px-2.5 py-0.5 border ${kind === k ? "bg-purple text-white border-purple" : "border-line"}`}>{k === "slip" ? "สลิปโอน" : "รูปบิล"}</button>)}</div>
-      <button type="button" disabled={busy} onClick={() => inp.current?.click()} className="btn-outline w-full text-sm">{busy ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />} แนบ{kind === "slip" ? "สลิปโอนเงิน" : "รูปบิลเพิ่ม"}</button>
+      <div className="flex gap-2"><div className="flex-1"><button type="button" disabled={busy} onClick={() => inp.current?.click()} className="btn-outline w-full text-sm">{busy ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />} แนบ{kind === "slip" ? "สลิปโอนเงิน" : "รูปบิลเพิ่ม"}</button></div><CameraButton disabled={busy} className="btn-outline text-sm" label="" onFiles={go} /></div>
       <input ref={inp} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { go(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
       {err && <div className="text-xs text-red">{err}</div>}
     </div>

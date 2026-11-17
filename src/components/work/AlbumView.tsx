@@ -7,6 +7,7 @@ import { Upload, ChevronLeft, ChevronRight, X, Trash2, Star, Download, Pencil } 
 import type { Album, AlbumPhoto } from "@/lib/work/types";
 import { uploadRoomFiles } from "@/lib/work/upload";
 import { addAlbumPhotos, deleteAlbumPhoto, setAlbumCover, setPhotoCaption } from "@/app/(app)/work/actions";
+import { CameraButton } from "@/components/CameraButton";
 
 export function AlbumView({ roomKey, roomId, album, photos, meId, canManage, deleteAlbumAction }: { roomKey: string; roomId: string; album: Album; photos: AlbumPhoto[]; meId: string; canManage: boolean; deleteAlbumAction: () => Promise<void> }) {
   const router = useRouter();
@@ -50,6 +51,7 @@ export function AlbumView({ roomKey, roomId, album, photos, meId, canManage, del
       <div className="flex flex-wrap items-center gap-2">
         <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
         <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="btn-primary"><Upload size={16} /> {busy ? progress ?? "กำลังบันทึก…" : "เพิ่มรูป"}</button>
+        <CameraButton disabled={busy} onFiles={(f) => upload(f as unknown as FileList)} />
         <span className="text-xs text-ink-soft">{photos.length} รูป · เลือกได้หลายรูป หรือลากรูปมาวางในหน้านี้</span>
         {canManage && <span className="ml-auto flex gap-2">
           <Link href={`?edit=1`} className="btn-outline py-1.5"><Pencil size={14} /> แก้ชื่ออัลบั้ม</Link>

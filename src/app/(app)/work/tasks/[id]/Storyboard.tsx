@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Images, Trash2, Upload, Film } from "lucide-react";
+import { Images, Trash2, Upload, Film, Camera } from "lucide-react";
 import type { TaskFile } from "@/lib/work/types";
 
 const isImg = (u: string) => /\.(png|jpe?g|gif|webp|avif|heic)$/i.test(u.split("?")[0]);
@@ -29,6 +29,7 @@ export function Storyboard({ taskId, files, canEdit, addAction, deleteAction }: 
         <form action={addAction} className="flex flex-wrap items-end gap-2 pt-2 border-t border-line">
           <div className="flex-1 min-w-[200px]"><label className="label">เพิ่มรูป / วิดีโอ (เลือกได้หลายไฟล์)</label><input type="file" name="files" multiple accept="image/*,video/*,.pdf" className="input text-xs" required /></div>
           <div className="w-56"><label className="label">คำอธิบาย (ใส่ให้ทุกไฟล์ที่เลือก)</label><input name="caption" className="input" placeholder="เช่น ฉาก 1 เปิดเรื่อง" /></div>
+          <label className="btn-outline py-2 cursor-pointer" title="เปิดกล้องถ่ายรูป"><Camera size={14} /> ถ่ายรูป<input type="file" name="files" accept="image/*" capture="environment" hidden onChange={(e) => { if (e.target.files?.length) e.currentTarget.form?.requestSubmit(); }} /></label>
           <button className="btn-primary py-2"><Upload size={14} /> อัปโหลด</button>
         </form>
       )}
