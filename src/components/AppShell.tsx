@@ -11,6 +11,7 @@ import {
   ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange, Store,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
+import { RoomChatShortcuts } from "./work/RoomChatShortcuts";
 import type { SessionInfo } from "@/lib/types";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean; external?: boolean };
@@ -134,6 +135,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
       <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-lavender hover:bg-white/10 hover:text-white border border-white/15">
         <LayoutGrid size={18} /> โปรแกรมทั้งหมด
       </Link>
+      {seg === "work" && <Suspense fallback={null}><RoomChatShortcuts onNavigate={() => setOpen(false)} /></Suspense>}
       {groups.map((m) => {
         const items = m.items.filter((i) => !i.admin || session.isAdmin);
         if (!items.length) return null;
