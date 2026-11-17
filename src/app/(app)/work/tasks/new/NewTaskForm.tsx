@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { Room, RoomMember } from "@/lib/work/types";
 import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
 import { DateInput } from "@/components/DateInput";
+import { WorkTypeFields } from "@/components/work/WorkTypeFields";
+import { GC_ROOM_KEYS } from "@/lib/work/workType";
 
 type Emp = { id: string; first_name: string; nickname: string | null; emp_code: string };
 
@@ -11,6 +13,7 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
   const [roomId, setRoomId] = useState(rooms.find((r) => r.key === initialRoomKey)?.id ?? rooms[0]?.id ?? "");
   const [primary, setPrimary] = useState(initialAssignee ?? "");
   const isSwRoom = rooms.find((r) => r.id === roomId)?.key === "sw-room";
+  const isGcRoom = GC_ROOM_KEYS.includes(rooms.find((r) => r.id === roomId)?.key ?? "");
   const options = useMemo(() => {
     const inRoom = members.filter((m) => m.room_id === roomId).map((m) => m.employees).filter(Boolean) as Emp[];
     if (isAdmin) {
@@ -38,6 +41,7 @@ export function NewTaskForm({ rooms, members, allEmployees, initialRoomKey, isAd
       <div className="md:col-span-2"><CoAssigneePicker key={roomId} options={options.map((e) => ({ id: e.id, name: e.nickname ?? e.first_name }))} primaryId={primary} /></div>
       <div className="md:col-span-2"><label className="label">ชื่องาน *</label><input name="title" defaultValue={initialTitle ?? ""} className="input" required autoFocus placeholder="เช่น ออกแบบกล่องของขวัญปีใหม่ 2570" />{fromMessage && <input type="hidden" name="from_message" value={fromMessage} />}</div>
       <div className="md:col-span-2"><label className="label">รายละเอียด</label><textarea name="description" className="input" rows={3} placeholder="อธิบายสิ่งที่ต้องการ ขนาด จำนวน ลิงก์อ้างอิง…" /></div>
+      {isGcRoom && <WorkTypeFields />}
       {isSwRoom ? (<>
         <div><label className="label">① กำหนดจัดของเสร็จ</label><DateInput name="due_date" className="input" /></div>
         <div><label className="label">② กำหนดส่งถึงห้าง <span className="font-normal text-ink-soft">(ว่าง = จัดเสร็จ +2 วัน)</span></label><DateInput name="arrive_due" className="input" /></div>

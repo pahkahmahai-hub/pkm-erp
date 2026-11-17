@@ -31,6 +31,8 @@ export async function createTask(formData: FormData) {
   if (arriveDue) await supabase.from("work_tasks").update({ arrive_due: arriveDue }).eq("id", data.id);
   const co = coAssignees(formData, nul(formData.get("assignee_id")));
   if (co?.length) await supabase.from("work_tasks").update({ co_assignee_ids: co }).eq("id", data.id);
+  const wt = workTypeFields(formData);
+  if ("work_type" in wt && wt.work_type) await supabase.from("work_tasks").update(wt).eq("id", data.id);
   revalidatePath("/work");
   redirect(`/work/tasks/${data.id}?created=1`);
 }
@@ -66,6 +68,7 @@ export async function updateTask(id: string, formData: FormData) {
     priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
     ...(formData.has("arrive_due") ? { arrive_due: nul(formData.get("arrive_due")) } : {}),
     ...(formData.get("co_assignee_set") ? { co_assignee_ids: coAssignees(formData, nul(formData.get("assignee_id"))) ?? [] } : {}),
+    ...workTypeFields(formData),
     ...(formData.has("start_date") ? { start_date: nul(formData.get("start_date")), due_time: nul(formData.get("due_time")), topic_id: nul(formData.get("topic_id")) } : {}),
   }).eq("id", id);
   if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
@@ -87,6 +90,13 @@ export async function toggleChecklist(id: string, taskId: string, done: boolean)
   const supabase = await createClient();
   await supabase.from("work_checklist").update({ is_done: done, done_at: done ? new Date().toISOString() : null, done_by: done ? s.appUser.id : null }).eq("id", id);
   revalidatePath(`/work/tasks/${taskId}`);
+}
+
+/** ประเภทงาน + จำนวน (0062) — ส่งมาเฉพาะฟอร์มห้อง GC */
+function workTypeFields(formData: FormData) {
+  if (!formData.get("work_type_set")) return {};
+  const t = nul(formData.get("work_type"));
+  return { work_type: t, work_qty: t ? Math.max(1, Number(formData.get("work_qty")) || 1) : null };
 }
 
 /** ผู้รับผิดชอบรายข้อ: "u:<app_user id>" = ผู้บริหาร (0058) · อื่นๆ = employee id */
@@ -343,6 +353,8 @@ export async function createCalendarTask(formData: FormData) {
   revalidatePath("/work");
   const co = coAssignees(formData, nul(formData.get("assignee_id")));
   if (co?.length) await supabase.from("work_tasks").update({ co_assignee_ids: co }).eq("id", data.id);
+  const wt = workTypeFields(formData);
+  if ("work_type" in wt && wt.work_type) await supabase.from("work_tasks").update(wt).eq("id", data.id);
   if (formData.get("open") === "1") redirect(`/work/tasks/${data.id}?created=1`);
   redirect(`${back}${qs ? "&" : "?"}created=${data.task_no}`);
 }

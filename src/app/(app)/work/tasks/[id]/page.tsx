@@ -14,6 +14,8 @@ import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
 import { DateInput } from "@/components/DateInput";
+import { WorkTypeFields } from "@/components/work/WorkTypeFields";
+import { GC_ROOM_KEYS, unitOf } from "@/lib/work/workType";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +97,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <div><label className="label">มอบหมายให้</label>
                 <select name="assignee_id" defaultValue={task.assignee_id ?? ""} className="input"><option value="">—</option>{mem.map((m) => <option key={m.employee_id} value={m.employee_id}>{m.employees?.nickname ?? m.employees?.first_name}</option>)}</select></div>
               <div className="md:col-span-2"><CoAssigneePicker options={mem.map((m) => ({ id: m.employee_id, name: m.employees?.nickname ?? m.employees?.first_name ?? "?" }))} defaultIds={task.co_assignee_ids ?? []} primaryId={task.assignee_id} /></div>
+              {GC_ROOM_KEYS.includes(task.work_rooms?.key ?? "") && <WorkTypeFields defaultType={task.work_type} defaultQty={task.work_qty} />}
               {isSw && <div><label className="label">② กำหนดส่งถึงห้าง</label><DateInput name="arrive_due" defaultValue={task.arrive_due ?? ""} className="input" /></div>}
               <div><label className="label">{isSw ? "① กำหนดจัดของเสร็จ" : "กำหนดเสร็จ"}</label><div className="flex gap-2"><DateInput name="due_date" defaultValue={task.due_date ?? ""} className="input" />{hasCalendar && <input name="due_time" type="time" defaultValue={task.due_time?.slice(0, 5) ?? "17:30"} className="input w-28" />}</div></div>
               {hasCalendar && <><div><label className="label">วันเริ่ม / วันที่ลงปฏิทิน</label><DateInput name="start_date" defaultValue={task.start_date ?? ""} className="input" /></div>
@@ -105,6 +108,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           ) : (
             <div className="card p-5 space-y-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                {task.work_type && <div><span className="text-ink-soft">ประเภทงาน:</span> <span className="rounded-md bg-lavender/40 text-purple px-2 py-0.5 font-semibold">{task.work_type}{task.work_qty ? ` · ${task.work_qty} ${unitOf(task.work_type)}` : ""}</span></div>}
                 <div><span className="text-ink-soft">ผู้รับ:</span> <b>{task.employees ? (task.employees.nickname ?? task.employees.first_name) : "ยังไม่มอบหมาย"}</b>{coNames.length > 0 && <span> + ผู้ร่วมงาน <b>{coNames.join(", ")}</b></span>}</div>
                 {!isSw && <div><span className="text-ink-soft">กำหนดเสร็จ:</span> <b className={overdue ? "text-red" : ""}>{task.due_date ? fmtDate(task.due_date, { weekday: "short" }) : "—"}{task.due_time ? " " + task.due_time.slice(0, 5) + " น." : ""}{overdue && " (เลยกำหนด)"}</b></div>}
                 {task.start_date && <div className="flex items-center gap-1"><CalendarDays size={14} className="text-ink-soft" /><span className="text-ink-soft">ลงปฏิทิน:</span> <b>{fmtDate(task.start_date, { weekday: "short" })}</b></div>}

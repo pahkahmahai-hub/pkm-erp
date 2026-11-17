@@ -9,6 +9,8 @@ import type { Task, Topic } from "@/lib/work/types";
 import { addDays, fmtDM } from "@/lib/work/deliveries";
 import { createCalendarTask } from "@/app/(app)/work/actions";
 import { DateInput } from "@/components/DateInput";
+import { WorkTypeFields } from "./WorkTypeFields";
+import { GC_ROOM_KEYS } from "@/lib/work/workType";
 
 const DOW = ["จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์", "อาทิตย์"];
 interface Row { id: string; name: string; is_lead: boolean }
@@ -69,6 +71,7 @@ function DraftModal({ roomId, roomKey, qs, rows, topics, draft, onClose }: { roo
         <input type="hidden" name="room_id" value={roomId} /><input type="hidden" name="room_key" value={roomKey} /><input type="hidden" name="qs" value={qs} />
         <div className="flex items-start justify-between"><h2 className="font-display font-bold text-lg">ลงงานในปฏิทิน</h2><button type="button" onClick={onClose} className="text-ink-soft"><X size={18} /></button></div>
         <NewTaskFields rows={rows} topics={topics} draft={draft} />
+        {GC_ROOM_KEYS.includes(roomKey) && <div className="grid sm:grid-cols-2 gap-3"><WorkTypeFields /></div>}
         <div className="flex flex-wrap gap-2 justify-end pt-1">
           <button type="button" onClick={onClose} className="btn-outline">ยกเลิก</button>
           <button name="open" value="1" className="btn-outline"><ImageIcon size={14} /> บันทึกแล้วเปิดงาน (แนบรูป)</button>

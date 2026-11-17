@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Check, Flame, Repeat } from "lucide-react";
 import { fmtDateShort, todayBkk } from "@/lib/format";
+import { unitOf } from "@/lib/work/workType";
 import { STATUS_BADGE, statusLabel, effectiveDue, swDeadlines, swCurrentPhase, type Task } from "@/lib/work/types";
 
 const isClosed = (t: Task) => ["accepted", "cancelled", "done"].includes(t.status);
@@ -76,6 +77,7 @@ function CompactCard({ t }: { t: Task }) {
     <Link href={`/work/tasks/${t.id}`} className={`card px-2.5 py-2 block hover:border-purple transition ${overdue ? "border-red/60" : ""}`} title={t.title}>
       <div className="flex items-center justify-between gap-1 text-[10px] text-ink-soft font-mono"><span>#{t.task_no}</span><span className="flex items-center gap-1 font-sans">{t.priority === "urgent" && <Flame size={11} className="text-red" />}{t.routine_id && <Repeat size={10} />}{isSw && <span className="truncate">{t.employees ? (t.employees.nickname ?? t.employees.first_name) : "—"}{(t.co_assignee_ids ?? []).length ? ` +${(t.co_assignee_ids ?? []).length}` : ""}</span>}</span></div>
       <div className="text-[13px] font-semibold leading-tight line-clamp-2 mt-0.5">{main}</div>
+      {t.work_type && <div className="mt-0.5"><span className="inline-block rounded bg-lavender/40 text-purple text-[10px] font-semibold px-1.5">{t.work_type}{t.work_qty ? ` · ${t.work_qty} ${unitOf(t.work_type)}` : ""}</span></div>}
       {sub && <div className="text-[10px] text-ink-soft leading-tight truncate">{sub}</div>}
       {isSw && t.status !== "accepted" && t.status !== "cancelled" ? (
         <div className="mt-1.5"><SwDeadlineStrip t={t} /></div>
