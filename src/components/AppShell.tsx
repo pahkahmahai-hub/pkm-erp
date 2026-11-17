@@ -62,7 +62,7 @@ NAV.work = [
       { href: "/work", label: "ภาพรวมงาน", icon: ListChecks },
       { href: "/work/tasks/new", label: "สั่งงาน", icon: Plus },
       { href: "/work/notifications", label: "แจ้งเตือน", icon: Bell },
-      { href: "/work/performance", label: "ผลงานของฉัน", icon: TrendingUp },
+      { href: "/work/performance", label: "ผลงาน / ทีม", icon: TrendingUp },
       { href: "/work/routines", label: "งานประจำ", icon: Repeat },
       { href: "/work/deliveries", label: "ตารางส่งห้าง", icon: Truck },
       { href: "/work/company-calendar", label: "ปฏิทินบริษัท", icon: CalendarRange },

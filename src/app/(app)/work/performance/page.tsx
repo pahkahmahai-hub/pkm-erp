@@ -35,7 +35,7 @@ function range(p: Period, anchor: string) {
 interface Row { id: string; task_no: number; title: string; status: string; due_date: string | null; done_at: string | null; reviewed_at: string | null; updated_at: string; work_type: string | null; work_qty: number | null; work_rooms: { name: string; color: string } | null }
 const bkkDate = (ts: string | null) => (ts ? new Date(new Date(ts).getTime() + 7 * 3600e3).toISOString().slice(0, 10) : null);
 
-export default async function PerformancePage({ searchParams }: { searchParams: Promise<{ p?: string; d?: string; emp?: string }> }) {
+export default async function PerformancePage({ searchParams }: { searchParams: Promise<{ p?: string; d?: string; emp?: string; view?: string }> }) {
   const sp = await searchParams;
   const session = await getSession();
   const supabase = await createClient();
@@ -55,12 +55,39 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
       allowed = [...new Set([...allowed, ...((mem ?? []) as { employee_id: string }[]).map((m) => m.employee_id)])];
     }
   }
+  const teamView = allowed.length > 1 && (sp.view === "team" || (!session.employee && !sp.emp));
   const emp = sp.emp && allowed.includes(sp.emp) ? sp.emp : session.employee?.id ?? allowed[0] ?? null;
   const empName = (id: string | null) => { const e = dir.find((x) => x.id === id); return e ? e.nickname ?? e.first_name : "—"; };
 
+  // ---------- มุมมองทั้งทีม ----------
+  type TeamRow = { id: string; name: string; done: number; onTime: number; withDue: number; open: number; overdue: number; types: Record<string, { n: number; qty: number }> };
+  let team: TeamRow[] = [];
+  if (teamView) {
+    const [{ data: accAll }, { data: openAll }] = await Promise.all([
+      supabase.from("work_tasks").select("assignee_id, co_assignee_ids, due_date, done_at, reviewed_at, updated_at, work_type, work_qty").eq("status", "accepted").gte("updated_at", `${addDays(R.start, -1)}T00:00:00+07:00`).limit(5000),
+      supabase.from("work_tasks").select("assignee_id, co_assignee_ids, due_date").not("status", "in", "(accepted,cancelled)").limit(5000),
+    ]);
+    const m = new Map<string, TeamRow>(allowed.map((id) => [id, { id, name: empName(id), done: 0, onTime: 0, withDue: 0, open: 0, overdue: 0, types: {} }]));
+    const people = (t: { assignee_id: string | null; co_assignee_ids: string[] | null }) => [...new Set([t.assignee_id, ...(t.co_assignee_ids ?? [])].filter((x): x is string => !!x && m.has(x)))];
+    for (const t of (accAll ?? []) as { assignee_id: string | null; co_assignee_ids: string[] | null; due_date: string | null; done_at: string | null; reviewed_at: string | null; updated_at: string; work_type: string | null; work_qty: number | null }[]) {
+      const fin = bkkDate(t.reviewed_at ?? t.done_at ?? t.updated_at)!;
+      if (fin < R.start || fin >= R.end) continue;
+      const sent = bkkDate(t.done_at ?? t.reviewed_at ?? t.updated_at)!;
+      for (const id of people(t)) {
+        const x = m.get(id)!; x.done++;
+        if (t.due_date) { x.withDue++; if (sent <= t.due_date) x.onTime++; }
+        if (t.work_type) { x.types[t.work_type] = x.types[t.work_type] ?? { n: 0, qty: 0 }; x.types[t.work_type].n++; x.types[t.work_type].qty += t.work_qty ?? 0; }
+      }
+    }
+    for (const t of (openAll ?? []) as { assignee_id: string | null; co_assignee_ids: string[] | null; due_date: string | null }[]) {
+      for (const id of people(t)) { const x = m.get(id)!; x.open++; if (t.due_date && t.due_date < today) x.overdue++; }
+    }
+    team = [...m.values()].sort((a, b) => b.done - a.done || a.name.localeCompare(b.name));
+  }
+
   let done: (Row & { finished: string; onTime: boolean | null })[] = [];
   let openCount = 0, overdueOpen = 0;
-  if (emp) {
+  if (emp && !teamView) {
     const who = `assignee_id.eq.${emp},co_assignee_ids.cs.{${emp}}`;
     const [{ data: acc }, { data: open }] = await Promise.all([
       supabase.from("work_tasks").select("id, task_no, title, status, due_date, done_at, reviewed_at, updated_at, work_type, work_qty, work_rooms(name, color)")
@@ -81,11 +108,11 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const byType = Object.entries(done.reduce<Record<string, { n: number; qty: number }>>((a, t) => { const k = t.work_type ?? "ไม่ระบุประเภท"; a[k] = a[k] ?? { n: 0, qty: 0 }; a[k].n++; a[k].qty += t.work_qty ?? 0; return a; }, {})).sort((a, b) => b[1].n - a[1].n);
   const bars = R.buckets.map((b) => ({ ...b, n: done.filter((t) => t.finished >= b.from && t.finished < b.to).length }));
   const maxBar = Math.max(1, ...bars.map((b) => b.n));
-  const qs = (o: Record<string, string>) => { const q = new URLSearchParams({ p, d: anchor, ...(emp && emp !== session.employee?.id ? { emp } : {}), ...o }); return `/work/performance?${q}`; };
+  const qs = (o: Record<string, string>) => { const q = new URLSearchParams({ p, d: anchor, ...(teamView ? { view: "team" } : emp && emp !== session.employee?.id ? { emp } : {}), ...o }); return `/work/performance?${q}`; };
 
   return (
     <div className="space-y-6">
-      <Header title={emp === session.employee?.id ? "ผลงานของฉัน" : `ผลงาน · ${empName(emp)}`} sub="งานที่ทำเสร็จ (ตรวจรับแล้ว) ตามช่วงเวลา" crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }]} />
+      <Header title={teamView ? "ผลงานทีม" : emp === session.employee?.id ? "ผลงานของฉัน" : `ผลงาน · ${empName(emp)}`} sub="งานที่ทำเสร็จ (ตรวจรับแล้ว) ตามช่วงเวลา" crumbs={[{ href: "/work", label: "งาน · ห้องหลัก" }]} />
 
       <div className="flex flex-wrap items-center gap-2">
         {(["week", "month", "year"] as Period[]).map((k) => <Link key={k} href={qs({ p: k, d: anchor })} className={p === k ? "btn-primary py-1.5 px-4" : "btn-outline py-1.5 px-4"}>{k === "week" ? "สัปดาห์" : k === "month" ? "เดือน" : "ปี"}</Link>)}
@@ -97,14 +124,41 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         </div>
         {allowed.length > 1 && (
           <form className="ml-auto flex items-center gap-2" action="/work/performance">
+            <Link href={`/work/performance?p=${p}&d=${anchor}&view=team`} className={teamView ? "btn-primary py-1.5" : "btn-outline py-1.5"}>👥 ทั้งทีม</Link>
             <input type="hidden" name="p" value={p} /><input type="hidden" name="d" value={anchor} />
-            <select name="emp" defaultValue={emp ?? ""} className="input !py-1.5 w-44">{allowed.map((id) => <option key={id} value={id}>{empName(id)}{id === session.employee?.id ? " (ฉัน)" : ""}</option>)}</select>
+            <select name="emp" defaultValue={teamView ? "" : emp ?? ""} className="input !py-1.5 w-44">{teamView && <option value="" disabled>รายคน…</option>}{allowed.map((id) => <option key={id} value={id}>{empName(id)}{id === session.employee?.id ? " (ฉัน)" : ""}</option>)}</select>
             <button className="btn-outline py-1.5">ดู</button>
           </form>
         )}
       </div>
 
-      {!emp ? <div className="card p-8 text-center text-ink-soft">บัญชีนี้ยังไม่ได้ผูกกับประวัติพนักงาน</div> : (<>
+      {teamView ? (<>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Stat label="งานที่เสร็จ (ทั้งทีม)" value={team.reduce((a, x) => a + x.done, 0)} tone="purple" />
+          <Stat label="ส่งตรงเวลา" value={(() => { const w = team.reduce((a, x) => a + x.withDue, 0); return w ? `${Math.round((team.reduce((a, x) => a + x.onTime, 0) / w) * 100)}%` : "—"; })()} tone="teal" />
+          <Stat label="ค้างอยู่ตอนนี้" value={team.reduce((a, x) => a + x.open, 0)} tone="yellow" />
+          <Stat label="เลยกำหนด (ค้าง)" value={team.reduce((a, x) => a + x.overdue, 0)} tone="coral" />
+        </div>
+        <div className="card overflow-x-auto">
+          <table className="tbl text-sm">
+            <thead><tr><th>พนักงาน</th><th className="text-right">เสร็จ</th><th className="w-40"></th><th className="text-right">ตรงเวลา</th><th className="text-right">ค้าง</th><th className="text-right">เลยกำหนด</th><th>ประเภทงาน</th></tr></thead>
+            <tbody>
+              {(() => { const mx = Math.max(1, ...team.map((x) => x.done)); return team.map((x) => (
+                <tr key={x.id}>
+                  <td><Link href={`/work/performance?p=${p}&d=${anchor}&emp=${x.id}`} className="font-semibold hover:underline">{x.name}</Link></td>
+                  <td className="text-right font-semibold">{x.done}</td>
+                  <td><div className="h-2 rounded-full bg-lavender/30"><div className="h-2 rounded-full bg-purple" style={{ width: `${(x.done / mx) * 100}%` }} /></div></td>
+                  <td className="text-right">{x.withDue ? `${Math.round((x.onTime / x.withDue) * 100)}%` : "—"}</td>
+                  <td className="text-right">{x.open}</td>
+                  <td className={`text-right ${x.overdue ? "text-red font-semibold" : ""}`}>{x.overdue}</td>
+                  <td className="text-xs text-ink-soft">{Object.entries(x.types).map(([k, v]) => `${k} ${v.n}${v.qty ? ` (${v.qty} ${unitOf(k)})` : ""}`).join(" · ") || "—"}</td>
+                </tr>
+              )); })()}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-ink-soft">นับงานที่ตรวจรับแล้วในช่วงนี้ · งานที่มีผู้ร่วมงานนับให้ทุกคนในงาน · กดชื่อเพื่อดูรายละเอียดรายคน</p>
+      </>) : !emp ? <div className="card p-8 text-center text-ink-soft">บัญชีนี้ยังไม่ได้ผูกกับประวัติพนักงาน</div> : (<>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat label="งานที่เสร็จ" value={done.length} tone="purple" />
           <Stat label="ส่งตรงเวลา" value={pct === null ? "—" : `${pct}%`} tone="teal" />
