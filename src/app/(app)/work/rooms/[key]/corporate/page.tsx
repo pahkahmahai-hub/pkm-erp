@@ -17,7 +17,7 @@ const dm = (d: string | null) => (d ? `${Number(d.slice(8, 10))} ${TH_M[Number(d
 const dmy = (d: string | null) => (d ? `${dm(d)} ${(Number(d.slice(0, 4)) + 543) % 100}` : "—");
 const addDays = (d: string, n: number) => new Date(Date.parse(d + "T00:00:00Z") + n * 86400_000).toISOString().slice(0, 10);
 
-export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; month?: string; q?: string; st?: string; pay?: string; deleted?: string; by?: string; sort?: string }> }) {
+export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; month?: string; q?: string; st?: string; pay?: string; deleted?: string; by?: string; sort?: string; hide?: string }> }) {
   const { key } = await params;
   if (key !== "operation") notFound();
   const sp = await searchParams;
@@ -59,6 +59,9 @@ export default async function CorporatePage({ params, searchParams }: { params: 
   if (q) list = list.filter((o) => [o.order_no, o.customer_name, o.customer_label, o.title, o.detail, o.doc_qt, o.doc_iv, o.doc_bill].some((v) => (v ?? "").toLowerCase().includes(q)));
   if (sp.st === "open") list = list.filter(corpOpen); else if (sp.st && CORP_STATUS.some((s) => s.key === sp.st)) list = list.filter((o) => o.status === sp.st);
   if (sp.pay && CORP_PAY.some((s) => s.key === sp.pay)) list = list.filter((o) => o.pay_status === sp.pay);
+  // ซ่อนออเดอร์ที่ส่งครบแล้ว / ยกเลิก
+  const hideDone = sp.hide === "1";
+  if (hideDone) list = list.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
   // เรียงลำดับ
   const sort = ["due_asc", "due_desc", "order_desc", "no"].includes(sp.sort ?? "") ? sp.sort! : "no";
   const cmpDue = (a?: string | null, b?: string | null, dir = 1) => (!a && !b ? 0 : !a ? 1 : !b ? -1 : a < b ? -dir : a > b ? dir : 0);
@@ -72,7 +75,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
   const boardCols = CORP_STATUS.filter((s) => s.key !== "cancelled");
   const boardList = all.filter((o) => corpOpen(o) || (o.status === "delivered" && (o.pay_status !== "paid" || (o.delivered_at ?? "") >= addDays(today, -30))));
   const base = `/work/rooms/${key}/corporate`;
-  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, month: sp.month, q: sp.q, st: sp.st, pay: sp.pay, by: sp.by, sort: sp.sort, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
+  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, month: sp.month, q: sp.q, st: sp.st, pay: sp.pay, by: sp.by, sort: sp.sort, hide: sp.hide, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
   const crumbs: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${key}`, label: acc.room.name }];
 
   return (
@@ -107,6 +110,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
             <select name="pay" defaultValue={sp.pay ?? ""} className="input py-1 w-auto"><option value="">ทุกสถานะเงิน</option>{CORP_PAY.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
             <select name="sort" defaultValue={sort} className="input py-1 w-auto"><option value="no">เรียง: เลขออเดอร์</option><option value="due_asc">เรียง: กำหนดส่ง ใกล้ → ไกล</option><option value="due_desc">เรียง: กำหนดส่ง ไกล → ใกล้</option><option value="order_desc">เรียง: วันสั่ง ล่าสุดก่อน</option></select>
             <input name="q" defaultValue={sp.q ?? ""} className="input py-1 w-48" placeholder="ค้นหา ลูกค้า/สินค้า/เลขเอกสาร" />
+            <label className={`flex items-center gap-1.5 rounded-full border px-3 py-1 cursor-pointer text-xs ${hideDone ? "border-purple bg-purple text-white" : "border-line"}`}><input type="checkbox" name="hide" value="1" defaultChecked={hideDone} className="accent-white" /> ซ่อนที่ส่งครบแล้ว</label>
             <button className="btn-outline py-1 px-3 text-xs">กรอง</button>
           </form>
         )}
