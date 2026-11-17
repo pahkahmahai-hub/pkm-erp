@@ -37,7 +37,7 @@ export default async function DeliveriesPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-4">
-      <Header crumbs={[...WORK, { href: "/work/rooms/sw-room", label: "SW ROOM" }]} title="ตารางส่งสินค้าห้าง" sub="ทีม SW — แถวละห้าง · ช่องละสัปดาห์ · สีตามขั้นตอน 1 สั่งจัด → 7 สินค้าถึงแล้ว" action={<span className="flex gap-2"><Link href="/work/rooms/sw-room" className="btn-outline">SW ROOM</Link>{canEdit && <Link href="/work/deliveries/stores" className="btn-outline"><Store size={16} /> จัดการห้าง</Link>}</span>} />
+      <Header crumbs={[...WORK, { href: "/work/rooms/sw-room", label: "SW ROOM" }]} title="ตารางส่งสินค้าห้าง" sub="ทีม SW — แถวละห้าง · ช่องละสัปดาห์ · สีตามขั้นตอน 1 สั่งจัด → 8 เข้าระบบ" action={<span className="flex gap-2"><Link href="/work/rooms/sw-room" className="btn-outline">SW ROOM</Link>{canEdit && <Link href="/work/deliveries/stores" className="btn-outline"><Store size={16} /> จัดการห้าง</Link>}</span>} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={href(addMonths(from, -1))} className="btn-outline py-1 px-2"><ChevronLeft size={16} /></Link>
         <Link href={href(addMonths(monthOf(today), -1))} className="btn-outline py-1 px-3 text-xs">เดือนนี้</Link>

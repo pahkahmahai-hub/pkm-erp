@@ -103,7 +103,7 @@ export function DeliveryBoard({ stores, deliveries, weeks, employees, salesDocs,
               {err && <div className="rounded-xl bg-red/10 text-red text-sm px-4 py-2">{err}</div>}
               <div>
                 <label className="label">ขั้นตอน</label>
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1">
                   {STEPS.map((s) => <button key={s.n} type="button" onClick={() => setDraft({ ...draft, step: s.n })} className={`rounded-lg py-2 text-[11px] leading-tight font-semibold border-2 ${draft.step === s.n ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`} style={{ background: s.bg, color: s.fg }}>{s.n}<br />{s.short}</button>)}
                 </div>
                 <p className="text-[11px] text-ink-soft mt-1">{draft.step}. {stepMeta(draft.step).label}</p>

@@ -8,7 +8,7 @@ export interface StoreDelivery {
   employees?: { id: string; first_name: string; nickname: string | null } | null;
 }
 
-/** 7 ขั้นตอน — สี: 1-2 เหลือง (เตรียม), 3-4 ฟ้า (จัดสินค้า), 5-6 ม่วง (ส่ง/อัพระบบ), 7 เขียว (ถึงแล้ว) */
+/** 8 ขั้นตอน — สี: 1-2 เหลือง (เตรียม), 3-4 ฟ้า (จัดสินค้า), 5-6 ม่วง (ส่ง/ถึง), 7 ASN ส้ม, 8 เขียว (เข้าระบบ) · 0064 */
 export const STEPS: { n: number; label: string; short: string; bg: string; fg: string }[] = [
   { n: 1, label: "สั่งจัดสินค้าส่งห้าง", short: "สั่งจัด",     bg: "#fff3bf", fg: "#6b4f00" },
   { n: 2, label: "ส่งลิสต์รายการแล้ว",  short: "ส่งลิสต์",    bg: "#ffe066", fg: "#5a3f00" },
@@ -16,9 +16,10 @@ export const STEPS: { n: number; label: string; short: string; bg: string; fg: s
   { n: 4, label: "จัดสินค้าเสร็จ",      short: "จัดเสร็จ",    bg: "#74c0fc", fg: "#062a4d" },
   { n: 5, label: "ส่งสินค้าแล้ว",       short: "ส่งแล้ว",     bg: "#e5dbff", fg: "#3b2470" },
   { n: 6, label: "สินค้าถึงห้างแล้ว",   short: "ถึงแล้ว",     bg: "#b197fc", fg: "#2a1757" },
-  { n: 7, label: "อัพเข้าระบบห้างเรียบร้อย", short: "เข้าระบบ",   bg: "#b2f2bb", fg: "#1b5e2a" },
+  { n: 7, label: "ทำ ASN แล้ว",          short: "ASN",         bg: "#ffd8a8", fg: "#7a3e00" },
+  { n: 8, label: "อัพเข้าระบบห้างเรียบร้อย", short: "เข้าระบบ",   bg: "#b2f2bb", fg: "#1b5e2a" },
 ];
-export const stepMeta = (n: number) => STEPS[Math.min(Math.max(n, 1), 7) - 1];
+export const stepMeta = (n: number) => STEPS[Math.min(Math.max(n, 1), STEPS.length) - 1];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const ymd = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
