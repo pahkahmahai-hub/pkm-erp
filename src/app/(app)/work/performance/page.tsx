@@ -61,14 +61,14 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const empName = (id: string | null) => { const e = dir.find((x) => x.id === id); return e ? e.nickname ?? e.first_name : "—"; };
 
   // ---------- มุมมองทั้งทีม ----------
-  type TeamRow = { id: string; name: string; done: number; onTime: number; withDue: number; open: number; overdue: number; types: Record<string, { n: number; qty: number }> };
+  type TeamRow = { id: string; name: string; done: number; onTime: number; withDue: number; open: number; overdue: number; types: Record<string, { n: number; qty: number }>; postponed: number };
   let team: TeamRow[] = [];
   if (teamView) {
     const [{ data: accAll }, { data: openAll }] = await Promise.all([
       supabase.from("work_tasks").select("assignee_id, co_assignee_ids, due_date, done_at, reviewed_at, updated_at, work_type, work_qty").eq("status", "accepted").gte("updated_at", `${addDays(R.start, -1)}T00:00:00+07:00`).limit(5000),
       supabase.from("work_tasks").select("*, work_rooms(key)").not("status", "in", "(accepted,cancelled)").limit(5000),
     ]);
-    const m = new Map<string, TeamRow>(allowed.map((id) => [id, { id, name: empName(id), done: 0, onTime: 0, withDue: 0, open: 0, overdue: 0, types: {} }]));
+    const m = new Map<string, TeamRow>(allowed.map((id) => [id, { id, name: empName(id), done: 0, onTime: 0, withDue: 0, open: 0, overdue: 0, types: {}, postponed: 0 }]));
     const people = (t: { assignee_id: string | null; co_assignee_ids?: string[] | null }) => [...new Set([t.assignee_id, ...(t.co_assignee_ids ?? [])].filter((x): x is string => !!x && m.has(x)))];
     for (const t of (accAll ?? []) as { assignee_id: string | null; co_assignee_ids: string[] | null; due_date: string | null; done_at: string | null; reviewed_at: string | null; updated_at: string; work_type: string | null; work_qty: number | null }[]) {
       const fin = bkkDate(t.reviewed_at ?? t.done_at ?? t.updated_at)!;
@@ -82,6 +82,11 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
     }
     for (const t of ((openAll ?? []) as Task[]).filter((t) => !isFutureRoutine(t, today))) {
       for (const id of people(t)) { const x = m.get(id)!; x.open++; if (isOverdue(t)) x.overdue++; }
+    }
+    // ขอเลื่อนกำหนดที่อนุมัติในช่วงนี้ (0063)
+    const { data: pp } = await supabase.from("work_due_changes").select("decided_at, work_tasks(assignee_id, co_assignee_ids)").eq("status", "approved").gte("decided_at", `${R.start}T00:00:00+07:00`).lt("decided_at", `${R.end}T00:00:00+07:00`).limit(2000);
+    for (const c of (pp ?? []) as unknown as { work_tasks: { assignee_id: string | null; co_assignee_ids: string[] | null } | null }[]) {
+      if (c.work_tasks) for (const id of people(c.work_tasks)) m.get(id)!.postponed++;
     }
     team = [...m.values()].sort((a, b) => b.done - a.done || a.name.localeCompare(b.name));
   }
@@ -143,7 +148,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         </div>
         <div className="card overflow-x-auto">
           <table className="tbl text-sm">
-            <thead><tr><th className="!text-left">พนักงาน</th><th className="!text-left w-56">เสร็จ</th><th className="!text-center w-24">ตรงเวลา</th><th className="!text-center w-20">ค้าง</th><th className="!text-center w-24">เลยกำหนด</th><th className="!text-left">ประเภทงาน</th></tr></thead>
+            <thead><tr><th className="!text-left">พนักงาน</th><th className="!text-left w-56">เสร็จ</th><th className="!text-center w-24">ตรงเวลา</th><th className="!text-center w-20">ค้าง</th><th className="!text-center w-24">เลยกำหนด</th><th className="!text-center w-20">เลื่อน</th><th className="!text-left">ประเภทงาน</th></tr></thead>
             <tbody>
               {(() => { const mx = Math.max(1, ...team.map((x) => x.done)); return team.map((x) => (
                 <tr key={x.id}>
@@ -152,13 +157,14 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
                   <td className="!text-center">{x.withDue ? `${Math.round((x.onTime / x.withDue) * 100)}%` : "—"}</td>
                   <td className="!text-center">{x.open}</td>
                   <td className={`!text-center ${x.overdue ? "text-red font-semibold" : ""}`}>{x.overdue}</td>
+                  <td className="!text-center text-ink-soft">{x.postponed || "—"}</td>
                   <td className="text-xs text-ink-soft">{Object.entries(x.types).map(([k, v]) => `${k} ${v.n}${v.qty ? ` (${v.qty} ${unitOf(k)})` : ""}`).join(" · ") || "—"}</td>
                 </tr>
               )); })()}
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-ink-soft">นับงานที่ตรวจรับแล้วในช่วงนี้ · งานที่มีผู้ร่วมงานนับให้ทุกคนในงาน · กดชื่อเพื่อดูรายละเอียดรายคน</p>
+        <p className="text-xs text-ink-soft">นับงานที่ตรวจรับแล้วในช่วงนี้ · เลื่อน = ขอเลื่อนกำหนดที่ได้รับอนุมัติในช่วงนี้ · งานที่มีผู้ร่วมงานนับให้ทุกคนในงาน · กดชื่อเพื่อดูรายละเอียดรายคน</p>
       </>) : !emp ? <div className="card p-8 text-center text-ink-soft">บัญชีนี้ยังไม่ได้ผูกกับประวัติพนักงาน</div> : (<>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Stat label="งานที่เสร็จ" value={done.length} tone="purple" />

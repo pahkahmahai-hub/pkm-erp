@@ -751,3 +751,21 @@ export async function decideForward(id: string, approve: boolean) {
   revalidatePath(`/work/tasks/${id}`);
   redirect(`/work/tasks/${id}`);
 }
+
+/** ขอเลื่อนกำหนดส่ง / อนุมัติ (0063) */
+export async function requestPostpone(id: string, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("request_postpone", { p_task: id, p_new_due: nul(formData.get("new_due")), p_reason: String(formData.get("reason") ?? "") });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  redirect(`/work/tasks/${id}?pp=sent`);
+}
+export async function decidePostpone(id: string, approve: boolean, formData: FormData) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("decide_postpone", { p_task: id, p_approve: approve, p_note: nul(formData.get("note")) });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  redirect(`/work/tasks/${id}`);
+}

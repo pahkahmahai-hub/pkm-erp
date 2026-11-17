@@ -9,7 +9,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds, userNames } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask, forwardTask, decideForward } from "../../actions";
+import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask, forwardTask, decideForward, requestPostpone, decidePostpone } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -19,9 +19,9 @@ import { GC_ROOM_KEYS, unitOf } from "@/lib/work/workType";
 
 export const dynamic = "force-dynamic";
 
-export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string; saved?: string; error?: string; edit?: string; fwd?: string }> }) {
+export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string; saved?: string; error?: string; edit?: string; fwd?: string; pp?: string }> }) {
   const { id } = await params;
-  const { created, saved, error, edit, fwd } = await searchParams;
+  const { created, saved, error, edit, fwd, pp } = await searchParams;
   const session = await getSession();
   await markTaskNotificationsRead(id).catch(() => {});
   await markTaskRead(id).catch(() => {});
@@ -82,6 +82,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
         <form action={renameTask.bind(null, id)} className="absolute right-0 z-20 mt-2 w-[min(90vw,520px)] card p-3 flex gap-2 shadow-lg"><input name="title" defaultValue={task.title} className="input" required autoFocus /><button className="btn-primary whitespace-nowrap">บันทึก</button></form></details>}
         <span className={`${STATUS_BADGE[task.status]} text-sm px-3 py-1`}>{statusLabel(task.status, task.work_rooms?.key)}</span></span>} />
       {created && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">สั่งงานแล้ว ผู้รับจะเห็นในหน้างานของตัวเอง</div>}
+      {pp === "sent" && <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm px-4 py-3">ส่งคำขอเลื่อนกำหนดแล้ว — รอหัวหน้า / ผู้บริหารอนุมัติ</div>}
       {fwd === "done" && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">ส่งต่องานแล้ว — แจ้งเตือนคนรับใหม่และผู้สั่งงานให้แล้ว</div>}
       {fwd === "pending" && <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm px-4 py-3">ส่งคำขอส่งต่องานแล้ว — รอหัวหน้าห้องอนุมัติ</div>}
       {saved && <div className="rounded-xl bg-green/10 text-green text-sm px-4 py-3">บันทึกแล้ว</div>}
@@ -217,6 +218,34 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                 <button formAction={swStepBack.bind(null, id)} className="btn-outline w-full text-xs py-1.5">↩ ย้อนกลับไป “{task.status === "prep" ? "รอตรวจรับ" : task.status === "shipped" ? "เตรียมส่ง" : "ส่งสินค้าแล้ว"}”</button>
               </form>
             )}
+            {/* ขอเลื่อนกำหนดส่ง (0063) */}
+            {task.pending_due && (
+              <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm p-3 space-y-2">
+                <div>⏳ ขอเลื่อนกำหนดส่ง {task.due_date ? fmtDate(task.due_date) : "—"} → <b>{fmtDate(task.pending_due)}</b></div>
+                <div className="text-xs">เหตุผล: {task.pending_due_reason}</div>
+                {(session.isAdmin || isLead) && (task.pending_due_by !== me || session.isAdmin) && (
+                  <form className="space-y-2">
+                    <input name="note" className="input !py-1.5 text-xs" placeholder="หมายเหตุ (ไม่บังคับ)" />
+                    <div className="flex gap-2">
+                      <button formAction={decidePostpone.bind(null, id, true)} className="btn-primary flex-1 py-1.5">อนุมัติเลื่อน</button>
+                      <button formAction={decidePostpone.bind(null, id, false)} className="btn-outline flex-1 py-1.5">ไม่อนุมัติ</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+            {!task.pending_due && isAssignee && !["accepted", "cancelled"].includes(task.status) && (
+              <details className="rounded-xl border border-line">
+                <summary className="list-none cursor-pointer px-3 py-2 text-sm font-semibold text-purple">📅 ขอเลื่อนกำหนดส่ง</summary>
+                <form action={requestPostpone.bind(null, id)} className="px-3 pb-3 space-y-2">
+                  <div><label className="label">กำหนดส่งใหม่</label><DateInput name="new_due" className="input" required /></div>
+                  <div><label className="label">เหตุผล *</label><textarea name="reason" required rows={2} className="input" placeholder="เช่น รอไฟล์จากลูกค้า / งานด่วนแทรก / กำหนดเดิมกรอกผิด" /></div>
+                  <button className="btn-primary w-full">ส่งขออนุมัติ</button>
+                  <div className="text-[11px] text-ink-soft">หัวหน้าห้องและผู้บริหารได้แจ้งเตือน · อนุมัติแล้วใช้กำหนดใหม่คิด "ส่งตรงเวลา" · ขอก่อนถึงกำหนดจะดีที่สุด</div>
+                </form>
+              </details>
+            )}
+            {(task.postpone_count ?? 0) > 0 && <div className="text-[11px] text-ink-soft">เลื่อนกำหนดแล้ว {task.postpone_count} ครั้ง (ดูประวัติในคอมเมนต์)</div>}
             {/* ส่งต่องาน (0059) */}
             {task.pending_forward_to && (
               <div className="rounded-xl bg-yellow/20 text-[#7a4a00] text-sm p-3 space-y-2">

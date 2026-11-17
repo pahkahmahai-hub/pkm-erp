@@ -12,6 +12,7 @@ export interface Task {
   co_assignee_ids?: string[] | null;   // ผู้ร่วมงาน (0035)
   next_step_label?: string | null; next_step_due?: string | null;   // ขั้นถัดไปจากเช็คลิสต์ (0052)
   work_type?: string | null; work_qty?: number | null;   // ประเภทงาน + จำนวน (0062)
+  pending_due?: string | null; pending_due_reason?: string | null; pending_due_by?: string | null; postpone_count?: number;   // ขอเลื่อนกำหนด (0063)
   forward_count?: number; pending_forward_to?: string | null; pending_forward_by?: string | null; pending_forward_note?: string | null;   // ส่งต่องาน (0059)
   work_topics?: Pick<Topic, "id" | "name" | "color"> | null;
   started_at: string | null; done_at: string | null; done_note: string | null; reviewed_at: string | null; review_note: string | null;
