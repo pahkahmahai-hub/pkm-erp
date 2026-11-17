@@ -85,6 +85,10 @@ function CompactCard({ t }: { t: Task }) {
           {due && <span className={`shrink-0 flex items-center gap-0.5 ${overdue ? "text-red font-semibold" : dueToday ? "text-[#8a6a00] font-semibold" : ""}`}><CalendarDays size={10} />{overdue ? "เลย " : dueToday ? "วันนี้ " : ""}{fmtDateShort(due)}</span>}
         </div>
       )}
+      {t.next_step_due && t.status !== "accepted" && t.status !== "cancelled" && (() => { const today = todayBkk(); const od = t.next_step_due < today; const td = t.next_step_due === today; return (
+        <div className={`mt-1 text-[10px] flex items-center gap-1 rounded px-1.5 py-0.5 ${od ? "bg-red/10 text-red font-semibold" : td ? "bg-yellow/30 text-[#7a4a00] font-semibold" : "bg-lavender/30 text-purple"}`}>
+          <span className="shrink-0">ถัดไป:</span><span className="truncate">{t.next_step_label ?? "—"}</span><span className="shrink-0 ml-auto">{od ? "เลย " : td ? "วันนี้ " : ""}{fmtDateShort(t.next_step_due)}</span>
+        </div>); })()}
     </Link>
   );
 }
