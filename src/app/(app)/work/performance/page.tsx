@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, Stat } from "@/components/ui";
-import { loadDirectory, myLeadRoomIds } from "@/lib/work/queries";
+import { loadDirectory, myLeadRoomIds, isOverdue, isFutureRoutine } from "@/lib/work/queries";
+import type { Task } from "@/lib/work/types";
 import { fmtDateShort, todayBkk } from "@/lib/format";
 import { unitOf } from "@/lib/work/workType";
 
@@ -65,10 +66,10 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   if (teamView) {
     const [{ data: accAll }, { data: openAll }] = await Promise.all([
       supabase.from("work_tasks").select("assignee_id, co_assignee_ids, due_date, done_at, reviewed_at, updated_at, work_type, work_qty").eq("status", "accepted").gte("updated_at", `${addDays(R.start, -1)}T00:00:00+07:00`).limit(5000),
-      supabase.from("work_tasks").select("assignee_id, co_assignee_ids, due_date").not("status", "in", "(accepted,cancelled)").limit(5000),
+      supabase.from("work_tasks").select("*, work_rooms(key)").not("status", "in", "(accepted,cancelled)").limit(5000),
     ]);
     const m = new Map<string, TeamRow>(allowed.map((id) => [id, { id, name: empName(id), done: 0, onTime: 0, withDue: 0, open: 0, overdue: 0, types: {} }]));
-    const people = (t: { assignee_id: string | null; co_assignee_ids: string[] | null }) => [...new Set([t.assignee_id, ...(t.co_assignee_ids ?? [])].filter((x): x is string => !!x && m.has(x)))];
+    const people = (t: { assignee_id: string | null; co_assignee_ids?: string[] | null }) => [...new Set([t.assignee_id, ...(t.co_assignee_ids ?? [])].filter((x): x is string => !!x && m.has(x)))];
     for (const t of (accAll ?? []) as { assignee_id: string | null; co_assignee_ids: string[] | null; due_date: string | null; done_at: string | null; reviewed_at: string | null; updated_at: string; work_type: string | null; work_qty: number | null }[]) {
       const fin = bkkDate(t.reviewed_at ?? t.done_at ?? t.updated_at)!;
       if (fin < R.start || fin >= R.end) continue;
@@ -79,8 +80,8 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         if (t.work_type) { x.types[t.work_type] = x.types[t.work_type] ?? { n: 0, qty: 0 }; x.types[t.work_type].n++; x.types[t.work_type].qty += t.work_qty ?? 0; }
       }
     }
-    for (const t of (openAll ?? []) as { assignee_id: string | null; co_assignee_ids: string[] | null; due_date: string | null }[]) {
-      for (const id of people(t)) { const x = m.get(id)!; x.open++; if (t.due_date && t.due_date < today) x.overdue++; }
+    for (const t of ((openAll ?? []) as Task[]).filter((t) => !isFutureRoutine(t, today))) {
+      for (const id of people(t)) { const x = m.get(id)!; x.open++; if (isOverdue(t)) x.overdue++; }
     }
     team = [...m.values()].sort((a, b) => b.done - a.done || a.name.localeCompare(b.name));
   }
@@ -92,15 +93,16 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
     const [{ data: acc }, { data: open }] = await Promise.all([
       supabase.from("work_tasks").select("id, task_no, title, status, due_date, done_at, reviewed_at, updated_at, work_type, work_qty, work_rooms(name, color)")
         .or(who).eq("status", "accepted").gte("updated_at", `${addDays(R.start, -1)}T00:00:00+07:00`).order("updated_at", { ascending: false }).limit(1000),
-      supabase.from("work_tasks").select("id, due_date, status").or(who).not("status", "in", "(accepted,cancelled)"),
+      supabase.from("work_tasks").select("*, work_rooms(key)").or(who).not("status", "in", "(accepted,cancelled)"),
     ]);
     done = ((acc ?? []) as unknown as Row[]).map((t) => {
       const finished = bkkDate(t.reviewed_at ?? t.done_at ?? t.updated_at)!;
       const sent = bkkDate(t.done_at ?? t.reviewed_at ?? t.updated_at)!;
       return { ...t, finished, onTime: t.due_date ? sent <= t.due_date : null };
     }).filter((t) => t.finished >= R.start && t.finished < R.end);
-    const o = (open ?? []) as { due_date: string | null }[];
-    openCount = o.length; overdueOpen = o.filter((t) => t.due_date && t.due_date < today).length;
+    // ค้าง = ไม่นับงานประจำของสัปดาห์หน้า · เลยกำหนด = ใช้กำหนดของขั้นปัจจุบัน (SW: จัดของ → ถึงห้าง → เข้าระบบ) และไม่นับงานที่ส่งตรวจแล้ว
+    const o = ((open ?? []) as Task[]).filter((t) => !isFutureRoutine(t, today));
+    openCount = o.length; overdueOpen = o.filter((t) => isOverdue(t)).length;
   }
   const withDue = done.filter((t) => t.onTime !== null);
   const onTime = withDue.filter((t) => t.onTime).length;
