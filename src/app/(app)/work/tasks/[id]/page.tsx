@@ -126,6 +126,20 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           {hasCalendar && <Storyboard taskId={id} files={files} canEdit={isOwner || isAssignee} addAction={addTaskFiles.bind(null, id, task.room_id)} deleteAction={deleteTaskFile} />}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-2"><h2 className="font-display font-bold">เช็คลิสต์</h2>{items.length > 0 && <span className="text-xs text-ink-soft">{doneCount}/{items.length}</span>}</div>
+            {items.length > 0 && doneCount === items.length && !["accepted", "cancelled"].includes(task.status) && (() => {
+              const selfTask = task.assignee_id === myEmp || (!!myEmp && (task.co_assignee_ids ?? []).includes(myEmp));
+              const canClose = session.isAdmin || (isOwner && !selfTask);
+              return (
+                <div className="mb-3 rounded-xl bg-green/10 border border-green/30 p-3 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-green font-semibold">✅ ทำครบทุกข้อแล้ว</span>
+                  {canClose
+                    ? <form action={setTaskStatus.bind(null, id, "accepted")} className="ml-auto"><button className="btn-primary py-1.5">✔ เคลียร์จบงาน</button></form>
+                    : isAssignee && task.status !== "done"
+                      ? <form action={setTaskStatus.bind(null, id, "done")} className="ml-auto"><button className="btn-primary py-1.5">ส่งตรวจ · ปิดงาน</button></form>
+                      : <span className="ml-auto text-xs text-ink-soft">รอผู้สั่งงาน / หัวหน้ากดปิดงาน</span>}
+                </div>
+              );
+            })()}
             {items.length > 0 && <div className="h-1.5 rounded-full bg-lavender/40 mb-3"><div className="h-full rounded-full bg-teal" style={{ width: `${(doneCount / items.length) * 100}%` }} /></div>}
             <ul className="space-y-1.5">
               {items.map((c, ci) => (
