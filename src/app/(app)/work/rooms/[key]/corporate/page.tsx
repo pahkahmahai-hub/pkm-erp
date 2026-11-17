@@ -17,7 +17,7 @@ const dm = (d: string | null) => (d ? `${Number(d.slice(8, 10))} ${TH_M[Number(d
 const dmy = (d: string | null) => (d ? `${dm(d)} ${(Number(d.slice(0, 4)) + 543) % 100}` : "—");
 const addDays = (d: string, n: number) => new Date(Date.parse(d + "T00:00:00Z") + n * 86400_000).toISOString().slice(0, 10);
 
-export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; month?: string; q?: string; st?: string; pay?: string; deleted?: string }> }) {
+export default async function CorporatePage({ params, searchParams }: { params: Promise<{ key: string }>; searchParams: Promise<{ view?: string; year?: string; month?: string; q?: string; st?: string; pay?: string; deleted?: string; by?: string; sort?: string }> }) {
   const { key } = await params;
   if (key !== "operation") notFound();
   const sp = await searchParams;
@@ -52,16 +52,27 @@ export default async function CorporatePage({ params, searchParams }: { params: 
 
   // filters (table)
   const month = /^(0[1-9]|1[0-2])$/.test(sp.month ?? "") ? sp.month! : "";
-  let list = all.filter((o) => (year === "all" || o.order_date.startsWith(year)) && (!month || o.order_date.slice(5, 7) === month));
+  // ปี/เดือน อิงจาก วันสั่ง (ค่าเริ่มต้น) หรือ กำหนดส่ง
+  const by = sp.by === "due" ? "due" : "order";
+  const dateOf = (o: (typeof all)[number]) => (by === "due" ? o.due_date ?? "" : o.order_date);
+  let list = all.filter((o) => (year === "all" || dateOf(o).startsWith(year)) && (!month || dateOf(o).slice(5, 7) === month));
   if (q) list = list.filter((o) => [o.order_no, o.customer_name, o.customer_label, o.title, o.detail, o.doc_qt, o.doc_iv, o.doc_bill].some((v) => (v ?? "").toLowerCase().includes(q)));
   if (sp.st === "open") list = list.filter(corpOpen); else if (sp.st && CORP_STATUS.some((s) => s.key === sp.st)) list = list.filter((o) => o.status === sp.st);
   if (sp.pay && CORP_PAY.some((s) => s.key === sp.pay)) list = list.filter((o) => o.pay_status === sp.pay);
+  // เรียงลำดับ
+  const sort = ["due_asc", "due_desc", "order_desc", "no"].includes(sp.sort ?? "") ? sp.sort! : "no";
+  const cmpDue = (a?: string | null, b?: string | null, dir = 1) => (!a && !b ? 0 : !a ? 1 : !b ? -1 : a < b ? -dir : a > b ? dir : 0);
+  list = [...list].sort((a, b) =>
+    sort === "due_asc" ? cmpDue(a.due_date, b.due_date, 1) || a.order_no.localeCompare(b.order_no)
+    : sort === "due_desc" ? cmpDue(a.due_date, b.due_date, -1) || a.order_no.localeCompare(b.order_no)
+    : sort === "order_desc" ? b.order_date.localeCompare(a.order_date) || b.order_no.localeCompare(a.order_no)
+    : a.order_no.localeCompare(b.order_no, undefined, { numeric: true }));
 
   // board: open orders + delivered in last 30 days or not yet paid
   const boardCols = CORP_STATUS.filter((s) => s.key !== "cancelled");
   const boardList = all.filter((o) => corpOpen(o) || (o.status === "delivered" && (o.pay_status !== "paid" || (o.delivered_at ?? "") >= addDays(today, -30))));
   const base = `/work/rooms/${key}/corporate`;
-  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, month: sp.month, q: sp.q, st: sp.st, pay: sp.pay, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
+  const qs = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(Object.entries({ view, year, month: sp.month, q: sp.q, st: sp.st, pay: sp.pay, by: sp.by, sort: sp.sort, ...patch }).filter(([, v]) => v) as [string, string][]); return `${base}?${p}`; };
   const crumbs: Crumb[] = [{ href: "/work", label: "งาน · ห้องหลัก" }, { href: `/work/rooms/${key}`, label: acc.room.name }];
 
   return (
@@ -89,10 +100,12 @@ export default async function CorporatePage({ params, searchParams }: { params: 
         {view === "table" && (
           <form className="flex flex-wrap gap-2 items-center text-sm">
             <input type="hidden" name="view" value="table" />
+            <select name="by" defaultValue={by} className="input py-1 w-auto" title="ปี/เดือน อิงจาก"><option value="order">ตามวันสั่ง</option><option value="due">ตามกำหนดส่ง</option></select>
             <select name="year" defaultValue={year} className="input py-1 w-auto"><option value="all">ทุกปี</option>{years.map((y) => <option key={y} value={y}>ปี {Number(y) + 543}</option>)}</select>
             <select name="month" defaultValue={month} className="input py-1 w-auto"><option value="">ทุกเดือน</option>{TH_M.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>)}</select>
             <select name="st" defaultValue={sp.st ?? ""} className="input py-1 w-auto"><option value="">ทุกสถานะงาน</option><option value="open">กำลังทำ (ยังไม่ส่งครบ)</option>{CORP_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
             <select name="pay" defaultValue={sp.pay ?? ""} className="input py-1 w-auto"><option value="">ทุกสถานะเงิน</option>{CORP_PAY.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select>
+            <select name="sort" defaultValue={sort} className="input py-1 w-auto"><option value="no">เรียง: เลขออเดอร์</option><option value="due_asc">เรียง: กำหนดส่ง ใกล้ → ไกล</option><option value="due_desc">เรียง: กำหนดส่ง ไกล → ใกล้</option><option value="order_desc">เรียง: วันสั่ง ล่าสุดก่อน</option></select>
             <input name="q" defaultValue={sp.q ?? ""} className="input py-1 w-48" placeholder="ค้นหา ลูกค้า/สินค้า/เลขเอกสาร" />
             <button className="btn-outline py-1 px-3 text-xs">กรอง</button>
           </form>
@@ -118,7 +131,7 @@ export default async function CorporatePage({ params, searchParams }: { params: 
       ) : (
         <div className="card overflow-x-auto">
           <table className="tbl text-sm">
-            <thead><tr><th>เลข</th><th>ลูกค้า</th><th>รายการ</th><th className="text-right">มูลค่า (รวม VAT)</th><th>สั่ง</th><th>กำหนดส่ง</th><th>สถานะงาน</th><th>สถานะเงิน</th><th>เอกสาร</th></tr></thead>
+            <thead><tr><th>เลข</th><th>ลูกค้า</th><th>รายการ</th><th className="text-right">มูลค่า (รวม VAT)</th><th><Link href={qs({ sort: sort === "order_desc" ? "no" : "order_desc" })} className="hover:underline">สั่ง{sort === "order_desc" ? " ↓" : ""}</Link></th><th><Link href={qs({ sort: sort === "due_asc" ? "due_desc" : "due_asc" })} className="hover:underline">กำหนดส่ง{sort === "due_asc" ? " ↑" : sort === "due_desc" ? " ↓" : " ⇅"}</Link></th><th>สถานะงาน</th><th>สถานะเงิน</th><th>เอกสาร</th></tr></thead>
             <tbody>
               {list.map((o) => {
                 const st = corpStatus(o.status); const late = corpOverdue(o, today);
