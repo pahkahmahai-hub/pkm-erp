@@ -143,16 +143,15 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
         </div>
         <div className="card overflow-x-auto">
           <table className="tbl text-sm">
-            <thead><tr><th>พนักงาน</th><th className="text-right">เสร็จ</th><th className="w-40"></th><th className="text-right">ตรงเวลา</th><th className="text-right">ค้าง</th><th className="text-right">เลยกำหนด</th><th>ประเภทงาน</th></tr></thead>
+            <thead><tr><th className="!text-left">พนักงาน</th><th className="!text-left w-56">เสร็จ</th><th className="!text-center w-24">ตรงเวลา</th><th className="!text-center w-20">ค้าง</th><th className="!text-center w-24">เลยกำหนด</th><th className="!text-left">ประเภทงาน</th></tr></thead>
             <tbody>
               {(() => { const mx = Math.max(1, ...team.map((x) => x.done)); return team.map((x) => (
                 <tr key={x.id}>
                   <td><Link href={`/work/performance?p=${p}&d=${anchor}&emp=${x.id}`} className="font-semibold hover:underline">{x.name}</Link></td>
-                  <td className="text-right font-semibold">{x.done}</td>
-                  <td><div className="h-2 rounded-full bg-lavender/30"><div className="h-2 rounded-full bg-purple" style={{ width: `${(x.done / mx) * 100}%` }} /></div></td>
-                  <td className="text-right">{x.withDue ? `${Math.round((x.onTime / x.withDue) * 100)}%` : "—"}</td>
-                  <td className="text-right">{x.open}</td>
-                  <td className={`text-right ${x.overdue ? "text-red font-semibold" : ""}`}>{x.overdue}</td>
+                  <td className="!text-left"><div className="flex items-center gap-3"><span className="w-6 font-semibold text-right">{x.done}</span><div className="flex-1 h-2 rounded-full bg-lavender/30"><div className="h-2 rounded-full bg-purple" style={{ width: `${(x.done / mx) * 100}%` }} /></div></div></td>
+                  <td className="!text-center">{x.withDue ? `${Math.round((x.onTime / x.withDue) * 100)}%` : "—"}</td>
+                  <td className="!text-center">{x.open}</td>
+                  <td className={`!text-center ${x.overdue ? "text-red font-semibold" : ""}`}>{x.overdue}</td>
                   <td className="text-xs text-ink-soft">{Object.entries(x.types).map(([k, v]) => `${k} ${v.n}${v.qty ? ` (${v.qty} ${unitOf(k)})` : ""}`).join(" · ") || "—"}</td>
                 </tr>
               )); })()}
