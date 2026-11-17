@@ -105,20 +105,44 @@ export default async function WorkHome() {
       </div>
 
       <section className="space-y-4">
-        {[{ title: "ห้องหลัก", list: rooms.filter((r) => MAIN_ROOMS.includes(r.key)), cols: "sm:grid-cols-3" }, { title: "ห้องย่อย", list: rooms.filter((r) => !MAIN_ROOMS.includes(r.key)), cols: "sm:grid-cols-2 lg:grid-cols-4" }].filter((g) => g.list.length).map((g) => (
-          <div key={g.title}>
-            <h2 className="font-display font-bold mb-3">{g.title} <span className="text-xs font-normal text-ink-soft">{g.title === "ห้องหลัก" ? "ทั้งบริษัท · ทีม GC · ทีม SW" : "ตามหน้าที่งาน"}</span></h2>
-            <div className={`grid ${g.cols} gap-3`}>
-              {g.list.map((r) => (
-                <Link key={r.id} href={`/work/rooms/${r.key}`} className={`card flex items-center gap-3 hover:border-purple transition ${g.title === "ห้องหลัก" ? "p-5" : "p-4"}`}>
-                  <div className={`${g.title === "ห้องหลัก" ? "h-12 w-12 text-lg" : "h-10 w-10"} rounded-xl text-white grid place-items-center font-display font-bold`} style={{ background: r.color }}>{r.name[0]}</div>
-                  <div className="min-w-0 flex-1"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
-                  {(unreadByRoom[r.id] ?? 0) > 0 && <Link href={`/work/rooms/${r.key}?tab=chat`} className="bg-red text-white text-[11px] rounded-full px-2 py-0.5 font-semibold">{unreadByRoom[r.id]} แชท</Link>}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
+        {(() => {
+          type R = (typeof rooms)[number] & { parent_key?: string | null };
+          const card = (r: R, big: boolean) => (
+            <Link key={r.id} href={`/work/rooms/${r.key}`} className={`card flex items-center gap-3 hover:border-purple transition ${big ? "p-5" : "p-4"}`}>
+              <div className={`${big ? "h-12 w-12 text-lg" : "h-10 w-10"} rounded-xl text-white grid place-items-center font-display font-bold shrink-0`} style={{ background: r.color }}>{r.name[0]}</div>
+              <div className="min-w-0 flex-1"><div className="font-semibold truncate">{r.name}</div><div className="text-xs text-ink-soft">{countByRoom[r.id] ?? 0} งานค้าง</div></div>
+              {(unreadByRoom[r.id] ?? 0) > 0 && <Link href={`/work/rooms/${r.key}?tab=chat`} className="bg-red text-white text-[11px] rounded-full px-2 py-0.5 font-semibold">{unreadByRoom[r.id]} แชท</Link>}
+            </Link>
+          );
+          const main = (rooms as R[]).filter((r) => MAIN_ROOMS.includes(r.key));
+          const subs = (rooms as R[]).filter((r) => !MAIN_ROOMS.includes(r.key));
+          // ห้องย่อยแบ่ง 2 ฝั่งตามแผนก (ตาม parent_key · สำรองด้วยรายชื่อห้อง)
+          const DEPT: Record<string, string> = { graphic: "gc-room", visual: "gc-room", content: "gc-room", office: "sw-room", operation: "sw-room", online: "sw-room" };
+          const deptOf = (r: R) => r.parent_key ?? DEPT[r.key] ?? "other";
+          const sides = [
+            { key: "gc-room", title: "ทีม GC", sub: "Graphic & Content" },
+            { key: "sw-room", title: "ทีม SW", sub: "Sale & Warehouse" },
+          ].map((d) => ({ ...d, list: subs.filter((r) => deptOf(r) === d.key) })).filter((d) => d.list.length);
+          const others = subs.filter((r) => !["gc-room", "sw-room"].includes(deptOf(r)));
+          return (<>
+            {main.length > 0 && <div>
+              <h2 className="font-display font-bold mb-3">ห้องหลัก <span className="text-xs font-normal text-ink-soft">ทั้งบริษัท · ทีม GC · ทีม SW</span></h2>
+              <div className="grid sm:grid-cols-3 gap-3">{main.map((r) => card(r, true))}</div>
+            </div>}
+            {subs.length > 0 && <div>
+              <h2 className="font-display font-bold mb-3">ห้องย่อย <span className="text-xs font-normal text-ink-soft">ตามแผนก</span></h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {sides.map((d) => (
+                  <div key={d.key} className="rounded-2xl border border-line bg-white/40 p-3">
+                    <div className="px-1 mb-2 text-sm font-semibold">{d.title} <span className="text-xs font-normal text-ink-soft">{d.sub}</span></div>
+                    <div className="grid gap-2">{d.list.map((r) => card(r, false))}</div>
+                  </div>
+                ))}
+              </div>
+              {others.length > 0 && <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">{others.map((r) => card(r, false))}</div>}
+            </div>}
+          </>);
+        })()}
       </section>
 
       <div className="grid lg:grid-cols-2 gap-6">
