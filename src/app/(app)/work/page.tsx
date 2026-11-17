@@ -1,5 +1,6 @@
 import { PushToggle } from "@/components/work/PushToggle";
 import Link from "next/link";
+import { TaskSearchBox } from "@/components/work/TaskSearchBox";
 import { Plus, Bell } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
@@ -90,7 +91,8 @@ export default async function WorkHome() {
   return (
     <div className="space-y-6">
       <Header crumbs={[]} title="งาน" sub={fmtDate(todayBkk(), { weekday: "long" })} action={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <TaskSearchBox className="w-64" />
           <Link href="/work/notifications" className="btn-outline relative"><Bell size={16} /> แจ้งเตือน{(unread ?? 0) > 0 && <span className="absolute -top-1.5 -right-1.5 bg-red text-white text-[10px] rounded-full h-5 min-w-5 px-1 grid place-items-center">{unread}</span>}</Link>
           <Link href="/work/tasks/new" className="btn-primary"><Plus size={16} /> สั่งงาน</Link>
         </div>

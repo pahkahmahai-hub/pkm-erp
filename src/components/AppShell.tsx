@@ -8,7 +8,7 @@ import { RegisterSW } from "@/components/RegisterSW";
 import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
-  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange, Store, TrendingUp,
+  ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange, Store, TrendingUp, Search,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { RoomChatShortcuts } from "./work/RoomChatShortcuts";
@@ -61,6 +61,7 @@ NAV.work = [
     items: [
       { href: "/work", label: "ภาพรวมงาน", icon: ListChecks },
       { href: "/work/tasks/new", label: "สั่งงาน", icon: Plus },
+      { href: "/work/search", label: "ค้นหางาน", icon: Search },
       { href: "/work/notifications", label: "แจ้งเตือน", icon: Bell },
       { href: "/work/performance", label: "ผลงาน / ทีม", icon: TrendingUp },
       { href: "/work/routines", label: "งานประจำ", icon: Repeat },

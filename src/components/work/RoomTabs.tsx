@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NotifBell } from "./NotifBell";
+import { TaskSearchBox } from "./TaskSearchBox";
 import { MessageCircle, ListChecks, Truck, CalendarDays, CalendarRange, StickyNote, Images, Gift } from "lucide-react";
 
 export type RoomTab = "tasks" | "chat" | "calendar" | "notes" | "gallery" | "corporate";
@@ -17,7 +18,7 @@ export function RoomTabs({ roomKey, tab }: { roomKey: string; tab: RoomTab | str
       {roomKey === "teamwork" && <Link href="/work/company-calendar" className={cls(false)}><CalendarRange size={16} /> ปฏิทินบริษัท</Link>}
       {roomKey === "operation" && <Link href="/work/rooms/operation/corporate" className={cls(tab === "corporate")}><Gift size={16} /> Corporate</Link>}
       {roomKey === "sw-room" && <Link href="/work/deliveries" className={cls(false)}><Truck size={16} /> ตารางส่งห้าง</Link>}
-      <span className="sm:ml-auto"><NotifBell /></span>
+      <span className="sm:ml-auto flex gap-2"><TaskSearchBox className="w-56" /><NotifBell /></span>
     </div>
   );
 }
