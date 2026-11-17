@@ -7,6 +7,7 @@ import { uploadChatFile, CHAT_MAX_BYTES } from "@/lib/work/upload";
 import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 import { ShareFileButton } from "@/components/ShareFileButton";
+import { toggleAck, messageAcks } from "@/app/(app)/work/actions";
 
 export interface ChatMember { employee_id: string; label: string; first_name: string; isUser?: boolean }   // isUser = id เป็น app_user (ผู้บริหารที่ไม่มีประวัติพนักงาน)
 export interface Reader { user_id: string; name: string; last_read_at: string }
@@ -144,6 +145,29 @@ export function ChatBox({
     document.addEventListener("visibilitychange", onVis);
     return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
   }, []);
+  // ปุ่มรับทราบ (0065)
+  const ackKind: "room" | "comment" | null = table === "work_room_messages" ? "room" : table === "work_comments" ? "comment" : null;
+  const [acks, setAcks] = useState<Record<string, { user_id: string; name: string }[]>>({});
+  const [ackOpen, setAckOpen] = useState<string | null>(null);
+  const idsKey = messages.filter((m) => (m as { kind?: string }).kind !== "status").map((m) => m.id).slice(-150).join(",");
+  useEffect(() => {
+    if (!ackKind || !idsKey) return;
+    let alive = true;
+    const load = () => messageAcks(ackKind, idsKey.split(",")).then((rows) => {
+      if (!alive) return;
+      const g: Record<string, { user_id: string; name: string }[]> = {};
+      for (const x of rows) (g[x.message_id] = g[x.message_id] ?? []).push({ user_id: x.user_id, name: x.name });
+      setAcks(g);
+    }).catch(() => {});
+    load(); const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [ackKind, idsKey]);
+  function ack(m: ChatMessage) {
+    if (!ackKind) return;
+    const had = (acks[m.id] ?? []).some((x) => x.user_id === meId);
+    setAcks((c) => ({ ...c, [m.id]: had ? (c[m.id] ?? []).filter((x) => x.user_id !== meId) : [...(c[m.id] ?? []), { user_id: meId, name: "คุณ" }] }));
+    toggleAck(ackKind, m.id).then((r) => { if ("error" in r && r.error) setErr(r.error); }).catch(() => {});
+  }
   const seenBy = (m: ChatMessage) => readers.filter((x) => x.user_id !== m.author_id && new Date(x.last_read_at).getTime() >= new Date(m.created_at).getTime());
 
   function pick(list: FileList | File[] | null | undefined) {
@@ -221,6 +245,9 @@ export function ChatBox({
                   <span>{fmtDateTime(m.created_at)}</span>
                   <button type="button" onClick={() => { setReplyTo(m); taRef.current?.focus(); }} className="flex items-center gap-1 underline" title="ตอบกลับข้อความนี้"><Reply size={11} /> ตอบกลับ</button>
                   {(m.image_url || m.file_url) && <ShareFileButton url={(m.image_url || m.file_url)!} name={m.file_name} />}
+                  {ackKind && !mine && (() => { const on = (acks[m.id] ?? []).some((x) => x.user_id === meId); return (
+                    <button type="button" onClick={() => ack(m)} className={`rounded-full px-2 py-0.5 border font-semibold ${on ? "bg-green/15 border-green/40 text-green" : "border-purple/40 text-purple hover:bg-purple hover:text-white"}`} title={on ? "กดอีกครั้งเพื่อยกเลิก" : "กดรับทราบ ไม่ต้องพิมพ์"}>{on ? "✓ รับทราบแล้ว" : "👍 รับทราบ"}</button>); })()}
+                  {ackKind && (acks[m.id]?.length ?? 0) > 0 && <button type="button" onClick={() => setAckOpen(ackOpen === m.id ? null : m.id)} className="underline" title={(acks[m.id] ?? []).map((x) => x.name).join(", ")}>👍 {acks[m.id]!.length}</button>}
                   {m.task_id ? <a href={`/work/tasks/${m.task_id}`} className="underline">→ งาน</a> : makeTaskHref && (
                     table === "work_room_messages" && (m.mentions?.length ? m.mentions : []).length > 0 && !(m.mentions!.length > 2 && isAll(m.body ?? ""))
                       ? m.mentions!.filter((emp) => !members.find((x) => x.employee_id === emp)?.isUser).map((emp) => <a key={emp} href={makeTaskHref(m, emp)} className="flex items-center gap-1 underline font-semibold" title="สั่งงานให้คนนี้"><ListPlus size={11} /> สั่งงานให้ {labelOf(emp) || "คนที่ถูกเอ่ยถึง"}</a>)
@@ -229,6 +256,7 @@ export function ChatBox({
                   {loadReads && (() => { const sb = seenBy(m); return <button type="button" onClick={() => setSeenOpen(seenOpen === m.id ? null : m.id)} className="flex items-center gap-1 underline" title="ใครอ่านแล้วบ้าง"><Eye size={11} /> {sb.length ? `อ่านแล้ว ${sb.length}` : "ยังไม่มีคนอ่าน"}</button>; })()}
                   {mine && <button onClick={() => start(() => onDelete(m.id))} className="hover:text-red" title="ลบ"><Trash2 size={11} /></button>}
                 </div>
+                {ackOpen === m.id && (acks[m.id]?.length ?? 0) > 0 && <div className={`mt-1.5 rounded-lg px-2 py-1.5 text-[13px] ${mine ? "bg-white/15 text-white" : "bg-cream text-ink"}`}>👍 รับทราบ: {acks[m.id]!.map((x) => x.name).join(", ")}</div>}
                 {seenOpen === m.id && <div className={`mt-1.5 rounded-lg px-2 py-1.5 text-[13px] ${mine ? "bg-white/15 text-white" : "bg-cream text-ink"}`}>
                   {seenBy(m).length ? seenBy(m).map((x) => <div key={x.user_id} className="flex justify-between gap-3"><span>✓ {x.name}</span><span className="opacity-70">{fmtDateTime(x.last_read_at)}</span></div>) : <div className="opacity-80">ยังไม่มีใครเปิดอ่าน</div>}
                 </div>}

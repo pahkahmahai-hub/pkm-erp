@@ -769,3 +769,19 @@ export async function decidePostpone(id: string, approve: boolean, formData: For
   revalidatePath(`/work/tasks/${id}`);
   redirect(`/work/tasks/${id}`);
 }
+
+/** ปุ่มรับทราบในแชท/คอมเมนต์ (0065) */
+export async function toggleAck(kind: "room" | "comment", messageId: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_ack", { p_kind: kind, p_msg: messageId });
+  if (error) return { error: error.message };
+  return { on: !!data };
+}
+export async function messageAcks(kind: "room" | "comment", ids: string[]) {
+  await getSession();
+  if (!ids.length) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("message_acks", { p_kind: kind, p_ids: ids });
+  return (data ?? []) as { message_id: string; user_id: string; name: string; created_at: string }[];
+}
