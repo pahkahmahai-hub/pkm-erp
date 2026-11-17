@@ -7,6 +7,7 @@ import { uploadRoomFiles } from "@/lib/work/upload";
 import { addCorpItemImages, approveCorpImage, unapproveCorpImage, deleteCorpImage } from "@/app/(app)/work/actions";
 import { IMAGE_KINDS, type CorpImage, type ImageKind } from "@/lib/work/corpSpec";
 import { CameraButton } from "@/components/CameraButton";
+import { Lightbox } from "@/components/Lightbox";
 
 /** รูปของรายการสินค้า แยกตามประเภท · อัปโหลด / ลูกค้าคอนเฟิร์ม (ล็อกเข้า Spec Sheet) */
 export function CorpItemImages({ itemId, orderId, roomId, images, canCorp, canManage, meId }: { itemId: string; orderId: string; roomId: string; images: CorpImage[]; canCorp: boolean; canManage: boolean; meId: string }) {
@@ -17,6 +18,7 @@ export function CorpItemImages({ itemId, orderId, roomId, images, canCorp, canMa
   const [approving, setApproving] = useState<CorpImage | null>(null);
   const [note, setNote] = useState("");
   const [, start] = useTransition();
+  const [lb, setLb] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const evRef = useRef<HTMLInputElement>(null);
   const list = images.filter((i) => i.kind === kind);
@@ -60,7 +62,7 @@ export function CorpItemImages({ itemId, orderId, roomId, images, canCorp, canMa
       <div className="flex flex-wrap gap-2">
         {list.map((im) => (
           <div key={im.id} className={`relative w-28 rounded-xl overflow-hidden border-2 ${im.status === "approved" ? "border-green" : "border-line"}`}>
-            <a href={im.url} target="_blank" rel="noopener" className="block h-28 bg-cream">
+            <a href={im.url} target="_blank" rel="noopener" className="block h-28 bg-cream" onClick={(e) => { e.preventDefault(); setLb(list.indexOf(im)); }}>
               {isImg(im.url) ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={im.url} alt="" className="h-full w-full object-cover" /> : <span className="h-full grid place-items-center text-xs p-2 text-center"><FileText size={20} />{im.caption ?? "ไฟล์"}</span>}
             </a>
             <div className="p-1 text-[10px] space-y-1">
@@ -82,6 +84,7 @@ export function CorpItemImages({ itemId, orderId, roomId, images, canCorp, canMa
         </div>
       </div>
       {err && <div className="text-xs text-red">{err}</div>}
+      {lb !== null && <Lightbox items={list.map((i) => ({ url: i.url, caption: i.status === "approved" ? "✓ ลูกค้าคอนเฟิร์ม" : i.caption }))} index={lb} onIndex={setLb} onClose={() => setLb(null)} />}
       {approving && (
         <div className="fixed inset-0 z-50 bg-ink/50 grid place-items-center p-4" onClick={() => setApproving(null)}>
           <div className="bg-white rounded-2xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>

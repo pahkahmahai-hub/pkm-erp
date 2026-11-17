@@ -8,6 +8,7 @@ import { fmtDateTime } from "@/lib/format";
 import { fetchNewer } from "@/app/(app)/work/actions";
 import { ShareFileButton } from "@/components/ShareFileButton";
 import { toggleAck, messageAcks } from "@/app/(app)/work/actions";
+import { Lightbox } from "@/components/Lightbox";
 
 export interface ChatMember { employee_id: string; label: string; first_name: string; isUser?: boolean }   // isUser = id เป็น app_user (ผู้บริหารที่ไม่มีประวัติพนักงาน)
 export interface Reader { user_id: string; name: string; last_read_at: string }
@@ -145,6 +146,9 @@ export function ChatBox({
     document.addEventListener("visibilitychange", onVis);
     return () => { alive = false; clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
   }, []);
+  // ดูรูปในแชทแบบเลื่อนก่อนหน้า/ถัดไป
+  const [lb, setLb] = useState<number | null>(null);
+  const chatImgs = messages.filter((m) => m.image_url).map((m) => ({ url: m.image_url!, caption: m.body }));
   // ปุ่มรับทราบ (0065)
   const ackKind: "room" | "comment" | null = table === "work_room_messages" ? "room" : table === "work_comments" ? "comment" : null;
   const [acks, setAcks] = useState<Record<string, { user_id: string; name: string }[]>>({});
@@ -239,7 +243,7 @@ export function ChatBox({
                     <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span><span className="block truncate">{snippet(q)}</span>
                   </button>); })()}
                 {m.body && <div className="whitespace-pre-wrap break-words">{renderBody(m.body)}</div>}
-                {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
+                {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download onClick={(e) => { e.preventDefault(); setLb(chatImgs.findIndex((x) => x.url === m.image_url)); }}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
                 {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" download className={`mt-1 flex items-center gap-2 underline ${mine ? "text-white" : "text-purple"}`}><Download size={14} /> {m.file_name ?? "ไฟล์แนบ"}</a>}
                 <div className={`text-[12px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <span>{fmtDateTime(m.created_at)}</span>
@@ -307,6 +311,7 @@ export function ChatBox({
           <button type="button" onClick={send} disabled={pending || (!body.trim() && !files.length)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
         </div>
       </div>
+      {lb !== null && lb >= 0 && <Lightbox items={chatImgs} index={lb} onIndex={setLb} onClose={() => setLb(null)} />}
     </div>
   );
 }
