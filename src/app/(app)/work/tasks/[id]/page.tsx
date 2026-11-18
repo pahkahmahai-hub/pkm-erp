@@ -1,4 +1,5 @@
 import { CoAssigneePicker } from "@/components/work/CoAssigneePicker";
+import { Linkify } from "@/components/Linkify";
 import { SwDeadlineStrip } from "@/components/work/TaskCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -120,7 +121,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               {isSw && !["accepted", "cancelled"].includes(task.status) && (
                 <div><div className="text-xs text-ink-soft mb-1">กำหนด 3 ระยะ — ช่องสีเข้ม = ระยะที่ต้องตามตอนนี้ (แดง = เลยกำหนด · ~ = คาดการณ์ นับ 7 วันจริงเมื่อกด “สินค้าถึงแล้ว”)</div><SwDeadlineStrip t={task} size="md" /></div>
               )}
-              {task.description && <p className="text-sm whitespace-pre-wrap">{task.description}</p>}
+              {task.description && <p className="text-sm whitespace-pre-wrap break-words"><Linkify text={task.description} /></p>}
               {task.done_note && <div className="text-sm rounded-xl bg-teal/10 px-3 py-2"><b>บันทึกตอนส่งงาน:</b> {task.done_note}</div>}
               {task.review_note && <div className="text-sm rounded-xl bg-red/10 px-3 py-2"><b>หมายเหตุจากผู้ตรวจ:</b> {task.review_note}</div>}
               {isOwner && <div className="flex gap-3 text-xs"><Link href={`/work/tasks/${id}?edit=1`} className="text-purple font-semibold">แก้ไขรายละเอียด</Link></div>}

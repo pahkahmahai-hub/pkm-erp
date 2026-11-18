@@ -9,6 +9,8 @@ import { fetchNewer } from "@/app/(app)/work/actions";
 import { ShareFileButton } from "@/components/ShareFileButton";
 import { toggleAck, messageAcks } from "@/app/(app)/work/actions";
 import { Lightbox } from "@/components/Lightbox";
+import { linkify, youtubeId } from "@/components/Linkify";
+import { Play } from "lucide-react";
 
 export interface ChatMember { employee_id: string; label: string; first_name: string; isUser?: boolean }   // isUser = id เป็น app_user (ผู้บริหารที่ไม่มีประวัติพนักงาน)
 export interface Reader { user_id: string; name: string; last_read_at: string }
@@ -62,9 +64,9 @@ export function ChatBox({
   const labelOf = (empId: string) => members.find((m) => m.employee_id === empId)?.label ?? "";
   const renderBody = (text: string) => {
     const labels = [...members.map((m) => m.label), "ทุกคน", "all", "everyone"].filter(Boolean).sort((a, b) => b.length - a.length);
-    if (!labels.length) return text;
+    if (!labels.length) return linkify(text);
     const re = new RegExp(`(@(?:${labels.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")}))`, "g");
-    return text.split(re).map((part, i) => (part.startsWith("@") && labels.includes(part.slice(1)) ? <mark key={i} className="bg-yellow/40 text-inherit rounded px-0.5 font-semibold">{part}</mark> : part));
+    return text.split(re).map((part, i) => (part.startsWith("@") && labels.includes(part.slice(1)) ? <mark key={i} className="bg-yellow/40 text-inherit rounded px-0.5 font-semibold">{part}</mark> : linkify(part, `p${i}-`)));
   };
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
   const [body, setBody] = useState("");
@@ -256,6 +258,13 @@ export function ChatBox({
                     <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span><span className="block truncate">{snippet(q)}</span>
                   </button>); })()}
                 {m.body && <div className="whitespace-pre-wrap break-words">{renderBody(m.body)}</div>}
+                {m.body && youtubeId(m.body) && (
+                  <a href={`https://www.youtube.com/watch?v=${youtubeId(m.body)}`} target="_blank" rel="noopener noreferrer" className="mt-1 block relative w-64 max-w-full rounded-xl overflow-hidden ring-1 ring-line">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`https://i.ytimg.com/vi/${youtubeId(m.body)}/hqdefault.jpg`} alt="YouTube" className="w-full aspect-video object-cover" />
+                    <span className="absolute inset-0 grid place-items-center"><span className="rounded-full bg-red text-white p-3 shadow-lg"><Play size={20} fill="currentColor" /></span></span>
+                  </a>
+                )}
                 {m.image_url && <a href={m.image_url} target="_blank" rel="noopener" download onClick={(e) => { e.preventDefault(); setLb(chatImgs.findIndex((x) => x.url === m.image_url)); }}>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={m.image_url} alt="" className="mt-1 rounded-xl max-h-72 object-cover" /></a>}
                 {m.file_url && <a href={m.file_url} target="_blank" rel="noopener" download className={`mt-1 flex items-center gap-2 underline ${mine ? "text-white" : "text-purple"}`}><Download size={14} /> {m.file_name ?? "ไฟล์แนบ"}</a>}
                 <div className={`text-[12px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 ${mine ? "text-white/70" : "text-ink-soft"}`}>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Linkify } from "@/components/Linkify";
 import { notFound, redirect } from "next/navigation";
 import { Pencil, Truck, Trash2, History, AlertTriangle } from "lucide-react";
 import { getSession } from "@/lib/session";
@@ -117,8 +118,8 @@ export default async function CorpOrderPage({ params, searchParams }: { params: 
               {order.customer_tax_id && <Item label="เลขผู้เสียภาษี">{order.customer_tax_id}</Item>}
               {order.contact_email && <Item label="อีเมล">{order.contact_email}</Item>}
             </dl>
-            {order.detail && <div><div className="text-xs text-ink-soft">รายละเอียดสินค้า / Packaging</div><p className="whitespace-pre-wrap">{order.detail}</p></div>}
-            {order.note && <div className="rounded-xl bg-cream px-3 py-2 whitespace-pre-wrap"><b>หมายเหตุ:</b> {order.note}</div>}
+            {order.detail && <div><div className="text-xs text-ink-soft">รายละเอียดสินค้า / Packaging</div><p className="whitespace-pre-wrap break-words"><Linkify text={order.detail} /></p></div>}
+            {order.note && <div className="rounded-xl bg-cream px-3 py-2 whitespace-pre-wrap"><b>หมายเหตุ:</b> <Linkify text={order.note} /></div>}
           </div>
 
           <CorpSpecSection orderId={id} roomId={acc.room.id} items={(items ?? []) as CorpItem[]} steps={(steps ?? []) as CorpStep[]} images={(imgs ?? []) as CorpImage[]} people={people}

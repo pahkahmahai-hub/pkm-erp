@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Linkify } from "@/components/Linkify";
 import { notFound, redirect } from "next/navigation";
 import { Plus, Pin, Paperclip } from "lucide-react";
 import { getSession } from "@/lib/session";
@@ -40,7 +41,7 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
           return (
             <Link key={n.id} href={`/work/rooms/${key}/notes/${n.id}`} className="block break-inside-avoid rounded-2xl border border-line p-4 shadow-sm hover:shadow-md transition" style={{ background: n.color }}>
               <div className="flex items-start gap-2"><h2 className="font-display font-bold flex-1 leading-snug">{n.title}</h2>{n.pinned && <Pin size={14} className="text-purple shrink-0 mt-1" />}</div>
-              {n.body && <p className="text-sm text-ink/80 whitespace-pre-wrap line-clamp-6 mt-1.5">{n.body}</p>}
+              {n.body && <p className="text-sm text-ink/80 whitespace-pre-wrap line-clamp-6 mt-1.5 break-words"><Linkify text={n.body} /></p>}
               {imgs.length > 0 && <div className={`mt-3 grid gap-1 ${imgs.length === 1 ? "grid-cols-1" : "grid-cols-3"}`}>{imgs.slice(0, imgs.length === 1 ? 1 : 3).map((f) => /* eslint-disable-next-line @next/next/no-img-element */ <img key={f.id} src={f.url} alt="" className={`w-full rounded-lg object-cover ${imgs.length === 1 ? "max-h-48" : "aspect-square"}`} />)}</div>}
               <div className="mt-3 flex items-center justify-between text-[11px] text-ink-soft"><span>{n.app_users?.display_name ?? n.app_users?.email ?? ""} · {fmtDateTime(n.updated_at)}</span><span className="flex items-center gap-2">{imgs.length > 3 && `+${imgs.length - 3} รูป`}{others > 0 && <span className="flex items-center gap-0.5"><Paperclip size={11} />{others}</span>}</span></div>
             </Link>);
