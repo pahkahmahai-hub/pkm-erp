@@ -10,7 +10,7 @@ import { Header } from "@/components/ui";
 import { fmtDate, fmtDateTime, fmtDateShort, todayBkk } from "@/lib/format";
 import { TASK_SELECT, loadDirectory, fillEmployees, roomRights, roomFamilyIds, userNames } from "@/lib/work/queries";
 import { STATUS_BADGE, STATUS_TH, statusLabel, type TaskStatus, type Task, type Checklist, type Comment, type RoomMember, type TaskFile, type Topic, effectiveDue } from "@/lib/work/types";
-import { swStepBack, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask, forwardTask, decideForward, requestPostpone, decidePostpone } from "../../actions";
+import { swStepBack, undoTaskStatus, setTaskStatus, updateTask, deleteTask, toggleChecklist, addChecklistItem, deleteChecklistItem, updateChecklistItem, moveChecklistItem, addTaskFiles, deleteTaskFile, markTaskNotificationsRead, markTaskRead, renameTask, forwardTask, decideForward, requestPostpone, decidePostpone } from "../../actions";
 import { Storyboard } from "./Storyboard";
 import { Thread } from "./Thread";
 import { ConfirmDelete } from "@/components/stock/ConfirmDelete";
@@ -202,6 +202,12 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
                   <button formAction={setTaskStatus.bind(null, id, "returned")} className="btn-danger">ตีกลับ</button>
                 </div>
                 {isSw && !canStage && <p className="text-[11px] text-ink-soft">ขั้นส่งห้าง (เตรียมส่ง → ส่งแล้ว → ถึงแล้ว → อัพเข้าระบบ) กดได้โดยหัวหน้าห้อง SW และผู้บริหาร</p>}
+              </form>
+            )}
+            {/* ↩ กดผิด: ย้อนสถานะล่าสุด (0068) */}
+            {((task.status === "done" && (isOwner || isAssignee)) || (isOwner && (task.status === "returned" || task.status === "cancelled" || (task.status === "accepted" && !isSw)))) && (
+              <form action={undoTaskStatus.bind(null, id)}>
+                <button className="btn-outline w-full text-xs py-1.5">↩ {task.status === "done" ? "ยกเลิก “ทำเสร็จแล้ว” (กลับเป็นกำลังทำ)" : task.status === "accepted" ? "ยกเลิก “ตรวจรับ” (กลับเป็นรอตรวจรับ)" : task.status === "returned" ? "ยกเลิก “ตีกลับ” (กลับเป็นรอตรวจรับ)" : "ยกเลิก “ยกเลิกงาน” (เปิดงานใหม่)"}</button>
               </form>
             )}
             {isSw && canStage && task.status === "accepted" && (

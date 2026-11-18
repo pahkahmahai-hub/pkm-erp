@@ -47,6 +47,16 @@ export async function setTaskStatus(id: string, status: string, formData?: FormD
   revalidatePath("/work");
 }
 
+/** ↩ ยกเลิกการกดสถานะล่าสุด (กดผิด) — 0068 */
+export async function undoTaskStatus(id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("undo_task_status", { p_task: id });
+  if (error) redirect(`/work/tasks/${id}?error=${encodeURIComponent(error.message)}`);
+  revalidatePath(`/work/tasks/${id}`);
+  revalidatePath("/work");
+}
+
 /** SW ROOM: ย้อนขั้นส่งห้างกลับ 1 ขั้น (0030) */
 export async function swStepBack(id: string, formData?: FormData) {
   await getSession();
