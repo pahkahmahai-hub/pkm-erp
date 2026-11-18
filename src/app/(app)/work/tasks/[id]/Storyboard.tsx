@@ -4,11 +4,23 @@ import { useState } from "react";
 import { Images, Trash2, Upload, Film, Camera } from "lucide-react";
 import type { TaskFile } from "@/lib/work/types";
 import { Lightbox } from "@/components/Lightbox";
+import { uploadChatFile } from "@/lib/work/upload";
+import { postComment } from "@/app/(app)/work/actions";
 
 const isImg = (u: string) => /\.(png|jpe?g|gif|webp|avif|heic)$/i.test(u.split("?")[0]);
 
 export function Storyboard({ taskId, files, canEdit, addAction, deleteAction }: { taskId: string; files: TaskFile[]; canEdit: boolean; addAction: (fd: FormData) => Promise<void>; deleteAction: (taskId: string, fileId: string) => Promise<void> }) {
   const [idx, setIdx] = useState<number | null>(null);
+  // วาด/แก้ไขรูปแล้วส่งเป็นคอมเมนต์ในงานนี้
+  async function sendEdited(file: File, note: string, i: number): Promise<string | void> {
+    const up = await uploadChatFile(`chat/${taskId}`, file);
+    const fd = new FormData();
+    fd.set("body", `✏️ แก้ไข Storyboard รูปที่ ${i + 1}${files[i]?.caption ? ` (${files[i].caption})` : ""}${note ? `\n${note}` : ""}`);
+    fd.set("mentions", "[]");
+    fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", "1");
+    const res = await postComment(taskId, fd);
+    if (res.error) return res.error;
+  }
   return (
     <div className="card p-5 space-y-3">
       <div className="flex items-center justify-between"><h2 className="font-display font-bold flex items-center gap-2"><Images size={16} /> Storyboard / รูปอ้างอิง</h2><span className="text-xs text-ink-soft">{files.length} ไฟล์</span></div>
@@ -34,7 +46,7 @@ export function Storyboard({ taskId, files, canEdit, addAction, deleteAction }: 
           <button className="btn-primary py-2"><Upload size={14} /> อัปโหลด</button>
         </form>
       )}
-      {idx !== null && <Lightbox items={files.map((f) => ({ url: f.url, name: f.name, caption: f.caption }))} index={idx} onIndex={setIdx} onClose={() => setIdx(null)} />}
+      {idx !== null && <Lightbox items={files.map((f) => ({ url: f.url, name: f.name, caption: f.caption }))} index={idx} onIndex={setIdx} onClose={() => setIdx(null)} onSendEdited={sendEdited} sendLabel="ส่งเข้าคอมเมนต์" />}
     </div>
   );
 }

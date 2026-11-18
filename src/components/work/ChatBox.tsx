@@ -148,7 +148,20 @@ export function ChatBox({
   }, []);
   // ดูรูปในแชทแบบเลื่อนก่อนหน้า/ถัดไป
   const [lb, setLb] = useState<number | null>(null);
-  const chatImgs = messages.filter((m) => m.image_url).map((m) => ({ url: m.image_url!, caption: m.body }));
+  const chatImgMsgs = messages.filter((m) => m.image_url);
+  const chatImgs = chatImgMsgs.map((m) => ({ url: m.image_url!, caption: m.body }));
+  // วาด/แก้ไขรูปแล้วส่งกลับเข้าแชทนี้ (ตอบกลับข้อความรูปเดิม)
+  async function sendEdited(file: File, note: string, i: number): Promise<string | void> {
+    const up = await uploadChatFile(`chat/${filterValue}`, file);
+    const fd = new FormData();
+    fd.set("body", note ? `✏️ ${note}` : "✏️ แก้ไขรูป");
+    fd.set("mentions", JSON.stringify(mentionedIds(note)));
+    fd.set("uploaded_url", up.url); fd.set("uploaded_name", up.name); fd.set("uploaded_is_image", "1");
+    const orig = chatImgMsgs[i]; if (orig) fd.set("reply_to", orig.id);
+    const res = await onPost(fd);
+    if (res.error) return res.error;
+    if (res.row) addMessages([res.row as unknown as ChatMessage]);
+  }
   // ปุ่มรับทราบ (0065)
   const ackKind: "room" | "comment" | null = table === "work_room_messages" ? "room" : table === "work_comments" ? "comment" : null;
   const [acks, setAcks] = useState<Record<string, { user_id: string; name: string }[]>>({});
@@ -311,7 +324,7 @@ export function ChatBox({
           <button type="button" onClick={send} disabled={pending || (!body.trim() && !files.length)} className="btn-primary px-3.5 ml-auto sm:ml-0 sm:mb-4"><Send size={16} /><span className="sm:hidden ml-1">ส่ง</span></button>
         </div>
       </div>
-      {lb !== null && lb >= 0 && <Lightbox items={chatImgs} index={lb} onIndex={setLb} onClose={() => setLb(null)} />}
+      {lb !== null && lb >= 0 && <Lightbox items={chatImgs} index={lb} onIndex={setLb} onClose={() => setLb(null)} onSendEdited={sendEdited} />}
     </div>
   );
 }
