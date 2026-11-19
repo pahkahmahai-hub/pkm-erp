@@ -183,7 +183,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           <div className="card p-5 space-y-3">
             <h2 className="font-display font-bold">ดำเนินการ</h2>
             {(isAssignee || isOwner) && (task.status === "open" || task.status === "returned") && (
-              <form action={setTaskStatus.bind(null, id, "in_progress")}><button className="btn-outline w-full">เริ่มทำงาน</button></form>
+              <form action={setTaskStatus.bind(null, id, "in_progress")}><button className="btn-base w-full bg-green text-white hover:brightness-95">▶ เริ่มทำงาน</button></form>
             )}
             {(isAssignee || isOwner) && ["open", "in_progress", "returned"].includes(task.status) && (
               <form action={setTaskStatus.bind(null, id, "done")} className="space-y-2">
