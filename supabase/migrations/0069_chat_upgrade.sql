@@ -212,7 +212,7 @@ grant execute on function public.edit_message(text, uuid, text) to authenticated
 -- (6) ปักหมุดข้อความในห้อง (เจ้าของข้อความ · หัวหน้าห้อง · ผู้บริหาร)
 -- ---------------------------------------------------------------------
 alter table public.work_room_messages add column if not exists pinned_at timestamptz;
-alter table public.work_room_messages add column if not exists pinned_by uuid references public.app_users(id) on delete set null;
+alter table public.work_room_messages add column if not exists pinned_by uuid;   -- ไม่ผูก FK: ถ้าผูกจะมีลิงก์ไป app_users 2 เส้น ทำให้ embed app_users(...) ใช้ไม่ได้ (ดู 0070)
 create index if not exists work_room_messages_pinned on public.work_room_messages (room_id, pinned_at desc) where pinned_at is not null;
 
 create or replace function public.pin_message(p_msg uuid, p_on boolean) returns void
