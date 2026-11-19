@@ -9,9 +9,11 @@ import {
   LayoutDashboard, MapPin, CalendarDays, Clock, Users, FileBarChart2, Settings, LogOut, Menu, X, BadgeCheck, LayoutGrid,
   Boxes, PackagePlus, PackageMinus, AlertTriangle, Scissors, BookUser, ExternalLink, History, ClockAlert, ListChecks, Bell, Repeat, Plus,
   ShoppingCart, FileText, Receipt, Wallet, Globe, Building2, Upload, Banknote, Factory, Layers, Truck, CalendarRange, Store, TrendingUp, Search,
+  AtSign,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { RoomChatShortcuts } from "./work/RoomChatShortcuts";
+import { BadgeSync } from "./BadgeSync";
 import type { SessionInfo } from "@/lib/types";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean; external?: boolean };
@@ -63,6 +65,7 @@ NAV.work = [
       { href: "/work/tasks/new", label: "สั่งงาน", icon: Plus },
       { href: "/work/search", label: "ค้นหางาน", icon: Search },
       { href: "/work/notifications", label: "แจ้งเตือน", icon: Bell },
+      { href: "/work/notifications?tab=mentions", label: "ข้อความที่เรียกฉัน", icon: AtSign },
       { href: "/work/performance", label: "ผลงาน / ทีม", icon: TrendingUp },
       { href: "/work/routines", label: "งานประจำ", icon: Repeat },
       { href: "/work/deliveries", label: "ตารางส่งห้าง", icon: Truck },
@@ -216,7 +219,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
             <form action="/auth/signout" method="post"><button className="btn-outline py-1.5 px-3"><LogOut size={14} /> ออก</button></form>
           </div>
         </header>
-        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW />
+        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW /><BadgeSync />
         <main className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto">{children}</main>
         <footer className="px-6 py-4 text-[11px] text-ink-soft">PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful</footer>
       </div>
@@ -255,7 +258,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
           <button onClick={() => setOpen(true)} aria-label="เปิดเมนู" className="text-purple"><Menu size={22} /></button>
           <BrandLogo />
         </header>
-        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW />
+        <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW /><BadgeSync />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto">{children}</main>
         <footer className="px-6 py-4 text-[11px] text-ink-soft">
           PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful

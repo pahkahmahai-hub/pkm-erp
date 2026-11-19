@@ -7,9 +7,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const s = await getSession();
   const supabase = await createClient();
-  const { data: n } = await supabase.from("work_notifications").select("id, task_id, work_rooms(key)").eq("id", id).eq("user_id", s.appUser.id).maybeSingle();
+  const { data: n } = await supabase.from("work_notifications").select("id, task_id, link, work_rooms(key)").eq("id", id).eq("user_id", s.appUser.id).maybeSingle();
   if (n) await supabase.from("work_notifications").update({ read_at: new Date().toISOString() }).eq("id", id).is("read_at", null);
-  const x = n as { task_id: string | null; work_rooms: { key: string } | null } | null;
-  const to = x?.task_id ? `/work/tasks/${x.task_id}` : x?.work_rooms?.key ? `/work/rooms/${x.work_rooms.key}?tab=chat` : "/work/notifications";
+  const x = n as { task_id: string | null; link?: string | null; work_rooms: { key: string } | null } | null;
+  const to = x?.link?.startsWith("/") ? x.link : x?.task_id ? `/work/tasks/${x.task_id}` : x?.work_rooms?.key ? `/work/rooms/${x.work_rooms.key}?tab=chat` : "/work/notifications";
   return NextResponse.redirect(new URL(to, req.url));
 }

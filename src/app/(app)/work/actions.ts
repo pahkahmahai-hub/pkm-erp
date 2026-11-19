@@ -794,7 +794,71 @@ export async function messageAcks(kind: "room" | "comment", ids: string[]) {
   if (!ids.length) return [];
   const supabase = await createClient();
   const { data } = await supabase.rpc("message_acks", { p_kind: kind, p_ids: ids });
-  return (data ?? []) as { message_id: string; user_id: string; name: string; created_at: string }[];
+  return (data ?? []) as { message_id: string; user_id: string; name: string; created_at: string; emoji?: string | null }[];
+}
+
+// ---------------- แชทแบบไลน์ (0069) ----------------
+/** กดอีโมจิ / ยกเลิก */
+export async function toggleReaction(kind: "room" | "comment", messageId: string, emoji: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_reaction", { p_kind: kind, p_msg: messageId, p_emoji: emoji });
+  if (error) return { error: error.message.includes("toggle_reaction") ? "ยังไม่ได้รัน SQL 0069" : error.message };
+  return { on: !!data };
+}
+/** แก้ไขข้อความของตัวเอง */
+export async function editMessage(kind: "room" | "comment", messageId: string, body: string): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("edit_message", { p_kind: kind, p_msg: messageId, p_body: body });
+  if (error) return { error: error.message.includes("edit_message") ? "ยังไม่ได้รัน SQL 0069" : error.message };
+  return {};
+}
+/** ปักหมุด / เลิกปักหมุดข้อความในห้อง */
+export async function pinMessage(messageId: string, on: boolean): Promise<{ error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("pin_message", { p_msg: messageId, p_on: on });
+  if (error) return { error: error.message.includes("pin_message") ? "ยังไม่ได้รัน SQL 0069" : error.message };
+  return {};
+}
+/** ข้อความที่ปักหมุดในห้อง */
+export async function pinnedMessages(roomId: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.from("work_room_messages").select("*, app_users(display_name, email)").eq("room_id", roomId).not("pinned_at", "is", null).order("pinned_at", { ascending: false }).limit(5);
+  return (data ?? []) as Record<string, unknown>[];
+}
+/** ค้นข้อความในห้อง / ในงาน (ย้อนหลังทั้งหมด) */
+export async function searchMessages(table: "work_comments" | "work_room_messages", column: "task_id" | "room_id", value: string, q: string) {
+  await getSession();
+  const term = q.trim().replace(/[%_,()]/g, " ").trim();
+  if (term.length < 2) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select("*, app_users(display_name, email)").eq(column, value)
+    .or(`body.ilike.%${term}%,file_name.ilike.%${term}%`).order("created_at", { ascending: false }).limit(50);
+  return (data ?? []) as Record<string, unknown>[];
+}
+/** ข้อความรอบๆ ข้อความหนึ่ง (กดผลค้นหา / ลิงก์แจ้งเตือนที่เก่ากว่าที่โหลดไว้) */
+export async function messagesAround(table: "work_comments" | "work_room_messages", column: "task_id" | "room_id", value: string, at: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select("*, app_users(display_name, email)").eq(column, value).gte("created_at", at).order("created_at").limit(300);
+  return (data ?? []) as Record<string, unknown>[];
+}
+export async function messageById(table: "work_comments" | "work_room_messages", id: string) {
+  await getSession();
+  const supabase = await createClient();
+  const { data } = await supabase.from(table).select("id, created_at").eq("id", id).maybeSingle();
+  return (data ?? null) as { id: string; created_at: string } | null;
+}
+/** ปิด/เปิดเสียงแจ้งเตือนของห้อง (ถูก @ ยังเด้งเสมอ) */
+export async function toggleRoomMute(roomId: string): Promise<{ muted?: boolean; error?: string }> {
+  await getSession();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_room_mute", { p_room: roomId });
+  if (error) return { error: error.message.includes("toggle_room_mute") ? "ยังไม่ได้รัน SQL 0069" : error.message };
+  return { muted: !!data };
 }
 
 // ---------------- ใบงานสั่งสินค้า (Order Spec, 0066) ----------------

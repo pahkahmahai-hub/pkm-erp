@@ -48,11 +48,13 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
   if (tab === "chat") {
     const { data: msgs } = await supabase.from("work_room_messages").select("*, app_users(display_name, email)").eq("room_id", r.id).order("created_at", { ascending: false }).limit(100);
     await markRoomRead(r.id);
+    const muteRes = await supabase.from("work_room_mutes").select("room_id").eq("room_id", r.id).eq("user_id", session.appUser.id).maybeSingle();
+    const muted = muteRes.error ? null : !!muteRes.data;   // null = ยังไม่ได้รัน 0069
     return (
       <div className="space-y-4">
         <Header crumbs={WORK} title={r.name} sub={r.description ?? undefined} action={<Link href={`/work/tasks/new?room=${r.key}`} className="btn-primary"><Plus size={16} /> สั่งงาน</Link>} />
         <RoomTabs roomKey={key} tab={tab === "chat" ? "chat" : "tasks"} />
-        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} names={await userNames(supabase)} />
+        <RoomChat roomId={r.id} roomKey={r.key} initial={((msgs ?? []) as ChatMessage[]).reverse()} meId={session.appUser.id} members={chatMembers} names={await userNames(supabase)} muted={muted} canPinAll={session.isAdmin || mem.some((m) => m.employee_id === session.employee?.id && m.is_lead)} />
         <p className="text-xs text-ink-soft">สมาชิก: {mem.map((m) => (m.employees?.nickname ?? m.employees?.first_name) + (m.is_lead ? " ★" : "")).join(", ")} · พิมพ์ @ชื่อ เพื่อเอ่ยถึง แล้วกด “สั่งงานให้…” ใต้ข้อความเพื่อมอบหมายเป็นงานสั่ง</p>
       </div>
     );

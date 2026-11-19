@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface Sub { endpoint: string; p256dh: string; auth: string }
-interface Body { secret?: string; subscriptions?: Sub[]; title?: string; body?: string; url?: string; tag?: string }
+interface Body { secret?: string; subscriptions?: Sub[]; title?: string; body?: string; url?: string; tag?: string; urgent?: boolean; badge?: number }
 
 /** เรียกจาก trigger ในฐานข้อมูล (pg_net) ทุกครั้งที่มีแจ้งเตือนใหม่ → ส่ง Web Push ไปทุกเครื่องของผู้รับ */
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const { public_key, private_key, subject } = cfg as { public_key: string; private_key: string; subject: string };
   webpush.setVapidDetails(subject, public_key, private_key);
 
-  const payload = JSON.stringify({ title: b.title ?? "PKM ERP", body: b.body ?? "", url: b.url ?? "/work/notifications", tag: b.tag });
+  const payload = JSON.stringify({ title: b.title ?? "PKM ERP", body: b.body ?? "", url: b.url ?? "/work/notifications", tag: b.tag, urgent: !!b.urgent, badge: typeof b.badge === "number" ? b.badge : undefined });
   const dead: string[] = [], ok: string[] = [];
   await Promise.all(b.subscriptions.slice(0, 20).map(async (s) => {
     try {

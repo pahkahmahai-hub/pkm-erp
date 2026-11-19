@@ -6,14 +6,21 @@ self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : "" }; }
   const title = data.title || "PKM ERP";
-  event.waitUntil(self.registration.showNotification(title, {
+  const jobs = [self.registration.showNotification(title, {
     body: data.body || "มีแจ้งเตือนใหม่",
     icon: "/icon.png",
     badge: "/icon.png",
     tag: data.tag || undefined,
     renotify: !!data.tag,
+    requireInteraction: !!data.urgent,          // ถูก @ → ค้างบนจอจนกว่าจะกด
+    vibrate: data.urgent ? [200, 100, 200, 100, 200] : [120],
     data: { url: data.url || "/work/notifications" },
-  }));
+  })];
+  // เลขแดงบนไอคอนแอป (ถ้าเครื่องรองรับ)
+  if (self.navigator && "setAppBadge" in self.navigator) {
+    jobs.push((typeof data.badge === "number" && data.badge > 0 ? self.navigator.setAppBadge(data.badge) : self.navigator.setAppBadge()).catch(() => {}));
+  }
+  event.waitUntil(Promise.all(jobs));
 });
 
 self.addEventListener("notificationclick", (event) => {
