@@ -91,3 +91,17 @@ export async function userNames(supabase: SupabaseClient): Promise<Record<string
   const { data } = await supabase.rpc("user_names");
   return Object.fromEntries(((data ?? []) as { user_id: string; name: string }[]).map((x) => [x.user_id, x.name]));
 }
+
+/** เติมจำนวนคอมเมนต์ที่ยังไม่อ่าน (วงกลมแดงบนการ์ด) — 0072 · ถ้ายังไม่ได้รัน SQL ก็แค่ไม่โชว์ */
+export async function withUnread<T extends { id: string; unread?: number }>(supabase: SupabaseClient, tasks: T[]): Promise<T[]> {
+  const ids = tasks.map((t) => t.id);
+  if (!ids.length) return tasks;
+  const out = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += 300) {
+    const { data, error } = await supabase.rpc("task_unread_counts", { p_ids: ids.slice(i, i + 300) });
+    if (error) return tasks;
+    for (const r of (data ?? []) as { task_id: string; unread: number }[]) out.set(r.task_id, r.unread);
+  }
+  for (const t of tasks) t.unread = out.get(t.id) ?? 0;
+  return tasks;
+}

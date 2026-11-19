@@ -14,6 +14,7 @@ import {
 import { BrandLogo } from "./BrandLogo";
 import { RoomChatShortcuts } from "./work/RoomChatShortcuts";
 import { BadgeSync } from "./BadgeSync";
+import { WorkTopBar } from "./work/WorkTopBar";
 import type { SessionInfo } from "@/lib/types";
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; admin?: boolean; external?: boolean };
@@ -260,7 +261,7 @@ export function AppShell({ session, children }: { session: SessionInfo; children
           <BrandLogo />
         </header>
         <Suspense fallback={null}><NavFeedback /></Suspense><RegisterSW /><BadgeSync />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto">{seg === "work" && <WorkTopBar />}{children}</main>
         <footer className="px-6 py-4 text-[11px] text-ink-soft">
           PKM ERP · บริษัท ปากาม้า (ไทยแลนด์) จำกัด · Local · Sustainable · Meaningful
         </footer>

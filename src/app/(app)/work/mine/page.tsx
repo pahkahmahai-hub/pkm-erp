@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { Header, type Crumb } from "@/components/ui";
 import { TaskCard } from "@/components/work/TaskCard";
-import { TASK_SELECT, loadDirectory, fillEmployees, isFutureRoutine } from "@/lib/work/queries";
+import { TASK_SELECT, loadDirectory, fillEmployees, isFutureRoutine, withUnread } from "@/lib/work/queries";
 import type { Task, TaskStatus } from "@/lib/work/types";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ export default async function MyRelatedPage({ searchParams }: { searchParams: Pr
     loadDirectory(supabase),
   ]);
   let tasks = fillEmployees((data ?? []) as Task[], dir, "assignee_id").filter((t) => history || !isFutureRoutine(t));
+  if (!history) await withUnread(supabase, tasks);
   const count = (r: Role) => tasks.filter((t) => roles.get(t.id)?.includes(r)).length;
   if (role && role in ROLE_LABEL) tasks = tasks.filter((t) => roles.get(t.id)?.includes(role as Role));
   const note = (t: Task) => (roles.get(t.id) ?? []).map((r) => ROLE_LABEL[r]).join(" · ");

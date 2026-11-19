@@ -376,7 +376,9 @@ export function ChatBox({
                 {(!mine || m.pinned_at) && <div className="text-[13px] font-semibold opacity-70 mb-0.5 flex items-center gap-1">{!mine && authorName(m)}{m.pinned_at && <span className="flex items-center gap-0.5 font-normal"><Pin size={11} /> ปักหมุด</span>}</div>}
                 {m.reply_to && (() => { const q = messages.find((x) => x.id === m.reply_to); return (
                   <button type="button" onClick={() => document.getElementById("msg-" + m.reply_to)?.scrollIntoView({ behavior: "smooth", block: "center" })} className={`block w-full text-left mb-1.5 rounded-lg border-l-2 px-2 py-1 text-[11px] ${mine ? "bg-white/15 border-white/70 text-white/90" : "bg-white/70 border-purple text-ink-soft"}`}>
-                    <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span><span className="block truncate">{snippet(q)}</span>
+                    <span className="font-semibold">{nameOf(q) || "ตอบกลับ"}</span>
+                    {q?.image_url && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={q.image_url} alt="" className="mt-1 mb-0.5 rounded-lg max-h-36 max-w-[60%] object-cover" /></>}
+                    {(q?.body || !q?.image_url) && <span className="block truncate">{snippet(q)}</span>}
                   </button>); })()}
                 {editing?.id === m.id ? (
                   <div className="space-y-1.5">
@@ -440,7 +442,7 @@ export function ChatBox({
       </div>
 
       <div className="mt-4 border-t border-line pt-3 space-y-2">
-        {replyTo && <div className="flex items-start gap-2 rounded-lg bg-lavender/30 border-l-2 border-purple px-3 py-1.5 text-xs"><Reply size={12} className="mt-0.5 text-purple shrink-0" /><div className="min-w-0 flex-1"><div className="font-semibold text-purple">ตอบกลับ {nameOf(replyTo)}</div><div className="truncate text-ink-soft">{snippet(replyTo)}</div></div><button type="button" onClick={() => setReplyTo(null)} className="text-ink-soft hover:text-red"><X size={14} /></button></div>}
+        {replyTo && <div className="flex items-start gap-2 rounded-lg bg-lavender/30 border-l-2 border-purple px-3 py-1.5 text-xs"><Reply size={12} className="mt-0.5 text-purple shrink-0" />{replyTo.image_url && <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={replyTo.image_url} alt="" className="h-12 w-12 rounded-md object-cover shrink-0" /></>}<div className="min-w-0 flex-1"><div className="font-semibold text-purple">ตอบกลับ {nameOf(replyTo)}</div><div className="truncate text-ink-soft">{snippet(replyTo)}</div></div><button type="button" onClick={() => setReplyTo(null)} className="text-ink-soft hover:text-red"><X size={14} /></button></div>}
         {files.length > 0 && <div className="flex flex-wrap gap-2 items-end">
           {files.map((x, i) => x.url
             ? <div key={i} className="relative">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={x.url} alt="" className="h-20 w-20 rounded-xl object-cover" /><button type="button" onClick={() => setFiles((c) => c.filter((_, j) => j !== i))} className="absolute -top-2 -right-2 bg-red text-white rounded-full h-6 w-6 text-xs">✕</button></div>

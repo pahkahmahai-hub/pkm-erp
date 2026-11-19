@@ -175,7 +175,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           </div>
 
           {/* thread */}
-          <Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} members={mentionMembers} names={await userNames(supabase)} />
+          <div id="chat" className="scroll-mt-4"><Thread taskId={id} initial={(comments ?? []) as Comment[]} meId={me} members={mentionMembers} names={await userNames(supabase)} /></div>
         </div>
 
         {/* actions */}

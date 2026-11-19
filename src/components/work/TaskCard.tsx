@@ -5,6 +5,11 @@ import { unitOf } from "@/lib/work/workType";
 import { STATUS_BADGE, statusLabel, effectiveDue, swDeadlines, swCurrentPhase, type Task } from "@/lib/work/types";
 
 const isClosed = (t: Task) => ["accepted", "cancelled", "done"].includes(t.status);
+/** วงกลมแดง = คอมเมนต์ที่ยังไม่อ่าน */
+function UnreadDot({ n, className = "" }: { n?: number; className?: string }) {
+  if (!n) return null;
+  return <span className={`absolute -top-2 -right-2 z-10 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red text-white text-[11px] font-bold grid place-items-center shadow ring-2 ring-white ${className}`} title={`มีข้อความใหม่ ${n} ข้อความ`}>{n > 99 ? "99+" : n}</span>;
+}
 const dm = (d: string) => `${Number(d.slice(8, 10))}/${Number(d.slice(5, 7))}`;
 
 export function TaskCard({ t, showRoom = true, note, compact }: { t: Task; showRoom?: boolean; note?: string; compact?: boolean }) {
@@ -17,7 +22,8 @@ export function TaskCard({ t, showRoom = true, note, compact }: { t: Task; showR
   const ph = isSw ? swCurrentPhase(t.status) : null;
   const phLabel = ph ? swDeadlines(t).find((d) => d.phase === ph)?.short + " " : "";
   return (
-    <Link href={`/work/tasks/${t.id}`} className={`card p-3.5 block hover:border-purple transition ${overdue ? "border-red/60" : ""}`}>
+    <Link href={`/work/tasks/${t.id}${t.unread ? "#chat" : ""}`} className={`card p-3.5 block relative hover:border-purple transition ${overdue ? "border-red/60" : ""}`}>
+      <UnreadDot n={t.unread} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[11px] text-ink-soft font-mono">#{t.task_no}{showRoom && t.work_rooms && <span className="ml-2 inline-block px-1.5 rounded text-white" style={{ background: t.work_rooms.color }}>{t.work_rooms.name}</span>}</div>
@@ -74,7 +80,8 @@ function CompactCard({ t }: { t: Task }) {
   const main = i > 0 ? t.title.slice(0, i) : t.title;
   const sub = i > 0 ? t.title.slice(i + 3) : null;
   return (
-    <Link href={`/work/tasks/${t.id}`} className={`card px-2.5 py-2 block hover:border-purple transition ${overdue ? "border-red/60" : ""}`} title={t.title}>
+    <Link href={`/work/tasks/${t.id}${t.unread ? "#chat" : ""}`} className={`card px-2.5 py-2 block relative hover:border-purple transition ${overdue ? "border-red/60" : ""}`} title={t.title}>
+      <UnreadDot n={t.unread} />
       <div className="flex items-center justify-between gap-1 text-[10px] text-ink-soft font-mono"><span>#{t.task_no}</span><span className="flex items-center gap-1 font-sans">{t.priority === "urgent" && <Flame size={11} className="text-red" />}{t.routine_id && <Repeat size={10} />}{isSw && <span className="truncate">{t.employees ? (t.employees.nickname ?? t.employees.first_name) : "—"}{(t.co_assignee_ids ?? []).length ? ` +${(t.co_assignee_ids ?? []).length}` : ""}</span>}</span></div>
       <div className="text-[13px] font-semibold leading-tight line-clamp-2 mt-0.5">{main}</div>
       {t.work_type && <div className="mt-0.5"><span className="inline-block rounded bg-lavender/40 text-purple text-[10px] font-semibold px-1.5">{t.work_type}{t.work_qty ? ` · ${t.work_qty} ${unitOf(t.work_type)}` : ""}</span></div>}

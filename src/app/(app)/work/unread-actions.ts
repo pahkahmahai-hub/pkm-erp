@@ -25,3 +25,17 @@ export async function badgeCount(): Promise<number> {
   }
   return n;
 }
+
+/** จำนวนแจ้งเตือนที่ยังไม่อ่าน (ปุ่มแจ้งเตือนด้านบนทุกหน้าใน WORK) */
+export async function myNotifCount(): Promise<{ all: number; mentions: number }> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { all: 0, mentions: 0 };
+  const { data: me } = await supabase.from("app_users").select("id").eq("auth_user_id", auth.user.id).maybeSingle();
+  if (!me?.id) return { all: 0, mentions: 0 };
+  const [a, m] = await Promise.all([
+    supabase.from("work_notifications").select("id", { count: "exact", head: true }).eq("user_id", me.id).is("read_at", null),
+    supabase.from("work_notifications").select("id", { count: "exact", head: true }).eq("user_id", me.id).is("read_at", null).eq("kind", "mention"),
+  ]);
+  return { all: a.count ?? 0, mentions: m.error ? 0 : m.count ?? 0 };
+}
