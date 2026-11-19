@@ -172,7 +172,7 @@ export default async function WorkHome() {
                 </Link>); })}
             </div>
           </div>}
-          <h2 className="font-display font-bold mb-3">งานของฉัน ({mine.length})</h2>
+          <h2 className="font-display font-bold mb-3 flex items-baseline gap-2">งานของฉัน ({mine.length})<Link href="/work/mine" className="ml-auto text-xs font-normal text-purple underline">ดูบอร์ดงานที่เกี่ยวกับฉันทุกห้อง (รวมที่ถูก @) →</Link></h2>
           <div className="space-y-2">
             {mine.slice(0, 20).map((t) => <TaskCard key={t.id} t={t} />)}
             {!mine.length && <div className="card p-6 text-center text-ink-soft text-sm">ไม่มีงานค้าง 🎉</div>}
