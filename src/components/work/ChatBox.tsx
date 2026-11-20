@@ -48,8 +48,10 @@ export function ChatBox({
   const q = (mentionQ ?? "").toLowerCase();
   const mentionResults = mentionQ === null ? [] : [
     ...(members.length > 1 && ("ทุกคน".includes(q) || "all".includes(q) || "everyone".includes(q)) ? [ALL] : []),
-    ...members.filter((m) => m.label.toLowerCase().includes(q) || m.first_name.toLowerCase().includes(q)),
-  ].slice(0, 7);
+    // ผู้บริหารขึ้นก่อน (เดิมอยู่ท้ายแล้วถูกตัดทิ้งเมื่อห้องมีคนเกิน 6) · ไม่จำกัดจำนวน — รายการเลื่อนดูได้
+    ...members.filter((m) => m.isUser || m.first_name === "ผู้บริหาร").filter((m) => m.label.toLowerCase().includes(q) || m.first_name.toLowerCase().includes(q)),
+    ...members.filter((m) => !(m.isUser || m.first_name === "ผู้บริหาร")).filter((m) => m.label.toLowerCase().includes(q) || m.first_name.toLowerCase().includes(q)),
+  ];
   function onBodyChange(v: string) {
     setBody(v);
     const el = taRef.current; const pos = el ? el.selectionStart : v.length;
@@ -459,8 +461,8 @@ export function ChatBox({
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost px-2.5" title="แนบไฟล์ (ไม่เกิน 5 MB)"><Paperclip size={18} /></button>
           <div className="relative basis-full sm:basis-auto sm:flex-1 order-first sm:order-none">
             {mentionQ !== null && mentionResults.length > 0 && (
-              <div className="absolute bottom-full mb-1 left-0 w-64 card p-1 z-20">
-                {mentionResults.map((m, i) => <button key={m.employee_id} type="button" onMouseDown={(e) => { e.preventDefault(); insertMention(m); }} className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${i === mentionIdx ? "bg-lavender/40" : "hover:bg-cream"}`}>@{m.label} <span className="text-[11px] text-ink-soft">{m.first_name}</span></button>)}
+              <div className="absolute bottom-full mb-1 left-0 w-64 card p-1 z-20 max-h-72 overflow-y-auto">
+                {mentionResults.map((m, i) => <button key={m.employee_id} type="button" onMouseDown={(e) => { e.preventDefault(); insertMention(m); }} ref={(el) => { if (el && i === mentionIdx) el.scrollIntoView({ block: "nearest" }); }} className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg ${i === mentionIdx ? "bg-lavender/40" : "hover:bg-cream"}`}>@{m.label} <span className="text-[11px] text-ink-soft">{m.first_name}</span></button>)}
               </div>
             )}
             <textarea ref={taRef} value={body} onChange={(e) => onBodyChange(e.target.value)} onKeyDown={(e) => {
